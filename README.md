@@ -17,3 +17,4 @@ go http benchmark and monitor tool, just like jmeter but more configurable.
 
 # Done
     a single test runs for a simple http request
+    add gomark
