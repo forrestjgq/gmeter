@@ -13,5 +13,7 @@ go http benchmark and monitor tool, just like jmeter but more configurable.
 9. performance monitoring, like latency recorder(gomark)
 
 # ToDo
+    
 
 # Done
+    a single test runs for a simple http request
