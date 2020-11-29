@@ -19,7 +19,7 @@ type result struct {
 	err   error
 }
 
-func send(t *Test, req *request) (*response, error) {
+func send(config *Config, t *Test, req *request) (*response, error) {
 	msg, err := http.NewRequest(req.method, req.url, bytes.NewReader([]byte(req.body)))
 	if err != nil {
 		return nil, err
@@ -29,7 +29,17 @@ func send(t *Test, req *request) (*response, error) {
 			msg.Header.Add(k, v)
 		}
 	}
+	var latency *gomark.Latency
+
+	if config.ctx.monitor {
+		latency = gomark.NewLatency(config.ctx.lr)
+	}
 	rsp, err1 := t.h.Do(msg)
+
+	if latency != nil {
+		latency.Mark()
+	}
+
 	if err1 != nil {
 		return nil, err1
 	}
@@ -108,7 +118,7 @@ func one(config *Config, s *Schedule, cnt counter) error {
 		for i, name := range s.Series {
 			t := config.Tests[name]
 			req := compose(config, prevReqs[i], prevRsps[i], t)
-			rsp, err := send(t, req)
+			rsp, err := send(config, t, req)
 
 			prevReqs[i], prevRsps[i] = req, rsp
 
@@ -276,6 +286,11 @@ func Run(monitorPort int, config *Config) error {
 	if monitorPort != 0 {
 		gomark.StartHTTPServer(monitorPort)
 		config.ctx.monitor = true
+		name := config.Name
+		if name == "" {
+			name = "no_name"
+		}
+		config.ctx.lr = gomark.NewLatencyRecorder(name)
 	}
 
 	glog.Info("start test")

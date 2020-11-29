@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+
+	"github.com/forrestjgq/gomark/gmi"
 )
 
 type Host struct {
@@ -109,11 +111,13 @@ const (
 
 type context struct {
 	monitor bool
+	lr      gmi.Marker
 	stopped bool
 	err     error
 }
 
 type Config struct {
+	Name      string
 	Mode      RunMode
 	Hosts     map[string]*Host
 	Messages  map[string]*Message

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,14 +14,13 @@ import (
 )
 
 type pingHandler struct {
-	idx int
+	idx int64
 }
 
 func (p *pingHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if p.idx%1000 == 0 {
+	if atomic.AddInt64(&p.idx, 1)%1000 == 0 {
 		fmt.Printf("ping %d\n", p.idx)
 	}
-	p.idx++
 	_, _ = writer.Write([]byte(`{"status": "OK"}`))
 }
 
@@ -38,6 +38,7 @@ func startHttpServer() (*http.Server, int) {
 func TestRunGMeter(t *testing.T) {
 	server, port := startHttpServer()
 	cfg := &gmeter.Config{
+		Name:      "test",
 		Mode:      gmeter.RunOneByOne,
 		Hosts:     nil,
 		Messages:  nil,
@@ -69,14 +70,14 @@ func TestRunGMeter(t *testing.T) {
 
 	cfg.AddSchedule("ping-test", &gmeter.Schedule{
 		Series:       []string{"test"},
-		Count:        10000,
+		Count:        100000,
 		CountForEach: false,
-		Concurrency:  0,
+		Concurrency:  10,
 	})
 
 	time.Sleep(1 * time.Second)
 
-	err := gmeter.Run(0, cfg)
+	err := gmeter.Run(7777, cfg)
 	if err != nil {
 		t.Error(err)
 	}
