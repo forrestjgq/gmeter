@@ -12,3 +12,6 @@ go http benchmark and monitor tool, just like jmeter but more configurable.
 8. response checking condition definition
 9. performance monitoring, like latency recorder(gomark)
 
+# ToDo
+
+# Done
