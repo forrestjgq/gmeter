@@ -1,12 +1,18 @@
 package gmeter
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/forrestjgq/gomark/gmi"
+)
+
+var (
+	markBegin = "`"
+	markEnd   = "`"
 )
 
 type Host struct {
@@ -23,46 +29,6 @@ func (h Host) check() error {
 		return fmt.Errorf("host invalid: %s", h.Host)
 	}
 
-	return nil
-}
-
-type Message struct {
-	Path    string // /path/to/target
-	Method  string
-	Headers map[string]string
-	Params  map[string]string // Path?key=value&key=value..
-	Body    json.RawMessage
-}
-
-func (m *Message) check() error {
-	if matched, matchErr := regexp.Match("^(/[^/]+)*$", []byte(m.Path)); matchErr != nil {
-		panic("message match regexp invalid")
-	} else if !matched {
-		return fmt.Errorf("invalid path: %s", m.Path)
-	}
-
-	switch m.Method {
-	case http.MethodGet:
-		if m.Body != nil {
-			return fmt.Errorf("message %s GET with message body", m.Path)
-		}
-	case http.MethodPut:
-	case http.MethodDelete:
-		if m.Body != nil {
-			return fmt.Errorf("message %s DELETE with message body", m.Path)
-		}
-	case http.MethodPost:
-	case http.MethodPatch:
-	default:
-		return fmt.Errorf("invalid method: %s for host %s", m.Method, m.Path)
-	}
-
-	if m.Headers == nil {
-		m.Headers = make(map[string]string)
-	}
-	if m.Params == nil {
-		m.Params = make(map[string]string)
-	}
 	return nil
 }
 
@@ -117,13 +83,15 @@ type context struct {
 }
 
 type Config struct {
-	Name      string
-	Mode      RunMode
-	Hosts     map[string]*Host
-	Messages  map[string]*Message
-	Tests     map[string]*Test
-	Schedules []*Schedule
-	Options   map[Option]string
+	Name     string              // Everyone has a name
+	Hosts    map[string]*Host    // predefined hosts
+	Messages map[string]*Message // predefined request messages
+	Tests    map[string]*Test    // predefined tests
+
+	Mode      RunMode     // how to run schedules
+	Schedules []*Schedule // all test schedules, each one runs a series of tests
+
+	Options map[Option]string // options globally
 
 	// internal data
 	ctx *context
@@ -175,4 +143,69 @@ func (c *Config) aborted() bool {
 func (c *Config) hasOption(option Option) bool {
 	_, ok := c.Options[option]
 	return ok
+}
+func (c *Config) preprocess() error {
+	c.ctx = &context{}
+	var schedules []*Schedule
+
+	for _, s := range c.Schedules {
+		if s == nil {
+			continue
+		}
+		schedules = append(schedules, s)
+
+		for _, name := range s.Series {
+			if name == "" {
+				continue
+			}
+			t := c.Tests[name]
+			if t == nil {
+				return fmt.Errorf("test %s not found", name)
+			}
+
+			// prepare http client
+			if t.h == nil {
+				t.h = &http.Client{}
+				if t.Timeout != "" {
+					if du, err := time.ParseDuration(t.Timeout); err != nil {
+						return err
+					} else {
+						t.h.Timeout = du
+					}
+				}
+
+				// setup host and proxy
+				if host, ok := c.Hosts[t.Host]; !ok {
+					return fmt.Errorf("host %s not exist for test %s", t.Host, name)
+				} else {
+					if err := host.check(); err != nil {
+						return err
+					}
+
+					t.host = host.Host
+					if host.Proxy != "" {
+						proxy := func(_ *http.Request) (*url.URL, error) {
+							return url.Parse(host.Proxy)
+						}
+						t.h.Transport = &http.Transport{
+							Proxy: proxy,
+						}
+					}
+				}
+
+				if msg, exist := c.Messages[t.Request]; !exist {
+					return fmt.Errorf("message %s for test %s not exist", t.Request, name)
+				} else {
+					if err := msg.check(); err != nil {
+						return err
+					}
+					t.reqMsg = msg
+				}
+			}
+			s.tests = append(s.tests, t)
+		}
+	}
+
+	c.Schedules = schedules
+	return nil
 }
