@@ -1,4 +1,4 @@
-module github.com/forrest/gmeter
+module github.com/forrestjgq/gmeter
 
 go 1.15
 

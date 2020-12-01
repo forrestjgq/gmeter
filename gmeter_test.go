@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/forrest/gmeter"
+	"github.com/forrestjgq/gmeter"
 )
 
 type pingHandler struct {
