@@ -1,16 +1,16 @@
 package meter
 
 import (
-	"github.com/forrestjgq/gomark"
 	"io"
 	"net/http"
-)
 
+	"github.com/forrestjgq/gomark"
+)
 
 // runner is a single http sender
 type runner struct {
-	h      *http.Client
-	p      provider
+	h *http.Client
+	p provider
 }
 
 func (r *runner) run(bg *background) next {
@@ -26,12 +26,12 @@ func (r *runner) run(bg *background) next {
 
 	p := r.p
 
-	if !p.hasMore() {
-		return nextFinished
-	}
-
 	if p == nil || bg == nil {
 		return nextAbortAll
+	}
+
+	if decision = p.hasMore(bg); decision != nextContinue {
+		return decision
 	}
 
 	if url, decision = p.getUrl(bg); decision != nextContinue {

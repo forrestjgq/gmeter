@@ -1,9 +1,10 @@
 package meter
 
 import (
+	"sync/atomic"
+
 	"github.com/golang/glog"
 )
-
 
 type plan struct {
 	target runnable
@@ -34,7 +35,7 @@ func (p *plan) runConcurrent(n int) next {
 					// maybe error, may finished
 					c <- decision
 				}
-				p.bg.seq++
+				atomic.AddInt64(&p.bg.seq, 1)
 			}
 
 			c <- nextAbortPlan
@@ -60,4 +61,3 @@ func (p *plan) runConcurrent(n int) next {
 
 	return result
 }
-
