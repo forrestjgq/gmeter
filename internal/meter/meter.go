@@ -25,15 +25,17 @@ type env interface {
 }
 type background struct {
 	name          string
-	seq           int
+	seq           int64
 	local, global env
 	lr            gmi.Marker
+	err           error
 }
 
-func (bg *background) report() {
-
+func (bg *background) report(err error) {
+	if bg.err != nil {
+		bg.err = err
+	}
 }
-
 
 type runnable interface {
 	run(bg *background) next
