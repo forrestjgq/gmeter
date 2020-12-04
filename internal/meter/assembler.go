@@ -1,6 +1,5 @@
 package meter
 
-
 // assembler contains a single or series of runner
 // if more than one runner is included, they will be scheduled one by one
 type assembler struct {
@@ -21,7 +20,7 @@ func (a *assembler) run(bg *background) next {
 	return nextContinue
 }
 
-func assembleRunner(runners ...runnable)  {
+func assembleRunner(runners ...runnable) {
 	a := &assembler{}
 	for _, r := range runners {
 		if r != nil {
