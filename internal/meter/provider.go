@@ -13,8 +13,6 @@ type provider interface {
 	getUrl(bg *background) (string, next)
 	getHeaders(bg *background) (map[string]string, next)
 	getRequestBody(bg *background) (io.ReadCloser, next)
-	processResponse(bg *background, status int, body io.Reader) next
-	processFailure(bg *background, err error) next
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,24 +100,11 @@ func makeStaticProvider(method, url string, body string, count int64) (*staticPr
 // Feed Provider
 ////////////////////////////////////////////////////////////////////////////////
 
-type category string
-type content map[category]string
-
-const (
-	catMethod category = "_mtd_"
-	catURL    category = "_url_"
-	catHeader category = "_hdr_"
-	catBody   category = "_bdy_"
-	catEnd    category = "_eof_"
-)
-
-type feeder func(seq int64) content
-
 // feedProvider
 type feedProvider struct {
-	s   *staticProvider
-	f   feeder
-	end bool
+	s      *staticProvider
+	feeder feeder
+	end    bool
 }
 
 func (f *feedProvider) hasMore(bg *background) next {
@@ -159,7 +144,7 @@ func (f *feedProvider) processFailure(bg *background, err error) next {
 }
 
 func (f *feedProvider) feed(bg *background) {
-	c := f.f(bg.seq)
+	c := f.feeder.feed(bg.seq)
 	s := f.s
 	if c != nil {
 		oldHdr := s.headers
@@ -185,13 +170,13 @@ func (f *feedProvider) feed(bg *background) {
 	}
 }
 
-func makeFeedProvider(s *staticProvider, f feeder) (provider, error) {
-	if s == nil || f == nil {
+func makeFeedProvider(s *staticProvider, feeder feeder) (provider, error) {
+	if s == nil || feeder == nil {
 		return nil, errors.New("invalid feed provider")
 	}
 	p := &feedProvider{
-		s: s,
-		f: f,
+		s:      s,
+		feeder: feeder,
 	}
 
 	return p, nil

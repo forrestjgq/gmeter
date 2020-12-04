@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/golang/glog"
+
 	"github.com/forrestjgq/gomark"
 )
 
@@ -11,6 +13,7 @@ import (
 type runner struct {
 	h *http.Client
 	p provider
+	c consumer
 }
 
 func (r *runner) run(bg *background) next {
@@ -25,8 +28,9 @@ func (r *runner) run(bg *background) next {
 	)
 
 	p := r.p
+	c := r.c
 
-	if p == nil || bg == nil {
+	if p == nil || c == nil || bg == nil {
 		return nextAbortAll
 	}
 
@@ -47,7 +51,7 @@ func (r *runner) run(bg *background) next {
 	}
 
 	if req, err = http.NewRequest(p.getMethod(bg), url, body); err != nil {
-		return p.processFailure(bg, err)
+		return c.processFailure(bg, err)
 	}
 
 	if len(headers) > 0 {
@@ -62,13 +66,13 @@ func (r *runner) run(bg *background) next {
 	}
 
 	if rsp, err = r.h.Do(req); err != nil {
-		return p.processFailure(bg, err)
+		return c.processFailure(bg, err)
 	} else {
 		if latency != nil {
 			latency.Mark()
 		}
 
-		decision = p.processResponse(bg, rsp.StatusCode, rsp.Body)
+		decision = c.processResponse(bg, rsp.StatusCode, rsp.Body)
 
 		if rsp.Body != nil {
 			_ = rsp.Body.Close()
@@ -78,9 +82,22 @@ func (r *runner) run(bg *background) next {
 	return decision
 }
 
-func makeRunner(h *http.Client, p provider) runnable {
+// makeRunner will create a runner with valid provider.
+// if http.Client h or consumer c is not provided, a default one will be used.
+func makeRunner(p provider, h *http.Client, c consumer) runnable {
+	if p == nil {
+		glog.Error("provider must be provided")
+		return nil
+	}
+	if h == nil {
+		h = http.DefaultClient
+	}
+	if c == nil {
+		c = defaultConsumer
+	}
 	return &runner{
 		h: h,
 		p: p,
+		c: c,
 	}
 }

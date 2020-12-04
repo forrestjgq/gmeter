@@ -4,6 +4,10 @@ import (
 	"github.com/forrestjgq/gomark/gmi"
 )
 
+const (
+	escape byte = '`' // embedded section
+)
+
 type next int
 
 const (

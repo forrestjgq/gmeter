@@ -2,6 +2,7 @@ package gmeter_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -83,4 +84,56 @@ func TestRunGMeter(t *testing.T) {
 	}
 
 	server.Shutdown(context.Background())
+}
+
+func TestRecog(t *testing.T)  {
+	cfg := &gmeter.Config{
+		Name:      "test",
+		Mode:      gmeter.RunOneByOne,
+		Hosts:     nil,
+		Messages:  nil,
+		Tests:     nil,
+		Schedules: nil,
+		Options:   nil,
+	}
+
+	h := &gmeter.Host{
+		Host:  "http://127.0.0.1:8009",
+		Proxy: "",
+	}
+	cfg.AddHost("test", h)
+
+	cfg.AddMessage("ping", &gmeter.Message{
+		Path:    "/ai/detect/all",
+		Method:  "POST",
+		Headers: nil,
+		Params:  nil,
+		Body:    json.RawMessage(`{
+  "image": {
+      "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg"
+  }
+}`),
+	})
+
+	cfg.AddTest("test", &gmeter.Test{
+		Host:          "test",
+		Request:       "ping",
+		ResponseCheck: nil,
+		Timeout:       "3s",
+	})
+
+	cfg.AddSchedule("ping-test", &gmeter.Schedule{
+		Series:       []string{"test"},
+		Count:        100000,
+		CountForEach: false,
+		Concurrency:  10,
+	})
+
+	time.Sleep(1 * time.Second)
+
+	err := gmeter.Run(7777, cfg)
+	if err != nil {
+		t.Error(err)
+	}
+
 }
