@@ -1,5 +1,6 @@
 # Variable
-`$(name)`
+- `$(name)`: local variable
+- `${name}`: global variable
 
 ## Default Variable
 
@@ -8,11 +9,11 @@
 `freadln <file>`
 
 ## Environment `envl` `envg`
-`envl`: Local environment access.
-`envg`: Global environment access.
+- `envl`: Local environment access.
+- `envg`: Global environment access.
 
 ```
 envl/envg -r <var>
-envl/envg -w <var>
+envl/envg -w <var> value
 ```
 

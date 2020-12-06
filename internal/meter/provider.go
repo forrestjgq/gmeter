@@ -104,17 +104,20 @@ func makeStaticProvider(method, url string, body string, count int64) (*staticPr
 type feedProvider struct {
 	s      *staticProvider
 	feeder feeder
-	end    bool
 }
 
 func (f *feedProvider) hasMore(bg *background) next {
-	f.feed(bg)
+	if err := f.feed(bg); err != nil {
+		if err == io.EOF {
+			return nextFinished
+		} else {
+			bg.report(err)
+			return nextAbortPlan
+		}
+	}
 	if err := f.s.check(); err != nil {
 		bg.report(err)
 		return nextAbortPlan
-	}
-	if f.end {
-		return nextFinished
 	}
 	return nextContinue
 }
@@ -143,8 +146,11 @@ func (f *feedProvider) processFailure(bg *background, err error) next {
 	return f.s.processFailure(bg, err)
 }
 
-func (f *feedProvider) feed(bg *background) {
-	c := f.feeder.feed(bg.seq)
+func (f *feedProvider) feed(bg *background) error {
+	c, err := f.feeder.feed(bg)
+	if err != nil {
+		return err
+	}
 	s := f.s
 	if c != nil {
 		oldHdr := s.headers
@@ -157,9 +163,6 @@ func (f *feedProvider) feed(bg *background) {
 				s.method = v
 			case catURL:
 				s.url = v
-			case catEnd:
-				f.end = true
-				return
 			default:
 				s.headers[string(k)] = v
 			}
@@ -168,6 +171,7 @@ func (f *feedProvider) feed(bg *background) {
 			s.headers = oldHdr
 		}
 	}
+	return nil
 }
 
 func makeFeedProvider(s *staticProvider, feeder feeder) (provider, error) {

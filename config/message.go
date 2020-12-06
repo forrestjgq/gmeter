@@ -8,7 +8,7 @@ import (
 )
 
 type Request struct {
-	Method  string
+	Method  string // default to be GET
 	Path    string // /path/to/target
 	Headers map[string]string
 	Body    json.RawMessage

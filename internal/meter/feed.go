@@ -15,53 +15,61 @@ const (
 
 // feeder provide all possible elements http request requires
 type feeder interface {
-	feed(seq int64) content
+	feed(bg *background) (content, error)
 }
 
 // stringFeeder provides a string
-type stringFeeder func(seq int64) string
+type stringFeeder func(bg *background) (string, error)
 
 // mapFeeder provides a map, usually it's header feeder
-type mapFeeder func(seq int64) map[string]string
+type mapFeeder func(bg *background) (map[string]string, error)
 
 // feedCombiner is a feeder that combines several sub-feeders to provide http elements.
 type feedCombiner struct {
-	// callback to decide ending
-	end               func(seq int64) bool
 	headers           mapFeeder
 	url, method, body stringFeeder
 }
 
 // feed implements feeder
-func (fc *feedCombiner) feed(seq int64) map[category]string {
-	if fc.end == nil {
-		panic("end decider should not be nil")
-	}
-
-	m := make(map[category]string)
-	if fc.end(seq) {
-		m[catEnd] = "true"
-		return m
-	}
+func (fc *feedCombiner) feed(bg *background) (content, error) {
+	m := make(content)
+	var err error
 
 	if fc.url != nil {
-		m[catURL] = fc.url(seq)
+		m[catURL], err = fc.url(bg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if fc.method != nil {
-		m[catMethod] = fc.method(seq)
+		m[catMethod], err = fc.method(bg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if fc.body != nil {
-		m[catBody] = fc.body(seq)
+		m[catBody], err = fc.body(bg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if fc.headers != nil {
-		h := fc.headers(seq)
+		h, err := fc.headers(bg)
+		if err != nil {
+			return nil, err
+		}
 		for k, v := range h {
 			m[category(k)] = v
 		}
 	}
 
-	return m
+	return m, nil
+}
+
+func _testFeed() (provider, error) {
+	s, _ := makeStaticProvider("", "", "", 1)
+	return makeFeedProvider(s, &feedCombiner{})
 }
