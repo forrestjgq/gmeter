@@ -86,7 +86,7 @@ func TestRunGMeter(t *testing.T) {
 	server.Shutdown(context.Background())
 }
 
-func TestRecog(t *testing.T)  {
+func TestRecog(t *testing.T) {
 	cfg := &gmeter.Config{
 		Name:      "test",
 		Mode:      gmeter.RunOneByOne,
@@ -108,7 +108,7 @@ func TestRecog(t *testing.T)  {
 		Method:  "POST",
 		Headers: nil,
 		Params:  nil,
-		Body:    json.RawMessage(`{
+		Body: json.RawMessage(`{
   "image": {
       "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg"
   }
@@ -136,4 +136,17 @@ func TestRecog(t *testing.T)  {
 		t.Error(err)
 	}
 
+}
+func TestName(t *testing.T) {
+	b := []byte{'a', 'b', 0, 0, 'c'}
+	s := string(b)
+	t.Logf("s len %d", len(s))
+	t.Logf(s)
+	b1 := []byte(s)
+	t.Logf("b1 len %d", len(b1))
+	for i := range b {
+		if b[i] != b1[i] {
+			t.Fatalf("not match on %d", i)
+		}
+	}
 }

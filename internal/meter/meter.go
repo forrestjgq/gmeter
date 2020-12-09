@@ -18,12 +18,18 @@ const (
 	nextFinished
 )
 
-type variable string
+const (
+	KeyInput  = "INPUT"
+	KeyOutput = "OUTPUT"
+	KeyError  = "ERROR"
+
+	EOF = "EOF"
+)
 
 // container to store environment
 type env interface {
-	get(key string) variable
-	put(key string, value variable)
+	get(key string) string
+	put(key string, value string)
 	delete(key string)
 	has(key string)
 }
@@ -39,6 +45,39 @@ func (bg *background) report(err error) {
 	if bg.err != nil {
 		bg.err = err
 	}
+}
+func (bg *background) getInput() string {
+	return bg.local.get(KeyInput)
+}
+func (bg *background) getOutput() string {
+	return bg.local.get(KeyOutput)
+}
+func (bg *background) getError() string {
+	return bg.local.get(KeyError)
+}
+
+func (bg *background) setInput(value string) {
+	bg.local.put(KeyInput, value)
+}
+func (bg *background) setOutput(value string) {
+	bg.local.put(KeyOutput, value)
+}
+func (bg *background) setError(value string) {
+	bg.local.put(KeyError, value)
+}
+
+func (bg *background) getLocalEnv(key string) string {
+	return bg.local.get(key)
+}
+func (bg *background) setLocalEnv(key string, value string) {
+	bg.local.put(key, value)
+}
+
+func (bg *background) getGlobalEnv(key string) string {
+	return bg.global.get(key)
+}
+func (bg *background) setGlobalEnv(key string, value string) {
+	bg.global.put(key, value)
 }
 
 type runnable interface {
