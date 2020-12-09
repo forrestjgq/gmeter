@@ -26,12 +26,35 @@ const (
 	EOF = "EOF"
 )
 
+type simpEnv map[string]string
+
+func (s simpEnv) get(key string) string {
+	return s[key]
+}
+
+func (s simpEnv) put(key string, value string) {
+	s[key] = value
+}
+
+func (s simpEnv) delete(key string) {
+	delete(s, key)
+}
+
+func (s simpEnv) has(key string) bool {
+	_, ok := s[key]
+	return ok
+}
+
+func makeSimpEnv() env {
+	return make(simpEnv)
+}
+
 // container to store environment
 type env interface {
 	get(key string) string
 	put(key string, value string)
 	delete(key string)
-	has(key string)
+	has(key string) bool
 }
 type background struct {
 	name          string

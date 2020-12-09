@@ -138,15 +138,12 @@ func TestRecog(t *testing.T) {
 
 }
 func TestName(t *testing.T) {
-	b := []byte{'a', 'b', 0, 0, 'c'}
-	s := string(b)
-	t.Logf("s len %d", len(s))
-	t.Logf(s)
-	b1 := []byte(s)
-	t.Logf("b1 len %d", len(b1))
-	for i := range b {
-		if b[i] != b1[i] {
-			t.Fatalf("not match on %d", i)
-		}
-	}
+	s := "abc不行啊"
+	s1 := s[1:4]
+
+	r := []rune(s)
+	r1 := r[1:4]
+	s2 := string(r1)
+
+	t.Logf("s1: %s s2: %s", s1, s2)
 }
