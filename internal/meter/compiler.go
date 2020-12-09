@@ -190,7 +190,22 @@ func makeB64(content string) (command, error) {
 ////////////////////////////////////////////////////////////////////////////////
 type pipeline []command
 
-func parse(str string) (pipeline, error) {
+func (p pipeline) produce(bg *background) {
+	for _, c := range p {
+		bg.setInput(bg.getOutput())
+		c.produce(bg)
+		if bg.getError() != "" {
+			return
+		}
+	}
+}
+func (p pipeline) close() {
+	for _, c := range p {
+		c.close()
+	}
+}
+
+func parse(str string) (command, error) {
 	args, err := argv.Argv(str, nil, func(s string) (string, error) {
 		return s, nil
 	})
@@ -198,7 +213,7 @@ func parse(str string) (pipeline, error) {
 		return nil, err
 	}
 
-	var pp []command
+	var pp pipeline
 	for _, v := range args {
 		if len(v) == 0 {
 			continue
