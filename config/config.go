@@ -44,9 +44,9 @@ const (
 )
 
 type Schedule struct {
-	Tests       string // `test1` [| `test2` [| `test3` [|...]] , like `t1` | `t2` | `t3`
-	Count       uint64 // 0 for infinite, or specified count
-	Concurrency int    // 0 or 1 for one routine, or specified routines, must less than 100000
+	Tests       string // "test1[|test2[|test3...]]", test pipeline composed of one or more tests
+	Count       uint64 // 0 for infinite, or specified count, default 0
+	Concurrency int    // 0 or 1 for one routine, or specified routines, must less than 100000, default: 1 routine
 }
 
 type RunMode string
