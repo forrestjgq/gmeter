@@ -197,15 +197,20 @@ func (c *cmdWrite) produce(bg *background) {
 	}
 }
 
-func makeWrite(path, content string) (command, error) {
-	if len(path) == 0 {
-		return nil, errors.New("write file path not provided")
+func makeWrite(v []string) (command, error) {
+	content := ""
+	fs := flag.NewFlagSet("write", flag.ContinueOnError)
+	fs.StringVar(&content, "c", "$(INPUT)", "content to write to file, default using local input")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
 	}
-	if len(content) == 0 {
-		content = "$(" + KeyInput + ")"
+	v = fs.Args()
+	if len(v) != 1 {
+		return nil, fmt.Errorf("write path not specified")
 	}
+	path := v[0]
 	c := &cmdWrite{}
-	var err error
 	if c.path, err = makeSegments(path); err != nil {
 		return nil, err
 	}
@@ -438,17 +443,8 @@ func parse(str string) (command, error) {
 			}
 
 		case "write":
-			path, content := "", ""
-
-			if len(v) == 1 || len(v) > 3 {
-				return nil, fmt.Errorf("write invalid: %v", v)
-			}
-			path = v[1]
-			if len(v) == 3 {
-				content = v[2]
-			}
-
-			if cmd, err := makeWrite(path, content); err != nil {
+			cmd, err := makeWrite(v[1:])
+			if err != nil {
 				return nil, err
 			} else {
 				pp = append(pp, cmd)

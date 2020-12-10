@@ -52,12 +52,12 @@ Gmeter command is just like shell, with a few different.
 Read all file content from given `<path>` and print.
 
 ## write
-`write <path> <content>/$(INPUT)`
+`write [-c <content>] <path> `
 
-Write `<content>` to given file represented by `<path>` 
+Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
 
 ## list
-`list <file>/$(INPUT)`
+`list <file>`
 
 Read lines one by one from `<file>`, ignore empty lines.
 
