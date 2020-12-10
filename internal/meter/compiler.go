@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,11 +20,95 @@ type command interface {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                          segments                         ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type segment interface {
+	getString(bg *background) (string, error)
+}
+type staticSegment string
+
+func (ss staticSegment) getString(bg *background) (string, error) {
+	return string(ss), nil
+}
+
+type dynamicSegment struct {
+	f func(bg *background) (string, error)
+}
+
+func (ds dynamicSegment) getString(bg *background) (string, error) {
+	return ds.f(bg)
+}
+
+type segments []segment
+
+func (s segments) isStatic() bool {
+	for _, seg := range s {
+		if _, ok := seg.(staticSegment); ok {
+			return true
+		}
+	}
+	return false
+}
+func (s segments) compose(bg *background) (string, error) {
+	arr := make([]string, len(s))
+	for i, seg := range s {
+		str, err := seg.getString(bg)
+		if err != nil {
+			return "", err
+		}
+		arr[i] = str
+
+	}
+	if len(arr) == 1 {
+		return arr[0], nil
+	}
+	if len(arr) == 0 {
+		return "", nil
+	}
+
+	return strings.Join(arr, ""), nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                             echo                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdEcho struct {
+	content segments
+}
+
+func (c *cmdEcho) close() {
+	c.content = nil
+}
+
+func (c *cmdEcho) produce(bg *background) {
+	if content, err := c.content.compose(bg); err != nil {
+		bg.setError("echo: " + err.Error())
+	} else {
+		bg.setOutput(content)
+	}
+}
+
+func makeEcho(content string) (command, error) {
+	if len(content) == 0 {
+		content = "$(" + KeyInput + ")"
+	}
+	seg, err := makeSegments(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cmdEcho{content: seg}, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                             cat                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
 type cmdCat struct {
-	path    string
+	static  bool
+	path    segments
 	content []byte
 }
 
@@ -33,23 +118,21 @@ func (c *cmdCat) close() {
 
 func (c *cmdCat) produce(bg *background) {
 	if len(c.content) == 0 {
-		path := c.path
-		if len(path) == 0 {
-			path = bg.getInput()
-		}
-
-		if len(path) == 0 {
-			bg.setError("cat: file path is empty")
+		path, err := c.path.compose(bg)
+		if err != nil {
+			bg.setError("cat: " + err.Error())
 			return
 		}
 
 		if f, err := os.Open(filepath.Clean(path)); err != nil {
-			bg.setError(err.Error())
+			bg.setError("cat: " + err.Error())
 		} else {
 			if b, err1 := ioutil.ReadAll(f); err1 != nil {
 				bg.setError("cat: " + err1.Error())
 			} else {
-				c.content = b
+				if c.static {
+					c.content = b
+				}
 				bg.setOutput(string(b))
 			}
 			_ = f.Close()
@@ -60,34 +143,51 @@ func (c *cmdCat) produce(bg *background) {
 }
 
 func makeCat(path string) (command, error) {
-	return &cmdCat{path: path}, nil
+	if len(path) == 0 {
+		path = "$(" + KeyInput + ")"
+	}
+	seg, err := makeSegments(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cmdCat{
+		path:   seg,
+		static: seg.isStatic(),
+	}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //////////                           write                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 type cmdWrite struct {
-	path    string
-	content string
+	path    segments
+	content segments
 }
 
 func (c *cmdWrite) close() {
-	c.content = ""
+	c.content = nil
+	c.path = nil
 }
 
 func (c *cmdWrite) produce(bg *background) {
-	content := c.content
-	if len(content) == 0 {
-		content = bg.getInput()
-	}
-
-	if len(c.path) == 0 {
-		bg.setError("cat: file path is empty")
+	content, err := c.content.compose(bg)
+	if err != nil {
+		bg.setError("write: " + err.Error())
 		return
 	}
 	// do not check content here
+	path, err := c.path.compose(bg)
+	if err != nil {
+		bg.setError("write: " + err.Error())
+		return
+	}
+	if len(path) == 0 {
+		bg.setError("write: empty file path")
+		return
+	}
 
-	if f, err := os.Create(filepath.Clean(c.path)); err != nil {
+	if f, err := os.Create(filepath.Clean(path)); err != nil {
 		bg.setError("write: " + err.Error())
 	} else {
 		if _, err1 := f.WriteString(content); err1 != nil {
@@ -101,17 +201,25 @@ func makeWrite(path, content string) (command, error) {
 	if len(path) == 0 {
 		return nil, errors.New("write file path not provided")
 	}
-	return &cmdWrite{
-		path:    path,
-		content: content,
-	}, nil
+	if len(content) == 0 {
+		content = "$(" + KeyInput + ")"
+	}
+	c := &cmdWrite{}
+	var err error
+	if c.path, err = makeSegments(path); err != nil {
+		return nil, err
+	}
+	if c.content, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //////////                            list                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 type cmdList struct {
-	path string
+	path segments
 	file *os.File
 	scan *bufio.Scanner
 }
@@ -124,7 +232,12 @@ func (c *cmdList) close() {
 func (c *cmdList) produce(bg *background) {
 	if c.file == nil {
 		var err error
-		c.file, err = os.Open(filepath.Clean(c.path))
+		path, err := c.path.compose(bg)
+		if err != nil {
+			bg.setError("list: " + err.Error())
+			return
+		}
+		c.file, err = os.Open(filepath.Clean(path))
 		if err != nil {
 			bg.setError("list: " + err.Error())
 			return
@@ -148,8 +261,12 @@ func makeList(path string) (command, error) {
 	if len(path) == 0 {
 		return nil, errors.New("list file path not provided")
 	}
+	seg, err := makeSegments(path)
+	if err != nil {
+		return nil, err
+	}
 	return &cmdList{
-		path: path,
+		path: seg,
 	}, nil
 }
 
@@ -159,23 +276,26 @@ func makeList(path string) (command, error) {
 
 type cmdB64 struct {
 	file    bool
-	path    string
-	content string
+	static  bool
+	path    segments
+	content segments
+	encoded string
 }
 
 func (c *cmdB64) close() {
-	c.content = ""
+	c.content = nil
+	c.path = nil
 }
 
 func (c *cmdB64) produce(bg *background) {
-	if len(c.content) == 0 {
+	var err error
+	if len(c.encoded) == 0 {
+		encoded := ""
 		if c.file {
-			path := c.path
-			write := true
-
-			if len(path) == 0 {
-				path = bg.getInput()
-				write = false
+			path, err := c.path.compose(bg)
+			if err != nil {
+				bg.setError("b64: " + err.Error())
+				return
 			}
 
 			if len(path) == 0 {
@@ -185,47 +305,72 @@ func (c *cmdB64) produce(bg *background) {
 
 			if f, err := os.Open(filepath.Clean(path)); err != nil {
 				bg.setError(err.Error())
+				return
 			} else {
 				if b, err1 := ioutil.ReadAll(f); err1 != nil {
 					bg.setError("cat: " + err1.Error())
+					_ = f.Close()
+					return
 				} else {
-					s := base64.StdEncoding.EncodeToString(b)
-					if len(s) == 0 {
-						bg.setError("b64: empty input")
-						return
-					}
-					if write {
-						c.content = s
-					}
-					bg.setOutput(s)
+					encoded = string(b)
 				}
 				_ = f.Close()
 			}
-
 		} else {
-			// do not write, dynamic use input as content
-			bg.setOutput(base64.StdEncoding.EncodeToString([]byte(bg.getInput())))
+			if encoded, err = c.content.compose(bg); err != nil {
+				bg.setError("b64: " + err.Error())
+				return
+			}
 		}
 
+		encoded = base64.StdEncoding.EncodeToString([]byte(encoded))
+		if c.static {
+			c.encoded = encoded
+		}
+		bg.setOutput(encoded)
 	} else {
-		bg.setOutput(c.content)
+		bg.setOutput(c.encoded)
 	}
 }
 
-func makeB64(content string) (command, error) {
-	enc := ""
-	if len(content) > 0 {
-		enc = base64.StdEncoding.EncodeToString([]byte(content))
+func makeBase64(v []string) (command, error) {
+	content := ""
+	path := ""
+	file := false
+	fs := flag.NewFlagSet("b64", flag.ContinueOnError)
+	fs.BoolVar(&file, "f", false, "encode file content to base64")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
 	}
-	return &cmdB64{
-		content: enc,
-	}, nil
-}
-func makeFileB64(path string) (command, error) {
-	return &cmdB64{
-		file: true,
-		path: path,
-	}, nil
+	v = fs.Args()
+	if len(v) == 0 {
+		if file {
+			path = "$(" + KeyInput + ")"
+		} else {
+			content = "$(" + KeyInput + ")"
+		}
+	} else if len(v) == 1 {
+		if file {
+			path = v[0]
+		} else {
+			content = v[0]
+		}
+	} else {
+		return nil, fmt.Errorf("b64 parse error, unknown: %v", v)
+	}
+
+	c := &cmdB64{file: file}
+	c.path, err = makeSegments(path)
+	if err != nil {
+		return nil, err
+	}
+	c.content, err = makeSegments(content)
+	if err != nil {
+		return nil, err
+	}
+	c.static = c.path.isStatic() && c.content.isStatic()
+	return c, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -267,6 +412,18 @@ func parse(str string) (command, error) {
 		}
 
 		switch v[0] {
+		case "echo":
+			content := ""
+			if len(v) == 2 {
+				content = v[1]
+			} else if len(v) > 2 {
+				return nil, fmt.Errorf("echo invalid: %v", v)
+			}
+			if cmd, err := makeEcho(content); err != nil {
+				return nil, err
+			} else {
+				pp = append(pp, cmd)
+			}
 		case "cat":
 			path := ""
 			if len(v) == 2 {
@@ -306,34 +463,7 @@ func parse(str string) (command, error) {
 				pp = append(pp, cmd)
 			}
 		case "b64":
-			content := ""
-			path := ""
-			file := false
-			if len(v) == 1 {
-
-			} else if len(v) == 2 {
-				if v[1] == "-f" {
-					file = true
-				} else {
-					content = v[1]
-				}
-			} else if len(v) == 3 {
-				if v[1] != "-f" {
-					return nil, fmt.Errorf("b64 expect -f, got %s", v[1])
-				}
-				path = v[2]
-				file = true
-			} else if len(v) > 3 {
-				return nil, fmt.Errorf("b64 invalid: %v", v)
-			}
-
-			var cmd command
-			var err error
-			if file {
-				cmd, err = makeFileB64(path)
-			} else {
-				cmd, err = makeB64(content)
-			}
+			cmd, err := makeBase64(v[1:])
 			if err != nil {
 				return nil, err
 			} else {
@@ -343,42 +473,6 @@ func parse(str string) (command, error) {
 	}
 
 	return pp, nil
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//////////                          segments                         ///////////
-////////////////////////////////////////////////////////////////////////////////
-
-type segment interface {
-	getString(bg *background) (string, error)
-}
-type staticSegment string
-
-func (ss staticSegment) getString(bg *background) (string, error) {
-	return string(ss), nil
-}
-
-type dynamicSegment struct {
-	f func(bg *background) (string, error)
-}
-
-func (ds dynamicSegment) getString(bg *background) (string, error) {
-	return ds.f(bg)
-}
-
-type segments []segment
-
-func (s segments) compose(bg *background) (string, error) {
-	arr := make([]string, len(s))
-	for i, seg := range s {
-		str, err := seg.getString(bg)
-		if err != nil {
-			return "", err
-		}
-		arr[i] = str
-
-	}
-	return strings.Join(arr, ""), nil
 }
 
 const (
