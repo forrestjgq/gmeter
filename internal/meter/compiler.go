@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/forrestjgq/gmeter/internal/argv"
@@ -215,6 +216,78 @@ func makeWrite(v []string) (command, error) {
 		return nil, err
 	}
 	if c.content, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                            env                            ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+const (
+	envWrite = iota
+	envDelete
+)
+
+type cmdEnv struct {
+	op       int
+	variable segments
+	value    segments
+}
+
+func (c *cmdEnv) close() {
+	c.variable = nil
+	c.value = nil
+}
+
+func (c *cmdEnv) produce(bg *background) {
+	variable, err := c.variable.compose(bg)
+	if err != nil {
+		bg.setError("env: " + err.Error())
+		return
+	}
+	if c.op == envDelete {
+		bg.delLocalEnv(variable)
+	} else if c.op == envWrite {
+		value, err := c.value.compose(bg)
+		if err != nil {
+			bg.setError("env: " + err.Error())
+			return
+		}
+		bg.setLocalEnv(variable, value)
+	} else {
+		bg.setError("env: unknown operator " + strconv.Itoa(c.op))
+	}
+}
+
+func makeEnvw(v []string) (command, error) {
+	content := ""
+	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
+	fs.StringVar(&content, "c", "$(INPUT)", "content to write to local environment, default using local input")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
+	}
+	v = fs.Args()
+	if len(v) != 1 {
+		return nil, fmt.Errorf("write path not specified")
+	}
+	variable := v[0]
+	c := &cmdEnv{op: envWrite}
+	if c.variable, err = makeSegments(variable); err != nil {
+		return nil, err
+	}
+	if c.value, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+func makeEnvd(v []string) (command, error) {
+	variable := v[0]
+	c := &cmdEnv{op: envDelete}
+	var err error
+	if c.variable, err = makeSegments(variable); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -442,6 +515,20 @@ func parse(str string) (command, error) {
 				pp = append(pp, cmd)
 			}
 
+		case "envw":
+			cmd, err := makeEnvw(v[1:])
+			if err != nil {
+				return nil, err
+			} else {
+				pp = append(pp, cmd)
+			}
+		case "envd":
+			cmd, err := makeEnvd(v[1:])
+			if err != nil {
+				return nil, err
+			} else {
+				pp = append(pp, cmd)
+			}
 		case "write":
 			cmd, err := makeWrite(v[1:])
 			if err != nil {

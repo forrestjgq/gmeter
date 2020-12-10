@@ -55,6 +55,9 @@ func TestSegments(t *testing.T) {
 		"b64: `b64 $(BASE)` hello world ":                    "b64: " + enc + " hello world ",
 		"b64 file: `b64 -f " + name + "` hello world ":       "b64 file: " + fenc + " hello world ",
 		"pipe: `cat " + name + " | b64` hello world ":        "pipe: " + fenc + " hello world ",
+		"env: `envw -c \"content\" ENVW |echo $(ENVW)`":      "env: content",
+		"env: `envw ENVW |echo $(ENVW)`":                     "env: input",
+		"env: `envw ENVW |envd ENVW | echo $(ENVW)`":         "env: ",
 	}
 
 	for k, v := range m {

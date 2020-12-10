@@ -56,6 +56,16 @@ Read all file content from given `<path>` and print.
 
 Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
 
+## env
+```
+# write local environment variable
+envw [-c <content>] <variable>
+envd <variable>
+```
+`env` commands provide:
+- `envw`: Write `<content>` to local variable named by `<variable>`
+- `envd` deletes local variable named by `<variable>`
+
 ## list
 `list <file>`
 

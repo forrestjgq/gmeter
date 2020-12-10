@@ -95,6 +95,9 @@ func (bg *background) getLocalEnv(key string) string {
 func (bg *background) setLocalEnv(key string, value string) {
 	bg.local.put(key, value)
 }
+func (bg *background) delLocalEnv(key string) {
+	bg.local.delete(key)
+}
 
 func (bg *background) getGlobalEnv(key string) string {
 	return bg.global.get(key)
