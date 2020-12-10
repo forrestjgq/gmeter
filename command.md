@@ -66,6 +66,42 @@ envd <variable>
 - `envw`: Write `<content>` to local variable named by `<variable>`
 - `envd` deletes local variable named by `<variable>`
 
+## assert
+```
+assert <expr>
+```
+
+assert will report an error if `<expr>` is evaluated as `false`.
+
+`<expr>` accepts two forms: compare and logical judgement:
+
+### compare
+```
+a == b
+a != b
+a > b
+a >= b
+a < b
+a <= b
+```
+
+when compare operators are used, it compares both strings or numbers, here is the rule:
+1. when `a` and `b` are integer numbers, all operators are supported
+2. when `a` and `b` are numbers, but at least one of them are float number(with a '.' inside), `==` and `!=` will be judged by `abs(a-b)`, if this value is less then `0.00000001`, consider `a == b`, other operators are compared directly.
+3. when `a` or `b` is not number, use string compare, and only `==` and `!=` can be applied, or it will report an error.
+
+### logical judgement
+```
+a
+!a
+```
+
+when logical judgement operators are used, `a` can be 
+- `1`
+- `0`
+- `true`
+- `false`
+
 ## list
 `list <file>`
 

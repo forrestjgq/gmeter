@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -452,6 +453,244 @@ func makeBase64(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                          assert                           ///////////
+////////////////////////////////////////////////////////////////////////////////
+const (
+	opIs = iota
+	opNot
+	opEqual
+	opNotEqual
+	opGreater
+	opGreaterEqual
+	opLess
+	opLessEqual
+)
+
+const (
+	isFloat = iota
+	isNum
+	isStr
+)
+
+type cmdAssert struct {
+	a, b  segments
+	op    int
+	float *regexp.Regexp
+	num   *regexp.Regexp
+}
+
+func (c *cmdAssert) close() {
+	c.a = nil
+	c.b = nil
+}
+
+func (c *cmdAssert) kindOf(s string) int {
+	if c.float.MatchString(s) {
+		return isFloat
+	}
+	if c.num.MatchString(s) {
+		return isNum
+	}
+	return isStr
+}
+
+const (
+	eps = 0.00000001
+)
+
+func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) {
+	var (
+		a, b float64
+		err  error
+	)
+	if a, err = strconv.ParseFloat(lhs, 64); err != nil {
+		bg.setError("convert to float fail: " + lhs)
+	}
+	if b, err = strconv.ParseFloat(rhs, 64); err != nil {
+		bg.setError("convert to float fail: " + rhs)
+	}
+
+	delta := a - b
+	switch c.op {
+	case opEqual:
+		if delta < -eps || delta > eps {
+			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+		}
+	case opNotEqual:
+		if delta >= -eps && delta <= eps {
+			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+		}
+	case opGreater:
+		if delta <= 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s > %s", lhs, rhs))
+		}
+	case opGreaterEqual:
+		if delta < 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s >= %s", lhs, rhs))
+		}
+	case opLess:
+		if delta >= 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s < %s", lhs, rhs))
+		}
+	case opLessEqual:
+		if delta > 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s <= %s", lhs, rhs))
+		}
+	}
+}
+func (c *cmdAssert) doNum(lhs, rhs string, bg *background) {
+	var (
+		a, b int
+		err  error
+	)
+	if a, err = strconv.Atoi(lhs); err != nil {
+		bg.setError("convert to int fail: " + lhs)
+	}
+	if b, err = strconv.Atoi(rhs); err != nil {
+		bg.setError("convert to int fail: " + rhs)
+	}
+
+	delta := a - b
+	switch c.op {
+	case opEqual:
+		if delta != 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+		}
+	case opNotEqual:
+		if delta == 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+		}
+	case opGreater:
+		if delta <= 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s > %s", lhs, rhs))
+		}
+	case opGreaterEqual:
+		if delta < 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s >= %s", lhs, rhs))
+		}
+	case opLess:
+		if delta >= 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s < %s", lhs, rhs))
+		}
+	case opLessEqual:
+		if delta > 0 {
+			bg.setError(fmt.Sprintf("assert fail: %s <= %s", lhs, rhs))
+		}
+	}
+}
+func (c *cmdAssert) doStr(lhs, rhs string, bg *background) {
+	if c.op == opEqual {
+		if lhs != rhs {
+			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+		}
+	} else if c.op == opNotEqual {
+		if lhs == rhs {
+			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+		}
+	} else {
+		bg.setError(fmt.Sprintf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs))
+	}
+}
+func (c *cmdAssert) produce(bg *background) {
+	var (
+		a, b string
+		err  error
+	)
+	if a, err = c.a.compose(bg); err != nil {
+		bg.setError("assert: " + err.Error())
+		return
+	}
+	if c.op == opIs {
+		if a == "1" || a == "true" {
+			return
+		}
+		bg.setError("assert failure: " + a)
+		return
+	}
+	if c.op == opNot {
+		if a == "0" || a == "false" {
+			return
+		}
+		bg.setError("assert failure: !" + a)
+		return
+	}
+	if b, err = c.b.compose(bg); err != nil {
+		bg.setError("assert: " + err.Error())
+		return
+	}
+
+	ta, tb := c.kindOf(a), c.kindOf(b)
+	if ta == isStr || tb == isStr {
+		c.doStr(a, b, bg)
+	} else if ta == isFloat || tb == isFloat {
+		c.doFloat(a, b, bg)
+	} else {
+		c.doNum(a, b, bg)
+	}
+
+}
+
+func makeAssert(v []string) (command, error) {
+	var a string
+	var b string
+	c := &cmdAssert{}
+	if len(v) == 0 {
+		return nil, errors.New("assert nothing")
+	}
+	if v[0] == "!" {
+		c.op = opNot
+		if len(v) > 2 {
+			return nil, errors.New("assert ! variable, but more comes")
+		}
+		a = v[1]
+	} else if len(v) == 1 {
+		a = v[0]
+		if a[0] == '!' {
+			c.op = opNot
+			a = a[1:]
+		} else {
+			c.op = opIs
+		}
+	} else if len(v) == 3 {
+		a, b = v[0], v[2]
+		switch v[1] {
+		case "==":
+			c.op = opEqual
+		case "!=":
+			c.op = opNotEqual
+		case ">":
+			c.op = opGreater
+		case ">=":
+			c.op = opGreaterEqual
+		case "<":
+			c.op = opLess
+		case "<=":
+			c.op = opLessEqual
+		default:
+			return nil, errors.New("invalid operator " + v[1])
+		}
+	} else {
+		return nil, errors.New("assert expect expr as <a op b>")
+	}
+
+	var err error
+	if c.a, err = makeSegments(a); err != nil {
+		return nil, err
+	}
+	if c.b, err = makeSegments(b); err != nil {
+		return nil, err
+	}
+
+	if c.float, err = regexp.Compile("^-?[0-9]+\\.[0-9]*$"); err != nil {
+		return nil, err
+	}
+	if c.num, err = regexp.Compile("^-?[0-9]+$"); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                             lua                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -531,6 +770,13 @@ func parse(str string) (command, error) {
 			}
 		case "write":
 			cmd, err := makeWrite(v[1:])
+			if err != nil {
+				return nil, err
+			} else {
+				pp = append(pp, cmd)
+			}
+		case "assert":
+			cmd, err := makeAssert(v[1:])
 			if err != nil {
 				return nil, err
 			} else {
@@ -654,7 +900,7 @@ func makeSegments(str string) (segments, error) {
 	if phase != phaseString {
 		return nil, fmt.Errorf("parse finish with phase %d", phase)
 	}
-	if len(r)-start > 1 {
+	if len(r) > start {
 		segs = append(segs, staticSegment(r[start:]))
 	}
 
