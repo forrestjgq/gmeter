@@ -43,6 +43,22 @@ func TestSegments(t *testing.T) {
 	enc := base64.StdEncoding.EncodeToString([]byte(base))
 	fenc := base64.StdEncoding.EncodeToString([]byte(content))
 
+	json := `
+	{
+       "bool": true,
+       "int": 3,
+       "float": 3.0,
+       "string": "string",
+       "map": {
+           "k1": "this",
+           "k2": 2
+       },
+       "list": [
+           "line1", "line2"
+       ]
+    }
+`
+	bg.setLocalEnv("JSON", json)
 	m := map[string]string{
 		"LocalEnv: this is something $(LENV)":                                        "LocalEnv: this is something local variable",
 		"GlobalEnv: this is something ${GENV}":                                       "GlobalEnv: this is something global variable",
@@ -67,6 +83,15 @@ func TestSegments(t *testing.T) {
 		"`assert 1.0 <= 1.0 | assert 1.0 < 2.0 | assert 1.0 <= 2.0 | echo $(ERROR)`": "",
 		"`assert !false | assert true | assert !0 | assert 1 | echo $(ERROR)`":       "",
 		"`assert 1 != 1 | echo $(ERROR)`":                                            "ERROR",
+		"`json -e .bool $(JSON) | echo $(ERROR)`":                                    "",
+		"`json  .bool $(JSON)`":                                                      "1",
+		"`json  .int $(JSON) | assert $(OUTPUT) == 3 | echo $(ERROR)`":               "",
+		"`json  .float $(JSON) | assert $(OUTPUT) == 3.0 | echo $(ERROR)`":           "",
+		"`json  .string $(JSON)`":                                                    "string",
+		"`json  .map.k1 $(JSON)`":                                                    "this",
+		"`json  -n .list $(JSON)`":                                                   "2",
+		"`json  .list.[1] $(JSON)`":                                                  "line2",
+		"`json  .list $(JSON) | json [1]. `":                                         "line2",
 	}
 
 	for k, v := range m {

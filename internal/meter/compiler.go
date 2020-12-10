@@ -3,6 +3,7 @@ package meter
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -691,6 +692,181 @@ func makeAssert(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                             json                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdJson struct {
+	path    segments
+	content segments
+	exist   bool
+	numer   bool
+}
+
+func (c *cmdJson) close() {
+	c.content = nil
+	c.path = nil
+}
+
+func (c *cmdJson) find(content string, path string) (interface{}, error) {
+	if len(path) == 0 {
+		return nil, errors.New("invalid json path: " + path)
+	}
+	segs := strings.Split(path, ".")
+
+	var value interface{}
+	if err := json.Unmarshal([]byte(content), &value); err != nil {
+		return nil, err
+	}
+
+	rete := errors.New(path + " not found")
+	for i, key := range segs {
+		if len(key) == 0 {
+			if i > 0 && i < len(segs)-1 {
+				continue
+			}
+			if i > 0 {
+				return value, nil
+			}
+		}
+
+		r := []rune(key)
+		switch c := value.(type) {
+		case []interface{}:
+			if r[0] != '[' || r[len(r)-1] != ']' {
+				return nil, errors.New("expect json list path")
+			}
+			x := string(r[1 : len(r)-1])
+			if x == "" {
+				// key value not change, to support "[].
+			} else {
+				n, err := strconv.ParseInt(x, 10, 32)
+				if err != nil {
+					return nil, err
+				}
+				if int(n) >= len(c) {
+					return nil, errors.New("json index " + x + " overflow")
+				}
+
+				value = c[n]
+			}
+		case map[string]interface{}:
+			if len(key) == 0 {
+				continue
+			}
+			if v, ok := c[key]; ok {
+				value = v
+			} else {
+				return nil, rete
+			}
+		default:
+			return nil, rete
+
+		}
+
+	}
+
+	return value, nil
+}
+func (c *cmdJson) produce(bg *background) {
+	content, err := c.content.compose(bg)
+	if err != nil {
+		bg.setError("json: " + err.Error())
+		return
+	}
+	// do not check content here
+	path, err := c.path.compose(bg)
+	if err != nil {
+		bg.setError("json: " + err.Error())
+		return
+	}
+	if len(path) == 0 {
+		bg.setError("json: empty path")
+		return
+	}
+
+	v, err := c.find(content, path)
+	if err != nil {
+		bg.setError("json: " + err.Error())
+		return
+	}
+	if c.exist {
+		return
+	}
+
+	if c.numer {
+		if c, ok := v.([]interface{}); !ok {
+			bg.setError("json path is not a list")
+		} else {
+			bg.setOutput(strconv.Itoa(len(c)))
+		}
+		return
+	}
+
+	switch c := v.(type) {
+	case bool:
+		if c {
+			bg.setOutput("1")
+		} else {
+			bg.setOutput("0")
+		}
+	case float64:
+		bg.setOutput(strconv.FormatFloat(c, 'f', 8, 64))
+	case string:
+		bg.setOutput(c)
+	case json.Number:
+		bg.setOutput(string(c))
+	case []interface{}:
+		if b, err := json.Marshal(c); err != nil {
+			bg.setError("json marshal: " + err.Error())
+		} else {
+			bg.setOutput(string(b))
+		}
+	case map[string]interface{}:
+		if b, err := json.Marshal(c); err != nil {
+			bg.setError("json marshal: " + err.Error())
+		} else {
+			bg.setOutput(string(b))
+		}
+	}
+}
+
+func makeJson(v []string) (command, error) {
+	content := "$(INPUT)"
+	c := &cmdJson{}
+
+	fs := flag.NewFlagSet("json", flag.ContinueOnError)
+	fs.BoolVar(&c.exist, "e", false, "check if path exists")
+	fs.BoolVar(&c.numer, "n", false, "get number of list item")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
+	}
+	if c.exist && c.numer {
+		return nil, fmt.Errorf("json can not take both -n and -e option")
+	}
+	v = fs.Args()
+	if len(v) > 2 {
+		return nil, fmt.Errorf("json [-n] [-e] <path> [<content>]")
+	}
+	if len(v) < 1 {
+		return nil, fmt.Errorf("json path not specified")
+	}
+	path := v[0]
+	if c.path, err = makeSegments(path); err != nil {
+		return nil, err
+	}
+
+	if len(v) == 2 {
+		content = v[1]
+	}
+
+	if c.content, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                             lua                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -777,6 +953,13 @@ func parse(str string) (command, error) {
 			}
 		case "assert":
 			cmd, err := makeAssert(v[1:])
+			if err != nil {
+				return nil, err
+			} else {
+				pp = append(pp, cmd)
+			}
+		case "json":
+			cmd, err := makeJson(v[1:])
 			if err != nil {
 				return nil, err
 			} else {

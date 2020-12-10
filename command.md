@@ -149,6 +149,10 @@ b64 -f <file>/$(INPUT)
 
 Base64 encode a string or file
 
+## json
+```
+json [-e] [-n] <path> <content>/$(INPUT)
+```
 ## Pipeline
 A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may use `$(INPUT)` as its parameter.
 
