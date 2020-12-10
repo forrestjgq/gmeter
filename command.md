@@ -153,6 +153,46 @@ Base64 encode a string or file
 ```
 json [-e] [-n] <path> <content>/$(INPUT)
 ```
+
+`json` will parse `<content>` or `$(INPUT)` as json, and find `<path>`, write its content to `$(OUTPUT)`; if not found, write empty string.
+
+if `-n` is present, expect `<path>` is array and  write length of this array to `$(OUTPUT)`:
+1. if `<path>` is not found, output 0
+2. if `<path>` is found, but not an array, report error
+3. do not write content of `<path>` to `$(OUTPUT)`
+
+if `-e` is present, report error if `<path>` not found
+
+`<path>` follows these rules:
+1. divided by '.', each part is called a segment
+2. use `[n]` to represent an element of a list, `[]` for whole list
+3. if target json is exepcted as an object(like `{...}`), the first segment is empty, in other word, it starts by '.'
+4. if target json is an array, start by `[]` or `[n]`, here n is a number
+
+Here gives some examples of path:
+```json
+	{
+       "bool": true,
+       "int": 3,
+       "float": 3.0,
+       "string": "string",
+       "map": {
+           "k1": "this",
+           "k2": 2
+       },
+       "list": [
+           "line1", "line2"
+       ]
+    }
+```
+
+- `.bool` is `true`
+- `.string` is `string`
+- `.map.k1` is `this`
+- `.list` is `["line1", "line2"]`
+- `.list.[1]` is `line1`
+
+
 ## Pipeline
 A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may use `$(INPUT)` as its parameter.
 

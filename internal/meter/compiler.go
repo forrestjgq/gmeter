@@ -737,7 +737,7 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 			}
 			x := string(r[1 : len(r)-1])
 			if x == "" {
-				// key value not change, to support "[].
+				// key value not change, to support "[]".
 			} else {
 				n, err := strconv.ParseInt(x, 10, 32)
 				if err != nil {
@@ -785,21 +785,30 @@ func (c *cmdJson) produce(bg *background) {
 	}
 
 	v, err := c.find(content, path)
-	if err != nil {
-		bg.setError("json: " + err.Error())
-		return
-	}
-	if c.exist {
-		return
-	}
 
 	if c.numer {
+		if err != nil {
+			bg.setOutput("0")
+			return
+		}
 		if c, ok := v.([]interface{}); !ok {
 			bg.setError("json path is not a list")
 		} else {
 			bg.setOutput(strconv.Itoa(len(c)))
 		}
 		return
+	}
+
+	if c.exist {
+		if err != nil {
+			bg.setError("json: " + err.Error())
+			return
+		}
+	} else {
+		if err != nil {
+			bg.setOutput("")
+			return
+		}
 	}
 
 	switch c := v.(type) {
