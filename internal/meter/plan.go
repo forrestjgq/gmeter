@@ -64,6 +64,7 @@ func (p *plan) runConcurrent(n int) next {
 	return result
 }
 func (p *plan) run() next {
+	p.bg.setLocalEnv(KeyTest, p.name)
 	if p.concurrent > 1 {
 		return p.runConcurrent(p.concurrent)
 	}

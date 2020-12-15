@@ -84,12 +84,11 @@ type baby struct {
 	err error
 }
 type dynamicFeeder struct {
-	source     map[string]segments
-	c          chan *baby
-	seq        uint64
-	count      uint64
-	concurrent int
-	iterable   bool
+	source   map[string]segments
+	c        chan *baby
+	seq      uint64
+	count    uint64
+	iterable bool
 }
 
 func (f *dynamicFeeder) feed(bg *background) (content, error) {

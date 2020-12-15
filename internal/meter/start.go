@@ -114,7 +114,7 @@ func create(cfg *config.Config) []*plan {
 			if !ok {
 				urls := strings.Split(t.Host, "|")
 				if len(urls) == 0 || len(urls) > 2 {
-					glog.Fatalf("unknown host definition: ", t.Host)
+					glog.Fatal("unknown host definition: ", t.Host)
 				}
 				h := &config.Host{}
 
@@ -129,6 +129,9 @@ func create(cfg *config.Config) []*plan {
 				glog.Fatalf("host %s check fail: %v", t.Host, err)
 			}
 			client, err := loadHTTPClient(h, t.Timeout)
+			if err != nil {
+				glog.Fatalf("load http client fail, err: %v", err)
+			}
 
 			// request
 			str := t.Request
@@ -188,6 +191,9 @@ func create(cfg *config.Config) []*plan {
 			}
 			if rsp != nil && len(rsp.Check) > 0 {
 				csm, err = makeDynamicConsumer(rsp.Check, decision)
+				if err != nil {
+					glog.Fatalf("make test %s consumer fail, err %v", name, err)
+				}
 			}
 
 			runner, err := makeRunner(prv, client, csm)
@@ -216,22 +222,25 @@ func create(cfg *config.Config) []*plan {
 
 	return plans
 }
+
+// Start a test, path is the configure json file path, which must be able to be
+// unmarshal to config.Config
 func Start(path string) {
 	f, err := os.Open(path)
 	if err != nil {
-		glog.Fatalf("config open fail, ", err)
+		glog.Fatal("config open fail, ", err)
 		panic(err)
 	}
 	b, err := ioutil.ReadAll(f)
 	_ = f.Close()
 	if err != nil {
-		glog.Fatalf("read config file fail, ", err)
+		glog.Fatal("read config file fail, ", err)
 	}
 
 	var cfg config.Config
 	err = json.Unmarshal(b, &cfg)
 	if err != nil {
-		glog.Fatalf("unmarshal json fail, ", err)
+		glog.Fatal("unmarshal json fail, ", err)
 	}
 
 	cfg.Options[config.OptionCfgPath] = filepath.Dir(path)
@@ -241,22 +250,31 @@ func Start(path string) {
 		name string
 		res  next
 	}
-	c := make(chan result)
-	for _, p := range plans {
-		go func(t *plan) {
-			n := t.run()
-			c <- result{
-				name: t.name,
-				res:  n,
-			}
-		}(p)
-	}
-
+	// save result
 	results := make(map[string]next)
-	for r := range c {
-		results[r.name] = r.res
-		if len(results) == len(plans) {
-			break
+
+	if cfg.Mode == config.RunConcurrent {
+		c := make(chan result)
+		for _, p := range plans {
+			go func(t *plan) {
+				n := t.run()
+				c <- result{
+					name: t.name,
+					res:  n,
+				}
+			}(p)
+		}
+
+		for r := range c {
+			results[r.name] = r.res
+			if len(results) == len(plans) {
+				break
+			}
+		}
+	} else {
+		for _, p := range plans {
+			n := p.run()
+			results[p.name] = n
 		}
 	}
 

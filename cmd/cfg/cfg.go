@@ -61,7 +61,7 @@ func main() {
 		},
 		Options: map[config.Option]string{
 			config.OptionAbortIfFail: "true",
-			config.OptionDebug:       "true",
+			//config.OptionDebug:       "true",
 		},
 	}
 

@@ -81,6 +81,7 @@ func (s segments) compose(bg *background) (string, error) {
 ////////////////////////////////////////////////////////////////////////////////
 
 type cmdEcho struct {
+	raw     string
 	content segments
 }
 
@@ -94,7 +95,7 @@ func (c *cmdEcho) close() {
 
 func (c *cmdEcho) produce(bg *background) {
 	if content, err := c.content.compose(bg); err != nil {
-		bg.setError("echo: " + err.Error())
+		bg.setError(fmt.Sprintf("echo %s: %v", c.raw, err))
 	} else {
 		bg.setOutput(content)
 	}
@@ -104,12 +105,16 @@ func makeEcho(content string) (command, error) {
 	if len(content) == 0 {
 		content = "$(" + KeyInput + ")"
 	}
+
 	seg, err := makeSegments(content)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cmdEcho{content: seg}, nil
+	return &cmdEcho{
+		raw:     content,
+		content: seg,
+	}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -717,7 +722,7 @@ func makeAssert(v []string) (command, error) {
 		return nil, err
 	}
 
-	if c.float, err = regexp.Compile("^-?[0-9]+\\.[0-9]*$"); err != nil {
+	if c.float, err = regexp.Compile(`^-?[0-9]+\.[0-9]*$`); err != nil {
 		return nil, err
 	}
 	if c.num, err = regexp.Compile("^-?[0-9]+$"); err != nil {

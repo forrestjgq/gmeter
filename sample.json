@@ -49,7 +49,6 @@
         }
     ],
     "Options": {
-        "AbortIfFail": "true",
-        "Debug": "true"
+        "AbortIfFail": "true"
     }
 }

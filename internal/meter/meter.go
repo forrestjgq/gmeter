@@ -7,15 +7,10 @@ import (
 	"github.com/forrestjgq/gomark/gmi"
 )
 
-const (
-	escape byte = '`' // embedded section
-)
-
 type next int
 
 const (
 	nextContinue next = iota
-	nextRetry
 	nextAbortPlan
 	nextAbortAll
 	nextFinished
@@ -29,7 +24,6 @@ const (
 
 	// Local
 	KeyTest     = "TEST"
-	KeySequence = "SEQUENCE"
 	KeyURL      = "URL"
 	KeyRequest  = "REQUEST"
 	KeyStatus   = "STATUS"
