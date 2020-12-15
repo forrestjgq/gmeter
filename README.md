@@ -1,6 +1,18 @@
 # what is gmeter
 go http benchmark and monitor tool, just like jmeter but more configurable.
 
+# install
+
+`go get github.com/forrestjgq/gmeter/cmd/gmeter/...`
+
+# usage
+make sure you've add $GOPATH into your $PATH, then:
+```
+gmeter -config <config>
+```
+`<config>` is configure json file path, a sample can be get [here](./sample.json)
+
+
 # Design Goal
 1. configure with json
 2. msg/template definition 
