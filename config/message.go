@@ -1,4 +1,4 @@
-package gmeter
+package config
 
 import (
 	"encoding/json"
@@ -14,10 +14,7 @@ type Request struct {
 	Body    json.RawMessage
 }
 
-func (m *Request) compile(input *Request) error {
-	return nil
-}
-func (m *Request) check() error {
+func (m *Request) Check() error {
 	if matched, matchErr := regexp.Match("^(/[^/]+)*$", []byte(m.Path)); matchErr != nil {
 		panic("message match regexp invalid")
 	} else if !matched {

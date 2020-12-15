@@ -2,10 +2,13 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
+
+	"github.com/forrestjgq/gmeter/internal/meter"
 
 	"github.com/golang/glog"
 )
@@ -20,25 +23,17 @@ type two struct {
 }
 
 func main() {
-	StartPerf(0)
-	for i := 0; i < 1000000000; i++ {
-		a := &one{
-			t: nil,
-			b: make([]int, 1000),
-		}
-		b := &two{
-			t: nil,
-			b: make([]int, 1000),
-		}
-		for k := range a.b {
-			a.b[k] = k + i
-		}
-		for k := range b.b {
-			b.b[k] = k + i + 1
-		}
-		a.t = b
-		b.t = a
+	cfg := ""
+	flag.StringVar(&cfg, "config", "", "config file path")
+	flag.Parse()
+
+	if len(cfg) == 0 {
+		glog.Fatalf("config file not present")
 	}
+
+	StartPerf(0)
+
+	meter.Start(cfg)
 }
 
 var lperf net.Listener
@@ -74,5 +69,4 @@ func StopPerf() {
 		_ = lperf.Close()
 		lperf = nil
 	}
-
 }

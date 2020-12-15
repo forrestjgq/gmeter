@@ -1,14 +1,8 @@
-package gmeter
+package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
-)
-
-var (
-	markBegin = "`"
-	markEnd   = "`"
 )
 
 type Host struct {
@@ -16,7 +10,7 @@ type Host struct {
 	Proxy string // http://[user:password@]domain[:port]
 }
 
-func (h Host) check() error {
+func (h Host) Check() error {
 	matched, matchErr := regexp.Match("^http://([^@:]+:[^@:]+@)?.*(:[0-9]+)?(/[^?&]+)*$", []byte(h.Host))
 	if matchErr != nil {
 		panic(fmt.Sprintf("http match regexp fail, error: %v", matchErr))
@@ -29,24 +23,32 @@ func (h Host) check() error {
 }
 
 type Test struct {
-	Host    string          // `key` to Config.Hosts, or : [<proxy>|]<host>
-	Request json.RawMessage // `key` to Config.Messages or `fread <file>` or Request it self
-	Check   []string        // `cmd1` | `cmd2` | ..., like: `fwrite <file>`
-	Timeout string          // like "5s", "1m10s", "30ms"...
+	Host     string // `key` to Config.Hosts, or : [<proxy>|]<host>
+	Request  string // `key` to Config.Messages or `<file>`
+	Response *Response
+	Timeout  string // like "5s", "1m10s", "30ms"..., default "1m"
 }
 
 type Option string
 
 const (
-	OptionAbortIfFail Option = "AbortIfFail" // true or false
+	OptionAbortIfFail Option = "AbortIfFail" // true or false, default false
 	OptionSaveFailure Option = "SaveFailure" // to a path
 	OptionSaveReport  Option = "SaveReport"  // to a path
+	OptionCfgPath     Option = "ConfigPath"  // path to config file
+	OptionDebug       Option = "Debug"       // true or false
 )
 
 type Schedule struct {
-	Tests       string // "test1[|test2[|test3...]]", test pipeline composed of one or more tests
-	Count       uint64 // 0 for infinite, or specified count, default 0
-	Concurrency int    // 0 or 1 for one routine, or specified routines, must less than 100000, default: 1 routine
+	Name string
+	// "test1[|test2[|test3...]]", test pipeline composed of one or more tests
+	Tests string
+	// 0 for infinite, or specified count, default 0.
+	// if requests is generated from a list, this field will be ignored
+	Count uint64
+	// 0 or 1 for one routine, or specified routines, must less than 100000, default: 1 routine
+	Concurrency int
+	Env         map[string]string // predefined local variables
 }
 
 type RunMode string

@@ -1,6 +1,14 @@
 package meter
 
+import (
+	"sync"
+)
+
 type category string
+
+const (
+	cmdExit = "exit"
+)
 
 // content that does not take a key defined as explicit category will be
 // considered as http header
@@ -10,7 +18,7 @@ const (
 	catMethod category = "_mtd_"
 	catURL    category = "_url_"
 	catBody   category = "_bdy_"
-	catEnd    category = "_eof_"
+	catCmd    category = "_cmd_"
 )
 
 // feeder provide all possible elements http request requires
@@ -69,7 +77,105 @@ func (fc *feedCombiner) feed(bg *background) (content, error) {
 	return m, nil
 }
 
-func _testFeed() (provider, error) {
-	s, _ := makeStaticProvider("", "", "", 1)
-	return makeFeedProvider(s, &feedCombiner{})
+type baby struct {
+	bg  *background
+	wg  sync.WaitGroup
+	c   content
+	err error
+}
+type dynamicFeeder struct {
+	source     map[string]segments
+	c          chan *baby
+	seq        uint64
+	count      uint64
+	concurrent int
+	iterable   bool
+}
+
+func (f *dynamicFeeder) feed(bg *background) (content, error) {
+	b := &baby{
+		bg: bg,
+	}
+
+	b.wg.Add(1)
+	f.c <- b
+	b.wg.Wait()
+
+	return b.c, b.err
+}
+
+func (f *dynamicFeeder) full() bool {
+	return f.seq >= f.count
+}
+func (f *dynamicFeeder) run() {
+	for b := range f.c {
+		b.c = content{
+			catMethod: "GET",
+			catBody:   "",
+			catURL:    "",
+		}
+
+		if f.full() {
+			b.err = EofError
+			b.wg.Done()
+			continue
+		}
+
+		for k := range b.c {
+			var err error
+			var str string
+			s, ok := f.source[string(k)]
+			if !ok {
+				continue
+			}
+
+			str, err = s.compose(b.bg)
+
+			if f.iterable {
+				// for iterable segments, error is not tolerated, include eof or other error
+				if err != nil {
+					// make it full
+					f.seq++
+				}
+			} else {
+				f.seq++
+			}
+
+			if err != nil {
+				b.err = err
+				break
+			}
+
+			b.c[k] = str
+		}
+
+		b.wg.Done()
+	}
+}
+
+func makeDynamicFeeder(cfg map[string]string, count uint64) (*dynamicFeeder, error) {
+	f := &dynamicFeeder{
+		source: make(map[string]segments),
+		c:      make(chan *baby),
+		count:  count,
+	}
+
+	prop := make(map[string]string)
+	for k, v := range cfg {
+		if s, err := makeSegments(v, func(k, v string) {
+			prop[k] = v
+		}); err != nil {
+			return nil, err
+		} else {
+			f.source[k] = s
+		}
+	}
+	if _, exist := prop["iterable"]; exist {
+		f.iterable = true
+		f.count = 1
+	}
+
+	go f.run()
+
+	return f, nil
 }

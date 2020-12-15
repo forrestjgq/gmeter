@@ -46,10 +46,14 @@ Gmeter command is just like shell, with a few different.
 4. error will be writtern to `$(ERROR)`
 5. GMeter is a case sensitive system.
 
+## echo
+`echo <content>/$(INPUT)`
+
+write `<content>` or `$(INPUT)` to `$(OUTPUT)`
 ## cat
 `cat <path>/$(INPUT)`
 
-Read all file content from given `<path>` and print.
+Read all file content from given `<path>` and write to $(OUTPUT).
 
 ## write
 `write [-c <content>] <path> `
@@ -73,9 +77,9 @@ assert <expr>
 
 assert will report an error if `<expr>` is evaluated as `false`.
 
-`<expr>` accepts two forms: compare and logical judgement:
+`<expr>` accepts two forms: compare and logical judgment:
 
-### compare
+### compare expression
 ```
 a == b
 a != b
@@ -90,13 +94,13 @@ when compare operators are used, it compares both strings or numbers, here is th
 2. when `a` and `b` are numbers, but at least one of them are float number(with a '.' inside), `==` and `!=` will be judged by `abs(a-b)`, if this value is less then `0.00000001`, consider `a == b`, other operators are compared directly.
 3. when `a` or `b` is not number, use string compare, and only `==` and `!=` can be applied, or it will report an error.
 
-### logical judgement
+### logical judgment expression
 ```
 a
 !a
 ```
 
-when logical judgement operators are used, `a` can be 
+when logical judgment operators are used, `a` can be 
 - `1`
 - `0`
 - `true`
@@ -208,7 +212,7 @@ If any command in a pipeline write an error other than "EOF" to `$(ERROR)`, pipe
 ## lua support
 You may embed lua script inside and by read and write variable to communicates with GMeter.
 
-lua script can be embeded inside `<<` and `>>`, multiple lines are supported, or read from file
+lua script can be embedded inside `<<` and `>>`, multiple lines are supported, or read from file
 
 ```sh
 # embedded

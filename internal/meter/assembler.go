@@ -20,15 +20,12 @@ func (a *assembler) run(bg *background) next {
 	return nextContinue
 }
 
-func assembleRunner(runners ...runnable) {
+func assembleRunners(runners ...runnable) *assembler {
 	a := &assembler{}
 	for _, r := range runners {
 		if r != nil {
 			a.runners = append(a.runners, r)
 		}
 	}
-}
-
-func makeAssembler() *assembler {
-	return &assembler{}
+	return a
 }

@@ -1,26 +1,27 @@
 package meter
 
 import (
-	"sync/atomic"
-
 	"github.com/golang/glog"
 )
 
 type plan struct {
-	target runnable
-	bg     background
+	name       string
+	target     runnable
+	bg         *background
+	concurrent int
 }
 
 func (p *plan) runOneByOne() next {
 	for {
-		decision := p.target.run(&p.bg)
-		if decision == nextContinue {
-			p.bg.seq++
-		} else {
+		p.bg.next()
+
+		decision := p.target.run(p.bg)
+		if decision != nextContinue {
 			return decision
 		}
 	}
 }
+
 func (p *plan) runConcurrent(n int) next {
 	if n <= 1 {
 		glog.Errorf("concurrent number is %d, we require it at least 2", n)
@@ -30,12 +31,13 @@ func (p *plan) runConcurrent(n int) next {
 	c := make(chan next)
 	for i := 0; i < n; i++ {
 		go func() {
+			bg := p.bg.dup()
 			for !stop {
-				if decision := p.target.run(&p.bg); decision != nextContinue {
+				bg.next()
+				if decision := p.target.run(bg); decision != nextContinue {
 					// maybe error, may finished
 					c <- decision
 				}
-				atomic.AddInt64(&p.bg.seq, 1)
 			}
 
 			c <- nextAbortPlan
@@ -60,4 +62,10 @@ func (p *plan) runConcurrent(n int) next {
 	}
 
 	return result
+}
+func (p *plan) run() next {
+	if p.concurrent > 1 {
+		return p.runConcurrent(p.concurrent)
+	}
+	return p.runOneByOne()
 }

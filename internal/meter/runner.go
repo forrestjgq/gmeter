@@ -1,10 +1,12 @@
 package meter
 
 import (
-	"io"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
-
-	"github.com/golang/glog"
+	"strconv"
+	"strings"
 
 	"github.com/forrestjgq/gomark"
 )
@@ -19,7 +21,7 @@ type runner struct {
 func (r *runner) run(bg *background) next {
 	var (
 		url      string
-		body     io.ReadCloser
+		body     string
 		headers  map[string]string
 		decision next
 		req      *http.Request
@@ -50,7 +52,15 @@ func (r *runner) run(bg *background) next {
 		return decision
 	}
 
-	if req, err = http.NewRequest(p.getMethod(bg), url, body); err != nil {
+	bg.setLocalEnv(KeyURL, url)
+	bg.setLocalEnv(KeyRequest, body)
+	bg.setLocalEnv(KeyURL, url)
+
+	rd := strings.NewReader(body)
+	debug := bg.getGlobalEnv(KeyDebug) == "true"
+
+	method := p.getMethod(bg)
+	if req, err = http.NewRequest(method, url, rd); err != nil {
 		return c.processFailure(bg, err)
 	}
 
@@ -64,6 +74,14 @@ func (r *runner) run(bg *background) next {
 	if bg.lr != nil {
 		latency = gomark.NewLatency(bg.lr)
 	}
+	if debug {
+		fmt.Printf(`
+--------Request-------------
+URL: %s %s
+Header: %v
+Body: %s
+`, method, url, headers, body)
+	}
 
 	if rsp, err = r.h.Do(req); err != nil {
 		return c.processFailure(bg, err)
@@ -72,11 +90,24 @@ func (r *runner) run(bg *background) next {
 			latency.Mark()
 		}
 
-		decision = c.processResponse(bg, rsp.StatusCode, rsp.Body)
+		b, err := ioutil.ReadAll(rsp.Body)
+		_ = rsp.Body.Close()
 
-		if rsp.Body != nil {
-			_ = rsp.Body.Close()
+		if debug {
+			fmt.Printf(`
+
+--------Response------------
+Status: %d
+Body: %s
+`, rsp.StatusCode, string(b))
 		}
+		if err != nil {
+			return c.processFailure(bg, err)
+		}
+		bg.setLocalEnv(KeyStatus, strconv.Itoa(rsp.StatusCode))
+		bg.setLocalEnv(KeyResponse, string(b))
+		decision = c.processResponse(bg)
+
 	}
 
 	return decision
@@ -84,10 +115,9 @@ func (r *runner) run(bg *background) next {
 
 // makeRunner will create a runner with valid provider.
 // if http.Client h or consumer c is not provided, a default one will be used.
-func makeRunner(p provider, h *http.Client, c consumer) runnable {
+func makeRunner(p provider, h *http.Client, c consumer) (runnable, error) {
 	if p == nil {
-		glog.Error("provider must be provided")
-		return nil
+		return nil, errors.New("provider must be provided")
 	}
 	if h == nil {
 		h = http.DefaultClient
@@ -99,5 +129,5 @@ func makeRunner(p provider, h *http.Client, c consumer) runnable {
 		h: h,
 		p: p,
 		c: c,
-	}
+	}, nil
 }

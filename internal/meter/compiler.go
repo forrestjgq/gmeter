@@ -14,10 +14,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/glog"
+
 	"github.com/forrestjgq/gmeter/internal/argv"
 )
 
 type command interface {
+	iterable() bool
 	produce(bg *background)
 	close()
 }
@@ -81,6 +84,10 @@ type cmdEcho struct {
 	content segments
 }
 
+func (c *cmdEcho) iterable() bool {
+	return false
+}
+
 func (c *cmdEcho) close() {
 	c.content = nil
 }
@@ -113,6 +120,10 @@ type cmdCat struct {
 	static  bool
 	path    segments
 	content []byte
+}
+
+func (c *cmdCat) iterable() bool {
+	return false
 }
 
 func (c *cmdCat) close() {
@@ -168,6 +179,9 @@ type cmdWrite struct {
 	content segments
 }
 
+func (c *cmdWrite) iterable() bool {
+	return false
+}
 func (c *cmdWrite) close() {
 	c.content = nil
 	c.path = nil
@@ -238,6 +252,9 @@ type cmdEnv struct {
 	value    segments
 }
 
+func (c *cmdEnv) iterable() bool {
+	return false
+}
 func (c *cmdEnv) close() {
 	c.variable = nil
 	c.value = nil
@@ -304,9 +321,14 @@ type cmdList struct {
 	scan *bufio.Scanner
 }
 
+func (c *cmdList) iterable() bool {
+	return true
+}
 func (c *cmdList) close() {
 	c.scan = nil
-	_ = c.file.Close()
+	if c.file != nil {
+		_ = c.file.Close()
+	}
 }
 
 func (c *cmdList) produce(bg *background) {
@@ -331,9 +353,11 @@ func (c *cmdList) produce(bg *background) {
 			bg.setOutput(t)
 		} else {
 			bg.setError(EOF)
+			c.close()
 		}
 	} else {
 		bg.setError(EOF)
+		c.close()
 	}
 }
 
@@ -362,6 +386,9 @@ type cmdB64 struct {
 	encoded string
 }
 
+func (c *cmdB64) iterable() bool {
+	return false
+}
 func (c *cmdB64) close() {
 	c.content = nil
 	c.path = nil
@@ -474,10 +501,15 @@ const (
 )
 
 type cmdAssert struct {
+	raw   string
 	a, b  segments
 	op    int
 	float *regexp.Regexp
 	num   *regexp.Regexp
+}
+
+func (c *cmdAssert) iterable() bool {
+	return false
 }
 
 func (c *cmdAssert) close() {
@@ -601,6 +633,7 @@ func (c *cmdAssert) produce(bg *background) {
 		bg.setError("assert: " + err.Error())
 		return
 	}
+	glog.Infof("assert %s %d %s", a, c.op, b)
 	if c.op == opIs {
 		if a == "1" || a == "true" {
 			return
@@ -634,7 +667,9 @@ func (c *cmdAssert) produce(bg *background) {
 func makeAssert(v []string) (command, error) {
 	var a string
 	var b string
-	c := &cmdAssert{}
+	c := &cmdAssert{
+		raw: strings.Join(v, " "),
+	}
 	if len(v) == 0 {
 		return nil, errors.New("assert nothing")
 	}
@@ -702,6 +737,9 @@ type cmdJson struct {
 	numer   bool
 }
 
+func (c *cmdJson) iterable() bool {
+	return false
+}
 func (c *cmdJson) close() {
 	c.content = nil
 	c.path = nil
@@ -884,6 +922,14 @@ func makeJson(v []string) (command, error) {
 ////////////////////////////////////////////////////////////////////////////////
 type pipeline []command
 
+func (p pipeline) iterable() bool {
+	for _, cmd := range p {
+		if cmd.iterable() {
+			return true
+		}
+	}
+	return false
+}
 func (p pipeline) produce(bg *background) {
 	for _, c := range p {
 		bg.setInput(bg.getOutput())
@@ -1004,7 +1050,22 @@ const (
 	phaseString
 )
 
-func makeSegments(str string) (segments, error) {
+type propReceiver func(k, v string)
+
+// makeSegments creates a segment list which will create a string eventually.
+// prop is a callback to receive following properties:
+// - "iterable", if property is sent, it's value is always "1" and indicates this segments is iterable, which
+//               means it self-produces batch of data like reading from list and each compose will produce only
+//               one of them. Iterable segments will generate "EOF" error in the ends of feeding.
+func makeSegments(str string, prop ...propReceiver) (segments, error) {
+	var rx propReceiver
+	if len(prop) > 0 {
+		rx = prop[0]
+	}
+	if rx == nil {
+		rx = func(k, v string) {}
+	}
+
 	r := []rune(str)
 	start := 0
 	phase := phaseString
@@ -1052,6 +1113,9 @@ func makeSegments(str string) (segments, error) {
 					cmd, err := parse(string(r[start:i]))
 					if err != nil {
 						return nil, err
+					}
+					if cmd.iterable() {
+						rx("iterable", "1")
 					}
 					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
 						cmd.produce(bg)

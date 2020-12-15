@@ -1,6 +1,9 @@
 package meter
 
 import (
+	"errors"
+	"sync/atomic"
+
 	"github.com/forrestjgq/gomark/gmi"
 )
 
@@ -19,12 +22,32 @@ const (
 )
 
 const (
-	KeyInput  = "INPUT"
-	KeyOutput = "OUTPUT"
-	KeyError  = "ERROR"
+	// Global
+	KeyDebug    = "DEBUG"
+	KeySchedule = "SCHEDULE"
+	KeyTPath    = "TPATH"
+
+	// Local
+	KeyTest     = "TEST"
+	KeySequence = "SEQUENCE"
+	KeyURL      = "URL"
+	KeyRequest  = "REQUEST"
+	KeyStatus   = "STATUS"
+	KeyResponse = "RESPONSE"
+	KeyInput    = "INPUT"
+	KeyOutput   = "OUTPUT"
+	KeyError    = "ERROR"
 
 	EOF = "EOF"
 )
+
+var (
+	EofError error = errors.New(EOF)
+)
+
+func isEof(err error) bool {
+	return err.Error() == EOF
+}
 
 type simpEnv map[string]string
 
@@ -44,6 +67,13 @@ func (s simpEnv) has(key string) bool {
 	_, ok := s[key]
 	return ok
 }
+func (s simpEnv) dup() env {
+	ret := make(simpEnv)
+	for k, v := range s {
+		ret[k] = v
+	}
+	return ret
+}
 
 func makeSimpEnv() env {
 	return make(simpEnv)
@@ -55,15 +85,44 @@ type env interface {
 	put(key string, value string)
 	delete(key string)
 	has(key string) bool
+	dup() env
 }
+type counter struct {
+	seq uint64
+}
+
+func (c *counter) next() uint64 {
+	return atomic.AddUint64(&c.seq, 1)
+}
+
 type background struct {
-	name          string
-	seq           int64
+	name          string // global test name
+	counter       *counter
+	seq           uint64
 	local, global env
 	lr            gmi.Marker
 	err           error
 }
 
+func (bg *background) dup() *background {
+	return &background{
+		name:    bg.name,
+		counter: bg.counter,
+		local:   bg.local.dup(),
+		global:  bg.global,
+		lr:      bg.lr,
+		err:     bg.err,
+	}
+}
+func (bg *background) next() {
+	bg.cleanup()
+	bg.seq = bg.counter.next()
+}
+func (bg *background) cleanup() {
+	bg.setInput("")
+	bg.setOutput("")
+	bg.setError("")
+}
 func (bg *background) report(err error) {
 	if bg.err != nil {
 		bg.err = err

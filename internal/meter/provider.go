@@ -1,7 +1,6 @@
 package meter
 
 import (
-	"bytes"
 	"errors"
 	"io"
 )
@@ -12,7 +11,7 @@ type provider interface {
 	getMethod(bg *background) string
 	getUrl(bg *background) (string, next)
 	getHeaders(bg *background) (map[string]string, next)
-	getRequestBody(bg *background) (io.ReadCloser, next)
+	getRequestBody(bg *background) (string, next)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -23,22 +22,8 @@ type provider interface {
 type staticProvider struct {
 	url, method string
 	headers     map[string]string
-	count       int64
-
-	body *bytes.Reader
-}
-
-// as ReaderCloser
-////////////////////////////////////////////////////////////////////////////////
-func (s *staticProvider) Read(p []byte) (n int, err error) {
-	if s.body != nil {
-		return s.body.Read(p)
-	}
-	return 0, io.EOF
-}
-
-func (s *staticProvider) Close() error {
-	return nil
+	count       uint64
+	body        string
 }
 
 // as provider
@@ -62,8 +47,8 @@ func (s *staticProvider) getHeaders(bg *background) (map[string]string, next) {
 	return s.headers, nextContinue
 }
 
-func (s *staticProvider) getRequestBody(bg *background) (io.ReadCloser, next) {
-	return s, nextContinue
+func (s *staticProvider) getRequestBody(bg *background) (string, next) {
+	return s.body, nextContinue
 }
 
 func (s *staticProvider) processResponse(bg *background, status int, body io.Reader) next {
@@ -77,17 +62,17 @@ func (s *staticProvider) processFailure(bg *background, err error) next {
 	return nextAbortPlan
 }
 func (s *staticProvider) check() error {
-	if len(s.url) > 0 && len(s.method) > 0 && s.body.Size() > 0 {
+	if len(s.url) > 0 && len(s.method) > 0 {
 		return nil
 	}
 	return errors.New("invalid provider")
 }
 
-func makeStaticProvider(method, url string, body string, count int64) (*staticProvider, error) {
+func makeStaticProvider(method, url string, body string, count uint64) (*staticProvider, error) {
 	s := &staticProvider{
 		url:    url,
 		method: method,
-		body:   bytes.NewReader([]byte(body)),
+		body:   body,
 		count:  count,
 	}
 	if err := s.check(); err != nil {
@@ -108,7 +93,7 @@ type feedProvider struct {
 
 func (f *feedProvider) hasMore(bg *background) next {
 	if err := f.feed(bg); err != nil {
-		if err == io.EOF {
+		if isEof(err) {
 			return nextFinished
 		} else {
 			bg.report(err)
@@ -134,7 +119,7 @@ func (f *feedProvider) getHeaders(bg *background) (map[string]string, next) {
 	return f.s.getHeaders(bg)
 }
 
-func (f *feedProvider) getRequestBody(bg *background) (io.ReadCloser, next) {
+func (f *feedProvider) getRequestBody(bg *background) (string, next) {
 	return f.s.getRequestBody(bg)
 }
 
@@ -151,6 +136,7 @@ func (f *feedProvider) feed(bg *background) error {
 	if err != nil {
 		return err
 	}
+	f.s = &staticProvider{}
 	s := f.s
 	if c != nil {
 		oldHdr := s.headers
@@ -158,7 +144,7 @@ func (f *feedProvider) feed(bg *background) error {
 		for k, v := range c {
 			switch k {
 			case catBody:
-				s.body = bytes.NewReader([]byte(v))
+				s.body = v
 			case catMethod:
 				s.method = v
 			case catURL:
@@ -174,12 +160,12 @@ func (f *feedProvider) feed(bg *background) error {
 	return nil
 }
 
-func makeFeedProvider(s *staticProvider, feeder feeder) (provider, error) {
-	if s == nil || feeder == nil {
+func makeFeedProvider(feeder feeder) (provider, error) {
+	if feeder == nil {
 		return nil, errors.New("invalid feed provider")
 	}
 	p := &feedProvider{
-		s:      s,
+		s:      &staticProvider{},
 		feeder: feeder,
 	}
 
