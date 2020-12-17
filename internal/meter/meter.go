@@ -2,6 +2,7 @@ package meter
 
 import (
 	"errors"
+	"fmt"
 	"sync/atomic"
 
 	"github.com/forrestjgq/gomark/gmi"
@@ -140,6 +141,10 @@ func (bg *background) setOutput(value string) {
 }
 func (bg *background) setError(value string) {
 	bg.local.put(KeyError, value)
+}
+func (bg *background) setErrorf(format string, a ...interface{}) {
+	err := fmt.Errorf(format, a...)
+	bg.local.put(KeyError, err.Error())
 }
 
 func (bg *background) getLocalEnv(key string) string {

@@ -18,7 +18,12 @@
                     "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg",
                     "url2": "/home/vse/depends/res/12imagesall/6_002696.jpg",
                     "url3": "/home/vse/depends/res/12imagesall/1_005235.jpg",
-                    "url4": "/home/vse/depends/res/nonv.jpg"
+                    "url4": "/home/vse/depends/res/nonv.jpg",
+                    "date": "`echo 1|cvt -d`",
+                    "bool1": "`echo 1|cvt -b`",
+                    "bool0": "`echo 0|cvt -b`",
+                    "boolf": "`echo false|cvt -b`",
+                    "boolt": "`echo true|cvt -b`"
                 }
             }
         }

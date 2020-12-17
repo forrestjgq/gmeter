@@ -68,5 +68,6 @@ type Response struct {
 	// select .d[?].e == false | .f > 1, select from ".d" array where ".e" is "false", then pass element to next pipe
 	//        which is ".f > 1" to judge value
 	// select .d[*] | .
-	Check []string
+	Check    []string
+	Template json.RawMessage
 }

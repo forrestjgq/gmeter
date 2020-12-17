@@ -73,7 +73,118 @@ func (s segments) compose(bg *background) (string, error) {
 		return "", nil
 	}
 
+	killFirstQuote := false
+	for i, s := range arr {
+		if len(s) == 0 {
+			continue
+		}
+		if s[0] == '`' && s[len(s)-1] == '`' {
+			arr[i] = s[1 : len(s)-1]
+			if i > 0 {
+				prev := arr[i-1]
+				if len(prev) > 0 && prev[len(prev)-1] == '"' {
+					arr[i-1] = prev[:len(prev)-1]
+				}
+			}
+			killFirstQuote = true
+			continue
+		}
+		if killFirstQuote && s[0] == '"' {
+			arr[i] = s[1:]
+		}
+		killFirstQuote = false
+	}
 	return strings.Join(arr, ""), nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                             cvt                           ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdCvt struct {
+	raw     string
+	content segments
+	toNum   bool
+	toBool  bool
+	exp     *regexp.Regexp
+}
+
+func (c *cmdCvt) iterable() bool {
+	return false
+}
+
+func (c *cmdCvt) close() {
+	c.content = nil
+}
+
+func (c *cmdCvt) produce(bg *background) {
+	if content, err := c.content.compose(bg); err != nil {
+		bg.setErrorf("cvt(%s) compose fail: %v", c.raw, err)
+	} else {
+		if c.toBool {
+			if content == "0" || content == "false" {
+				bg.setOutput("`false`")
+			} else if content == "1" || content == "true" {
+				bg.setOutput("`true`")
+			} else {
+				bg.setErrorf("cvt(%s) convert to bool fail: %s", c.raw, content)
+			}
+		} else if c.toNum {
+			if !c.exp.MatchString(content) {
+				bg.setErrorf("cvt(%s) convert to number fail: %s", c.raw, content)
+			} else {
+				bg.setOutput("`" + content + "`")
+			}
+		} else {
+			bg.setOutput(content)
+		}
+	}
+}
+
+func makeCvt(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+
+	fs := flag.NewFlagSet("cvt", flag.ContinueOnError)
+	boolVal := false
+	numVal := false
+	fs.BoolVar(&boolVal, "b", false, "convert to bool")
+	fs.BoolVar(&numVal, "d", false, "convert to number")
+
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
+	}
+	if boolVal && numVal {
+		return nil, fmt.Errorf("cvt(%s) convert to bool and number is not acceptable", raw)
+	}
+
+	content := "$(" + KeyInput + ")"
+
+	v = fs.Args()
+	if len(v) == 1 {
+		content = v[1]
+	} else if len(v) > 1 {
+		return nil, fmt.Errorf("cvt(%s) invalid args", raw)
+	}
+
+	seg, err := makeSegments(content)
+	if err != nil {
+		return nil, err
+	}
+	c := &cmdCvt{
+		raw:     raw,
+		content: seg,
+		toBool:  boolVal,
+		toNum:   numVal,
+	}
+	if numVal {
+		exp, err := regexp.Compile(`^-?[0-9.]+(e-?[0-9]+)?$`)
+		if err != nil {
+			glog.Fatalf("compile number expr fail, err %v", err)
+		}
+		c.exp = exp
+	}
+	return c, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -95,15 +206,20 @@ func (c *cmdEcho) close() {
 
 func (c *cmdEcho) produce(bg *background) {
 	if content, err := c.content.compose(bg); err != nil {
-		bg.setError(fmt.Sprintf("echo %s: %v", c.raw, err))
+		bg.setErrorf("echo %s compose fail: %v", c.raw, err)
 	} else {
 		bg.setOutput(content)
 	}
 }
 
-func makeEcho(content string) (command, error) {
-	if len(content) == 0 {
-		content = "$(" + KeyInput + ")"
+func makeEcho(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	content := "$(" + KeyInput + ")"
+
+	if len(v) == 1 {
+		content = v[0]
+	} else if len(v) > 1 {
+		return nil, fmt.Errorf("echo(%s) invalid args", raw)
 	}
 
 	seg, err := makeSegments(content)
@@ -112,7 +228,7 @@ func makeEcho(content string) (command, error) {
 	}
 
 	return &cmdEcho{
-		raw:     content,
+		raw:     raw,
 		content: seg,
 	}, nil
 }
@@ -125,6 +241,7 @@ type cmdCat struct {
 	static  bool
 	path    segments
 	content []byte
+	raw     string
 }
 
 func (c *cmdCat) iterable() bool {
@@ -139,15 +256,15 @@ func (c *cmdCat) produce(bg *background) {
 	if len(c.content) == 0 {
 		path, err := c.path.compose(bg)
 		if err != nil {
-			bg.setError("cat: " + err.Error())
+			bg.setErrorf("cat(%s) compose path fail, error: %v", c.raw, err)
 			return
 		}
 
 		if f, err := os.Open(filepath.Clean(path)); err != nil {
-			bg.setError("cat: " + err.Error())
+			bg.setErrorf("cat(%s) %s: %v", c.raw, path, err)
 		} else {
 			if b, err1 := ioutil.ReadAll(f); err1 != nil {
-				bg.setError("cat: " + err1.Error())
+				bg.setErrorf("cat(%s) read file %s fail: %v", c.raw, path, err1)
 			} else {
 				if c.static {
 					c.content = b
@@ -161,9 +278,14 @@ func (c *cmdCat) produce(bg *background) {
 	}
 }
 
-func makeCat(path string) (command, error) {
-	if len(path) == 0 {
-		path = "$(" + KeyInput + ")"
+func makeCat(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+
+	path := "$(" + KeyInput + ")"
+	if len(v) == 1 {
+		path = v[0]
+	} else if len(v) > 1 {
+		return nil, fmt.Errorf("cat invalid: %v", v)
 	}
 	seg, err := makeSegments(path)
 	if err != nil {
@@ -171,6 +293,7 @@ func makeCat(path string) (command, error) {
 	}
 
 	return &cmdCat{
+		raw:    raw,
 		path:   seg,
 		static: seg.isStatic(),
 	}, nil
@@ -182,6 +305,7 @@ func makeCat(path string) (command, error) {
 type cmdWrite struct {
 	path    segments
 	content segments
+	raw     string
 }
 
 func (c *cmdWrite) iterable() bool {
@@ -195,31 +319,32 @@ func (c *cmdWrite) close() {
 func (c *cmdWrite) produce(bg *background) {
 	content, err := c.content.compose(bg)
 	if err != nil {
-		bg.setError("write: " + err.Error())
+		bg.setErrorf("write(%s) command compose content fail: %v", c.raw, err)
 		return
 	}
 	// do not check content here
 	path, err := c.path.compose(bg)
 	if err != nil {
-		bg.setError("write: " + err.Error())
+		bg.setErrorf("write(%s) compose path fail: %v", c.raw, err)
 		return
 	}
 	if len(path) == 0 {
-		bg.setError("write: empty file path")
+		bg.setErrorf("write(%s) compose empty file path", c.raw)
 		return
 	}
 
 	if f, err := os.Create(filepath.Clean(path)); err != nil {
-		bg.setError("write: " + err.Error())
+		bg.setErrorf("write(%s) create file %s fail: %v", c.raw, path, err)
 	} else {
 		if _, err1 := f.WriteString(content); err1 != nil {
-			bg.setError("write: " + err1.Error())
+			bg.setErrorf("write(%s) write file %s fail: %v", c.raw, path, err1)
 		}
 		_ = f.Close()
 	}
 }
 
 func makeWrite(v []string) (command, error) {
+	raw := strings.Join(v, " ")
 	content := ""
 	fs := flag.NewFlagSet("write", flag.ContinueOnError)
 	fs.StringVar(&content, "c", "$(INPUT)", "content to write to file, default using local input")
@@ -232,7 +357,7 @@ func makeWrite(v []string) (command, error) {
 		return nil, fmt.Errorf("write path not specified")
 	}
 	path := v[0]
-	c := &cmdWrite{}
+	c := &cmdWrite{raw: raw}
 	if c.path, err = makeSegments(path); err != nil {
 		return nil, err
 	}
@@ -255,6 +380,7 @@ type cmdEnv struct {
 	op       int
 	variable segments
 	value    segments
+	raw      string
 }
 
 func (c *cmdEnv) iterable() bool {
@@ -268,7 +394,7 @@ func (c *cmdEnv) close() {
 func (c *cmdEnv) produce(bg *background) {
 	variable, err := c.variable.compose(bg)
 	if err != nil {
-		bg.setError("env: " + err.Error())
+		bg.setErrorf("env(%s) compose variable fail: %v", c.raw, err)
 		return
 	}
 	if c.op == envDelete {
@@ -276,16 +402,17 @@ func (c *cmdEnv) produce(bg *background) {
 	} else if c.op == envWrite {
 		value, err := c.value.compose(bg)
 		if err != nil {
-			bg.setError("env: " + err.Error())
+			bg.setErrorf("env(%s) compose value fail: %v", c.raw, err)
 			return
 		}
 		bg.setLocalEnv(variable, value)
 	} else {
-		bg.setError("env: unknown operator " + strconv.Itoa(c.op))
+		bg.setErrorf("env(%s): unknown operator %d", c.raw, c.op)
 	}
 }
 
 func makeEnvw(v []string) (command, error) {
+	raw := strings.Join(v, " ")
 	content := ""
 	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
 	fs.StringVar(&content, "c", "$(INPUT)", "content to write to local environment, default using local input")
@@ -295,10 +422,13 @@ func makeEnvw(v []string) (command, error) {
 	}
 	v = fs.Args()
 	if len(v) != 1 {
-		return nil, fmt.Errorf("write path not specified")
+		return nil, fmt.Errorf("envw variable not provided")
 	}
 	variable := v[0]
-	c := &cmdEnv{op: envWrite}
+	c := &cmdEnv{
+		raw: raw,
+		op:  envWrite,
+	}
 	if c.variable, err = makeSegments(variable); err != nil {
 		return nil, err
 	}
@@ -308,8 +438,9 @@ func makeEnvw(v []string) (command, error) {
 	return c, nil
 }
 func makeEnvd(v []string) (command, error) {
+	raw := strings.Join(v, " ")
 	variable := v[0]
-	c := &cmdEnv{op: envDelete}
+	c := &cmdEnv{op: envDelete, raw: raw}
 	var err error
 	if c.variable, err = makeSegments(variable); err != nil {
 		return nil, err
@@ -324,6 +455,7 @@ type cmdList struct {
 	path segments
 	file *os.File
 	scan *bufio.Scanner
+	raw  string
 }
 
 func (c *cmdList) iterable() bool {
@@ -341,12 +473,12 @@ func (c *cmdList) produce(bg *background) {
 		var err error
 		path, err := c.path.compose(bg)
 		if err != nil {
-			bg.setError("list: " + err.Error())
+			bg.setErrorf("list(%s) compose path fail: %v", c.raw, err)
 			return
 		}
 		c.file, err = os.Open(filepath.Clean(path))
 		if err != nil {
-			bg.setError("list: " + err.Error())
+			bg.setErrorf("list(%s) open file %s fail: %v", c.raw, path, err)
 			return
 		}
 		c.scan = bufio.NewScanner(c.file)
@@ -366,7 +498,11 @@ func (c *cmdList) produce(bg *background) {
 	}
 }
 
-func makeList(path string) (command, error) {
+func makeList(v []string) (command, error) {
+	if len(v) != 1 {
+		return nil, fmt.Errorf("list invalid: %v", v)
+	}
+	path := v[0]
 	if len(path) == 0 {
 		return nil, errors.New("list file path not provided")
 	}
@@ -375,6 +511,7 @@ func makeList(path string) (command, error) {
 		return nil, err
 	}
 	return &cmdList{
+		raw:  strings.Join(v, " "),
 		path: seg,
 	}, nil
 }
@@ -384,6 +521,7 @@ func makeList(path string) (command, error) {
 ////////////////////////////////////////////////////////////////////////////////
 
 type cmdB64 struct {
+	raw     string
 	file    bool
 	static  bool
 	path    segments
@@ -406,21 +544,21 @@ func (c *cmdB64) produce(bg *background) {
 		if c.file {
 			path, err := c.path.compose(bg)
 			if err != nil {
-				bg.setError("b64: " + err.Error())
+				bg.setErrorf("b64(%s) compose path fail: %v", c.raw, err)
 				return
 			}
 
 			if len(path) == 0 {
-				bg.setError("cat: file path is empty")
+				bg.setErrorf("b64(%s): file path is empty", c.raw)
 				return
 			}
 
 			if f, err := os.Open(filepath.Clean(path)); err != nil {
-				bg.setError(err.Error())
+				bg.setErrorf("b64(%s) open file %s fail: %v", c.raw, path, err)
 				return
 			} else {
 				if b, err1 := ioutil.ReadAll(f); err1 != nil {
-					bg.setError("cat: " + err1.Error())
+					bg.setErrorf("b64(%s) read file %s fail: %v", c.raw, path, err)
 					_ = f.Close()
 					return
 				} else {
@@ -430,7 +568,7 @@ func (c *cmdB64) produce(bg *background) {
 			}
 		} else {
 			if encoded, err = c.content.compose(bg); err != nil {
-				bg.setError("b64: " + err.Error())
+				bg.setErrorf("b64(%s) compose content fail: %v", c.raw, err)
 				return
 			}
 		}
@@ -446,6 +584,9 @@ func (c *cmdB64) produce(bg *background) {
 }
 
 func makeBase64(v []string) (command, error) {
+	c := &cmdB64{
+		raw: strings.Join(v, " "),
+	}
 	content := ""
 	path := ""
 	file := false
@@ -472,7 +613,7 @@ func makeBase64(v []string) (command, error) {
 		return nil, fmt.Errorf("b64 parse error, unknown: %v", v)
 	}
 
-	c := &cmdB64{file: file}
+	c.file = file
 	c.path, err = makeSegments(path)
 	if err != nil {
 		return nil, err
@@ -955,7 +1096,7 @@ func parse(str string) (command, error) {
 		return s, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse %s fail, err: %v", str, err)
 	}
 
 	var pp pipeline
@@ -963,84 +1104,37 @@ func parse(str string) (command, error) {
 		if len(v) == 0 {
 			continue
 		}
+		args := v[1:]
+		var cmd command
 
 		switch v[0] {
 		case "echo":
-			content := ""
-			if len(v) == 2 {
-				content = v[1]
-			} else if len(v) > 2 {
-				return nil, fmt.Errorf("echo invalid: %v", v)
-			}
-			if cmd, err := makeEcho(content); err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeEcho(args)
 		case "cat":
-			path := ""
-			if len(v) == 2 {
-				path = v[1]
-			} else if len(v) > 2 {
-				return nil, fmt.Errorf("cat invalid: %v", v)
-			}
-			if cmd, err := makeCat(path); err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
-
+			cmd, err = makeCat(args)
 		case "envw":
-			cmd, err := makeEnvw(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeEnvw(args)
 		case "envd":
-			cmd, err := makeEnvd(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeEnvd(args)
 		case "write":
-			cmd, err := makeWrite(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeWrite(args)
 		case "assert":
-			cmd, err := makeAssert(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeAssert(args)
 		case "json":
-			cmd, err := makeJson(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeJson(args)
 		case "list":
-			if len(v) != 2 {
-				return nil, fmt.Errorf("list invalid: %v", v)
-			}
-			if cmd, err := makeList(v[1]); err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeList(args)
 		case "b64":
-			cmd, err := makeBase64(v[1:])
-			if err != nil {
-				return nil, err
-			} else {
-				pp = append(pp, cmd)
-			}
+			cmd, err = makeBase64(args)
+		case "cvt":
+			cmd, err = makeCvt(args)
+		default:
+			err = fmt.Errorf("cmd %s not supported", v[0])
+		}
+		if err != nil {
+			return nil, fmt.Errorf("parse %s fail, err: %v", str, err)
+		} else {
+			pp = append(pp, cmd)
 		}
 	}
 

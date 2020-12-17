@@ -46,6 +46,41 @@ Gmeter command is just like shell, with a few different.
 4. error will be writtern to `$(ERROR)`
 5. GMeter is a case sensitive system.
 
+## cvt
+`cvt [-b] [-d] <content>/$(INPUT)`
+
+convert `<content>` or `$(INPUT)` to a bool(`-b`) or number(`-d`).
+
+This is used in json boolean value or number value representation. While we need produce a boolean or number as value of json, quote is not allowed to wrap it. For example:
+```json
+{
+    "number": 1.0
+}
+```
+here `1.0` can not be wrapped with quotes:
+
+```json
+{
+    "number": "1.0"
+}
+```
+`"1.0"` will be considered as a string.
+
+Now if we use command to produce number:
+```json
+{
+    "number": "`echo 1.0`"
+}
+```
+we'll get `"1.0"` instead of `1.0`.
+
+To support value of boolean and number, you need append a command `cvt [-b]/[-d]`:
+```json
+{
+    "number": "`echo 1.0 | cvt -d`"
+}
+```
+
 ## echo
 `echo <content>/$(INPUT)`
 
