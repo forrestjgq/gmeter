@@ -7,23 +7,16 @@ import (
 	"github.com/forrestjgq/gmeter/config"
 )
 
+var reqstr = "{ \"image\": { \"url\": \"$(IMAGE)\" }, \"roi\": { \"X\": \"`cvt -i $(X)`\", \"Y\": \"`cvt -i $(Y)`\", \"W\": \"`cvt -i $(W)`\", \"H\": \"`cvt -i $(H)`\"}}"
+
 func main() {
 	req := &config.Request{
 		Method: "POST",
-		Path:   "/ai/detect/all",
+		Path:   "/debug/detect/face",
 		Headers: map[string]string{
 			"content-type": "application/json",
 		},
-		Body: json.RawMessage(`
-{
-  "image": {
-      "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg",
-      "url2": "/home/vse/depends/res/12imagesall/6_002696.jpg",
-      "url3": "/home/vse/depends/res/12imagesall/1_005235.jpg",
-      "url4": "/home/vse/depends/res/nonv.jpg"
-  }
-}
-`),
+		Body: json.RawMessage(reqstr),
 	}
 	cfg := config.Config{
 		Name: "sample",
@@ -38,13 +31,22 @@ func main() {
 		},
 		Tests: map[string]*config.Test{
 			"recognize": &config.Test{
+				PreProcess: []string{
+					"`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
+					"`json .image $(JSON) | envw IMAGE`",
+					"`json .x $(JSON) | envw X`",
+					"`json .y $(JSON) | envw Y`",
+					"`json .w $(JSON) | envw W`",
+					"`json .h $(JSON) | envw H`",
+				},
 				Host:    "vse",
 				Request: "req",
 				Response: &config.Response{Check: []string{
-					"`assert $(STATUS) == 200`",
-					"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
-					"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
-					"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
+					//"`assert $(STATUS) == 200`",
+					//"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
+					//"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
+					//"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
+					"`report`",
 				}},
 				Timeout: "10s",
 			},
@@ -53,15 +55,21 @@ func main() {
 		Schedules: []*config.Schedule{
 			&config.Schedule{
 				Name:        "recog-image",
+				PreProcess:  []string{},
 				Tests:       "recognize",
-				Count:       1000,
+				Count:       0,
 				Concurrency: 1,
 				Env:         nil,
+				Reporter: config.Report{
+					Path: "report.log",
+					//Format: "`json .Result.Faces.[0].Features $(RESPONSE)`\n",
+					Format: "$(W): $(RESPONSE)\n",
+				},
 			},
 		},
 		Options: map[config.Option]string{
 			config.OptionAbortIfFail: "true",
-			//config.OptionDebug:       "true",
+			config.OptionDebug:       "true",
 		},
 	}
 

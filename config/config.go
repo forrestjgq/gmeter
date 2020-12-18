@@ -23,26 +23,32 @@ func (h Host) Check() error {
 }
 
 type Test struct {
-	Host     string // `key` to Config.Hosts, or : [<proxy>|]<host>
-	Request  string // `key` to Config.Messages or `<file>`
-	Response *Response
-	Timeout  string // like "5s", "1m10s", "30ms"..., default "1m"
+	PreProcess []string // processing before each HTTP request
+	Host       string   // `key` to Config.Hosts, or : [<proxy>|]<host>
+	Request    string   // `key` to Config.Messages or `<file>`
+	Response   *Response
+	Timeout    string // like "5s", "1m10s", "30ms"..., default "1m"
 }
 
 type Option string
 
 const (
 	OptionAbortIfFail Option = "AbortIfFail" // true or false, default false
-	OptionSaveFailure Option = "SaveFailure" // to a path
-	OptionSaveReport  Option = "SaveReport"  // to a path
-	OptionCfgPath     Option = "ConfigPath"  // path to config file
+	OptionCfgPath     Option = "ConfigPath"  // path to config file, set by gmeter
 	OptionDebug       Option = "Debug"       // true or false
 )
 
+type Report struct {
+	Path   string
+	Format string // like: $(RESPONSE), or "{\"Request\": $(Request), \"Status\": $(STATUS), \"Response\": $(Response)}\n"
+}
 type Schedule struct {
 	Name string
+	// processing before each tests runs
+	PreProcess []string
 	// "test1[|test2[|test3...]]", test pipeline composed of one or more tests
-	Tests string
+	Tests    string
+	Reporter Report
 	// 0 for infinite, or specified count, default 0.
 	// if requests is generated from a list, this field will be ignored
 	Count uint64

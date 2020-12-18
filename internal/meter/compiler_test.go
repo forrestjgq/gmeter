@@ -92,6 +92,7 @@ func TestSegments(t *testing.T) {
 		"`json  -n .list $(JSON)`":                                                   "2",
 		"`json  .list.[1] $(JSON)`":                                                  "line2",
 		"`json  .list $(JSON) | json [1]. `":                                         "line2",
+		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
 	}
 
 	for k, v := range m {

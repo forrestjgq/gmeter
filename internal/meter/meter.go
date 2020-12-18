@@ -3,6 +3,7 @@ package meter
 import (
 	"errors"
 	"fmt"
+	"io"
 	"sync/atomic"
 
 	"github.com/forrestjgq/gomark/gmi"
@@ -97,8 +98,15 @@ type background struct {
 	local, global env
 	lr            gmi.Marker
 	err           error
+	rptc          chan string
+	rptf          io.WriteCloser
+	rptFormater   segments
 }
 
+// globalClose should only be called by root background
+func (bg *background) globalClose() {
+	close(bg.rptc)
+}
 func (bg *background) dup() *background {
 	return &background{
 		name:    bg.name,
@@ -106,7 +114,8 @@ func (bg *background) dup() *background {
 		local:   bg.local.dup(),
 		global:  bg.global,
 		lr:      bg.lr,
-		err:     bg.err,
+		rptc:    bg.rptc,
+		rptf:    bg.rptf,
 	}
 }
 func (bg *background) next() {
@@ -118,9 +127,34 @@ func (bg *background) cleanup() {
 	bg.setOutput("")
 	bg.setError("")
 }
-func (bg *background) report(err error) {
-	if bg.err != nil {
-		bg.err = err
+func (bg *background) waitReport() {
+	for c := range bg.rptc {
+		if bg.rptf != nil {
+			_, _ = bg.rptf.Write([]byte(c))
+		}
+	}
+	if bg.rptf != nil {
+		_ = bg.rptf.Close()
+	}
+}
+func (bg *background) requireReport() bool {
+	return bg.rptc != nil
+}
+func (bg *background) reportDefault() {
+	if bg.requireReport() {
+		if bg.rptFormater != nil {
+			str, err := bg.rptFormater.compose(bg)
+			if err != nil {
+				bg.setError(err.Error())
+			} else {
+				bg.report(str)
+			}
+		}
+	}
+}
+func (bg *background) report(content string) {
+	if bg.requireReport() {
+		bg.rptc <- content
 	}
 }
 func (bg *background) getInput() string {
@@ -131,6 +165,9 @@ func (bg *background) getOutput() string {
 }
 func (bg *background) getError() string {
 	return bg.local.get(KeyError)
+}
+func (bg *background) hasError() bool {
+	return len(bg.local.get(KeyError)) > 0
 }
 
 func (bg *background) setInput(value string) {

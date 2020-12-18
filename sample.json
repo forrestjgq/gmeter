@@ -9,36 +9,41 @@
     "Messages": {
         "req": {
             "Method": "POST",
-            "Path": "/ai/detect/all",
+            "Path": "/debug/detect/all",
             "Headers": {
                 "content-type": "application/json"
             },
             "Body": {
                 "image": {
-                    "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg",
-                    "url2": "/home/vse/depends/res/12imagesall/6_002696.jpg",
-                    "url3": "/home/vse/depends/res/12imagesall/1_005235.jpg",
-                    "url4": "/home/vse/depends/res/nonv.jpg",
-                    "date": "`echo 1|cvt -d`",
-                    "bool1": "`echo 1|cvt -b`",
-                    "bool0": "`echo 0|cvt -b`",
-                    "boolf": "`echo false|cvt -b`",
-                    "boolt": "`echo true|cvt -b`"
+                    "url": "$(IMAGE)"
+                },
+                "roi": {
+                    "X": "`cvt -i $(X)`",
+                    "Y": "`cvt -i $(Y)`",
+                    "W": "`cvt -i $(W)`",
+                    "H": "`cvt -i $(H)`"
                 }
             }
         }
     },
     "Tests": {
         "recognize": {
+            "PreProcess": [
+                "`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
+                "`json .image $(JSON) | envw IMAGE`",
+                "`json .roi.[0] $(JSON) | envw X`",
+                "`json .roi.[1] $(JSON) | envw Y`",
+                "`json .roi.[2] $(JSON) | envw W`",
+                "`json .roi.[3] $(JSON) | envw H`"
+            ],
             "Host": "vse",
             "Request": "req",
             "Response": {
                 "Check": [
-                    "`assert $(STATUS) == 200`",
-                    "`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
-                    "`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
-                    "`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`"
-                ]
+                    "`assert $(STATUS) != 200`",
+                    "`report`"
+                ],
+                "Template": null
             },
             "Timeout": "10s"
         }
@@ -47,13 +52,19 @@
     "Schedules": [
         {
             "Name": "recog-image",
+            "PreProcess": [],
             "Tests": "recognize",
-            "Count": 1000,
+            "Reporter": {
+                "Path": "report.log",
+                "Format": "{\"err\": $(ERROR), \"status\": $(STATUS), \"response\": $(RESPONSE)}\n"
+            },
+            "Count": 0,
             "Concurrency": 1,
             "Env": null
         }
     ],
     "Options": {
-        "AbortIfFail": "true"
+        "AbortIfFail": "true",
+        "Debug": "true"
     }
 }

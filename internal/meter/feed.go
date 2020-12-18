@@ -2,6 +2,8 @@ package meter
 
 import (
 	"sync"
+
+	"github.com/golang/glog"
 )
 
 type category string
@@ -96,6 +98,7 @@ func (f *dynamicFeeder) feed(bg *background) (content, error) {
 		bg: bg,
 	}
 
+	glog.Error("Feed one")
 	b.wg.Add(1)
 	f.c <- b
 	b.wg.Wait()
@@ -104,6 +107,9 @@ func (f *dynamicFeeder) feed(bg *background) (content, error) {
 }
 
 func (f *dynamicFeeder) full() bool {
+	if f.count == 0 {
+		return false
+	}
 	return f.seq >= f.count
 }
 func (f *dynamicFeeder) run() {
@@ -136,8 +142,6 @@ func (f *dynamicFeeder) run() {
 					// make it full
 					f.seq++
 				}
-			} else {
-				f.seq++
 			}
 
 			if err != nil {
@@ -147,7 +151,7 @@ func (f *dynamicFeeder) run() {
 
 			b.c[k] = str
 		}
-
+		f.seq++
 		b.wg.Done()
 	}
 }

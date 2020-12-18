@@ -104,7 +104,8 @@ func (s segments) compose(bg *background) (string, error) {
 type cmdCvt struct {
 	raw     string
 	content segments
-	toNum   bool
+	toInt   bool
+	toFloat bool
 	toBool  bool
 	exp     *regexp.Regexp
 }
@@ -129,10 +130,20 @@ func (c *cmdCvt) produce(bg *background) {
 			} else {
 				bg.setErrorf("cvt(%s) convert to bool fail: %s", c.raw, content)
 			}
-		} else if c.toNum {
+		} else if c.toFloat {
 			if !c.exp.MatchString(content) {
 				bg.setErrorf("cvt(%s) convert to number fail: %s", c.raw, content)
 			} else {
+				bg.setOutput("`" + content + "`")
+			}
+		} else if c.toInt {
+			if !c.exp.MatchString(content) {
+				bg.setErrorf("cvt(%s) convert to number fail: %s", c.raw, content)
+			} else {
+				idx := strings.Index(content, ".")
+				if idx >= 0 {
+					content = content[:idx]
+				}
 				bg.setOutput("`" + content + "`")
 			}
 		} else {
@@ -146,23 +157,22 @@ func makeCvt(v []string) (command, error) {
 
 	fs := flag.NewFlagSet("cvt", flag.ContinueOnError)
 	boolVal := false
-	numVal := false
+	floatVal := false
+	intVal := false
 	fs.BoolVar(&boolVal, "b", false, "convert to bool")
-	fs.BoolVar(&numVal, "d", false, "convert to number")
+	fs.BoolVar(&floatVal, "f", false, "convert to float number")
+	fs.BoolVar(&intVal, "i", false, "convert to integer number")
 
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, err
-	}
-	if boolVal && numVal {
-		return nil, fmt.Errorf("cvt(%s) convert to bool and number is not acceptable", raw)
 	}
 
 	content := "$(" + KeyInput + ")"
 
 	v = fs.Args()
 	if len(v) == 1 {
-		content = v[1]
+		content = v[0]
 	} else if len(v) > 1 {
 		return nil, fmt.Errorf("cvt(%s) invalid args", raw)
 	}
@@ -175,9 +185,17 @@ func makeCvt(v []string) (command, error) {
 		raw:     raw,
 		content: seg,
 		toBool:  boolVal,
-		toNum:   numVal,
+		toFloat: floatVal,
+		toInt:   intVal,
 	}
-	if numVal {
+	if intVal {
+		exp, err := regexp.Compile(`^-?[0-9]+(\.0*)?$`)
+		if err != nil {
+			glog.Fatalf("compile number expr fail, err %v", err)
+		}
+		c.exp = exp
+	}
+	if floatVal {
 		exp, err := regexp.Compile(`^-?[0-9.]+(e-?[0-9]+)?$`)
 		if err != nil {
 			glog.Fatalf("compile number expr fail, err %v", err)
@@ -368,6 +386,157 @@ func makeWrite(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                             if                            ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+// if <condition> then <cmd> [else <cmd>]
+type cmdIf struct {
+	raw       string
+	condition command
+	cthen     command
+	celse     command
+}
+
+func (c *cmdIf) iterable() bool {
+	return false
+}
+func (c *cmdIf) close() {
+	if c.condition != nil {
+		c.cthen.close()
+		c.condition.close()
+	}
+	if c.cthen != nil {
+		c.cthen = nil
+		c.cthen = nil
+	}
+	if c.celse != nil {
+		c.celse.close()
+		c.celse = nil
+	}
+}
+
+func (c *cmdIf) produce(bg *background) {
+	c.condition.produce(bg)
+	err := bg.getError()
+	bg.setError("")
+	if len(err) == 0 {
+		c.cthen.produce(bg)
+	} else if c.celse != nil {
+		c.celse.produce(bg)
+	}
+}
+func makeIf(v []string) (command, error) {
+	c := &cmdIf{
+		raw: strings.Join(v, " "),
+	}
+	var cmdCondition []string
+	var cmdThen []string
+	var cmdElse []string
+
+	thenIdx := len(v)
+	elseIdx := len(v)
+	for i := 0; i < len(v); i++ {
+		if v[i] == "then" {
+			thenIdx = i
+			break
+		}
+	}
+	if thenIdx == len(v) || thenIdx <= 0 {
+		return nil, fmt.Errorf("if(%s): then not found", c.raw)
+	}
+	cmdCondition = v[:thenIdx]
+	for i := thenIdx + 1; i < len(v); i++ {
+		if v[i] == "else" {
+			elseIdx = i
+			break
+		}
+	}
+	if elseIdx == thenIdx+1 {
+		return nil, fmt.Errorf("if(%s): then command not found", c.raw)
+	}
+	cmdThen = v[thenIdx+1 : elseIdx]
+	if elseIdx < len(v)-1 {
+		cmdElse = v[elseIdx+1:]
+	}
+
+	if len(cmdCondition) == 0 || len(cmdThen) == 0 {
+		return nil, fmt.Errorf("if(%s): invalid if clause", c.raw)
+	}
+
+	var err error
+	c.condition, err = makeAssert(cmdCondition)
+	if err != nil {
+		return nil, fmt.Errorf("if(%s): parse condition fail, err: %v", c.raw, err)
+	}
+	c.cthen, err = parseCmdArgs(cmdThen)
+	if err != nil {
+		return nil, fmt.Errorf("if(%s): parse then clause fail, err: %v", c.raw, err)
+	}
+	if len(cmdElse) > 0 {
+		c.celse, err = parseCmdArgs(cmdElse)
+		if err != nil {
+			return nil, fmt.Errorf("if(%s): parse else clause fail, err: %v", c.raw, err)
+		}
+	}
+
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                           report                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdReport struct {
+	raw    string
+	format segments
+}
+
+func (c *cmdReport) iterable() bool {
+	return false
+}
+func (c *cmdReport) close() {
+	c.format = nil
+}
+
+func (c *cmdReport) produce(bg *background) {
+	if !bg.requireReport() {
+		return
+	}
+	if c.format != nil {
+		content, err := c.format.compose(bg)
+		if err != nil {
+			bg.setErrorf("report(%s) compose fail: %v", c.raw, err)
+			return
+		}
+		bg.report(content)
+	} else {
+		bg.reportDefault()
+	}
+
+}
+
+func makeReport(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	format := ""
+	fs := flag.NewFlagSet("report", flag.ContinueOnError)
+	fs.StringVar(&format, "f", "", "format to report, use predefined if not present")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, err
+	}
+	c := &cmdReport{
+		raw: raw,
+	}
+
+	if len(format) > 0 {
+		if c.format, err = makeSegments(format); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                            env                            ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -486,13 +655,16 @@ func (c *cmdList) produce(bg *background) {
 
 	if c.scan.Scan() {
 		t := c.scan.Text()
+		glog.Error("List: ", t)
 		if len(t) > 0 {
 			bg.setOutput(t)
 		} else {
+			glog.Error("List EOF")
 			bg.setError(EOF)
 			c.close()
 		}
 	} else {
+		glog.Error("List EOF")
 		bg.setError(EOF)
 		c.close()
 	}
@@ -677,137 +849,146 @@ const (
 	eps = 0.00000001
 )
 
-func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) {
+func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) string {
 	var (
 		a, b float64
 		err  error
 	)
 	if a, err = strconv.ParseFloat(lhs, 64); err != nil {
-		bg.setError("convert to float fail: " + lhs)
+		return "convert to float fail: " + lhs
 	}
 	if b, err = strconv.ParseFloat(rhs, 64); err != nil {
-		bg.setError("convert to float fail: " + rhs)
+		return "convert to float fail: " + rhs
 	}
 
 	delta := a - b
 	switch c.op {
 	case opEqual:
 		if delta < -eps || delta > eps {
-			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
 		}
 	case opNotEqual:
 		if delta >= -eps && delta <= eps {
-			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
 		}
 	case opGreater:
 		if delta <= 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s > %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s > %s", lhs, rhs)
 		}
 	case opGreaterEqual:
 		if delta < 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s >= %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s >= %s", lhs, rhs)
 		}
 	case opLess:
 		if delta >= 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s < %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s < %s", lhs, rhs)
 		}
 	case opLessEqual:
 		if delta > 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s <= %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s <= %s", lhs, rhs)
 		}
+	default:
+		return fmt.Sprintf("assert(%s): unknown operator %d", c.raw, c.op)
 	}
+	return ""
 }
-func (c *cmdAssert) doNum(lhs, rhs string, bg *background) {
+func (c *cmdAssert) doNum(lhs, rhs string, bg *background) string {
 	var (
 		a, b int
 		err  error
 	)
 	if a, err = strconv.Atoi(lhs); err != nil {
-		bg.setError("convert to int fail: " + lhs)
+		return "convert to int fail: " + lhs
 	}
 	if b, err = strconv.Atoi(rhs); err != nil {
-		bg.setError("convert to int fail: " + rhs)
+		return "convert to int fail: " + rhs
 	}
 
 	delta := a - b
 	switch c.op {
 	case opEqual:
 		if delta != 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
 		}
 	case opNotEqual:
 		if delta == 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
 		}
 	case opGreater:
 		if delta <= 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s > %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s > %s", lhs, rhs)
 		}
 	case opGreaterEqual:
 		if delta < 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s >= %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s >= %s", lhs, rhs)
 		}
 	case opLess:
 		if delta >= 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s < %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s < %s", lhs, rhs)
 		}
 	case opLessEqual:
 		if delta > 0 {
-			bg.setError(fmt.Sprintf("assert fail: %s <= %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s <= %s", lhs, rhs)
 		}
+	default:
+		return fmt.Sprintf("assert(%s): unknown operator %d", c.raw, c.op)
 	}
+	return ""
 }
-func (c *cmdAssert) doStr(lhs, rhs string, bg *background) {
+func (c *cmdAssert) doStr(lhs, rhs string, bg *background) string {
 	if c.op == opEqual {
 		if lhs != rhs {
-			bg.setError(fmt.Sprintf("assert fail: %s == %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
 		}
 	} else if c.op == opNotEqual {
 		if lhs == rhs {
-			bg.setError(fmt.Sprintf("assert fail: %s != %s", lhs, rhs))
+			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
 		}
 	} else {
-		bg.setError(fmt.Sprintf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs))
+		return fmt.Sprintf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs)
 	}
+	return ""
 }
-func (c *cmdAssert) produce(bg *background) {
+func (c *cmdAssert) judge(bg *background) string {
 	var (
 		a, b string
 		err  error
 	)
 	if a, err = c.a.compose(bg); err != nil {
-		bg.setError("assert: " + err.Error())
-		return
+		return fmt.Sprintf("assert(%s) compose lhs fail: %v", c.raw, err)
 	}
-	glog.Infof("assert %s %d %s", a, c.op, b)
 	if c.op == opIs {
 		if a == "1" || a == "true" {
-			return
+			return ""
 		}
 		bg.setError("assert failure: " + a)
-		return
+		return ""
 	}
 	if c.op == opNot {
 		if a == "0" || a == "false" {
-			return
+			return ""
 		}
-		bg.setError("assert failure: !" + a)
-		return
+		return "assert failure: !" + a
 	}
 	if b, err = c.b.compose(bg); err != nil {
-		bg.setError("assert: " + err.Error())
-		return
+		return fmt.Sprintf("assert(%s) compose rhs fail: %v", c.raw, err)
 	}
 
 	ta, tb := c.kindOf(a), c.kindOf(b)
 	if ta == isStr || tb == isStr {
-		c.doStr(a, b, bg)
+		return c.doStr(a, b, bg)
 	} else if ta == isFloat || tb == isFloat {
-		c.doFloat(a, b, bg)
+		return c.doFloat(a, b, bg)
 	} else {
-		c.doNum(a, b, bg)
+		return c.doNum(a, b, bg)
 	}
 
+}
+func (c *cmdAssert) produce(bg *background) {
+	err := c.judge(bg)
+	if len(err) != 0 {
+		bg.setError(err)
+	}
 }
 
 func makeAssert(v []string) (command, error) {
@@ -1091,6 +1272,38 @@ func (p pipeline) close() {
 	}
 }
 
+func parseCmdArgs(args []string) (command, error) {
+	name := args[0]
+	args = args[1:]
+	switch name {
+	case "echo":
+		return makeEcho(args)
+	case "cat":
+		return makeCat(args)
+	case "envw":
+		return makeEnvw(args)
+	case "envd":
+		return makeEnvd(args)
+	case "write":
+		return makeWrite(args)
+	case "assert":
+		return makeAssert(args)
+	case "json":
+		return makeJson(args)
+	case "list":
+		return makeList(args)
+	case "b64":
+		return makeBase64(args)
+	case "cvt":
+		return makeCvt(args)
+	case "if":
+		return makeIf(args)
+	case "report":
+		return makeReport(args)
+	default:
+		return nil, fmt.Errorf("cmd %s not supported", name)
+	}
+}
 func parse(str string) (command, error) {
 	args, err := argv.Argv(str, nil, func(s string) (string, error) {
 		return s, nil
@@ -1104,33 +1317,9 @@ func parse(str string) (command, error) {
 		if len(v) == 0 {
 			continue
 		}
-		args := v[1:]
 		var cmd command
 
-		switch v[0] {
-		case "echo":
-			cmd, err = makeEcho(args)
-		case "cat":
-			cmd, err = makeCat(args)
-		case "envw":
-			cmd, err = makeEnvw(args)
-		case "envd":
-			cmd, err = makeEnvd(args)
-		case "write":
-			cmd, err = makeWrite(args)
-		case "assert":
-			cmd, err = makeAssert(args)
-		case "json":
-			cmd, err = makeJson(args)
-		case "list":
-			cmd, err = makeList(args)
-		case "b64":
-			cmd, err = makeBase64(args)
-		case "cvt":
-			cmd, err = makeCvt(args)
-		default:
-			err = fmt.Errorf("cmd %s not supported", v[0])
-		}
+		cmd, err = parseCmdArgs(v)
 		if err != nil {
 			return nil, fmt.Errorf("parse %s fail, err: %v", str, err)
 		} else {
@@ -1208,7 +1397,7 @@ func makeSegments(str string, prop ...propReceiver) (segments, error) {
 					segs = append(segs, staticSegment(r[start:i]))
 				}
 			case phaseCmd:
-				if i-start > 1 {
+				if i > start {
 					cmd, err := parse(string(r[start:i]))
 					if err != nil {
 						return nil, err
@@ -1227,7 +1416,7 @@ func makeSegments(str string, prop ...propReceiver) (segments, error) {
 				}
 			case phaseEnv:
 			case phaseLocal:
-				if i-start > 1 {
+				if i > start {
 					name := string(r[start:i])
 					if len(name) == 0 {
 						return nil, errors.New("local variable name is missing")
@@ -1237,7 +1426,7 @@ func makeSegments(str string, prop ...propReceiver) (segments, error) {
 					}})
 				}
 			case phaseGlobal:
-				if i-start > 1 {
+				if i > start {
 					name := string(r[start:i])
 					if len(name) == 0 {
 						return nil, errors.New("global variable name is missing")

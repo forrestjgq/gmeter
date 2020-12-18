@@ -96,12 +96,12 @@ func (f *feedProvider) hasMore(bg *background) next {
 		if isEof(err) {
 			return nextFinished
 		} else {
-			bg.report(err)
+			bg.setError(err.Error())
 			return nextAbortPlan
 		}
 	}
 	if err := f.s.check(); err != nil {
-		bg.report(err)
+		bg.setError(err.Error())
 		return nextAbortPlan
 	}
 	return nextContinue

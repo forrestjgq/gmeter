@@ -11,8 +11,14 @@ type plan struct {
 	target     runnable
 	bg         *background
 	concurrent int
+	preprocess []segments
 }
 
+func (p *plan) close() {
+	if p.bg != nil {
+		p.bg.globalClose()
+	}
+}
 func (p *plan) runOneByOne() next {
 	for {
 		p.bg.next()
@@ -76,6 +82,17 @@ func (p *plan) runConcurrent(n int) next {
 }
 func (p *plan) run() next {
 	p.bg.setLocalEnv(KeyTest, p.name)
+	if len(p.preprocess) > 0 {
+		for _, segs := range p.preprocess {
+			_, err := segs.compose(p.bg)
+			if err != nil {
+				p.bg.setErrorf("preprocess fail, err: %v", err)
+			}
+			if p.bg.hasError() {
+				return nextAbortPlan
+			}
+		}
+	}
 	if p.concurrent > 1 {
 		return p.runConcurrent(p.concurrent)
 	}

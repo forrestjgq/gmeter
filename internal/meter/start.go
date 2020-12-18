@@ -20,14 +20,22 @@ import (
 
 var hosts = make(map[string]*http.Client)
 
-func loadFile(cfg *config.Config, path string) ([]byte, error) {
+func loadFilePath(cfg *config.Config, path string) (string, error) {
 	cpath := filepath.Clean(path)
 	if len(path) == 0 {
-		return nil, errors.New("file path invalid")
+		return "", errors.New("file path invalid")
 	}
 
 	if cpath[0] != '/' {
 		cpath = cfg.Options[config.OptionCfgPath] + "/" + cpath
+	}
+
+	return cpath, nil
+}
+func loadFile(cfg *config.Config, path string) ([]byte, error) {
+	cpath, err := loadFilePath(cfg, path)
+	if err != nil {
+		return nil, err
 	}
 
 	f, err := os.Open(cpath)
@@ -65,7 +73,7 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		return host, nil
 	}
 }
-func createBackground(cfg *config.Config, sched *config.Schedule) *background {
+func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
 	bg := &background{
 		name:    cfg.Name,
 		counter: &counter{},
@@ -83,7 +91,27 @@ func createBackground(cfg *config.Config, sched *config.Schedule) *background {
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {
 		bg.setGlobalEnv(KeyDebug, debug)
 	}
-	return bg
+	if len(sched.Reporter.Path) > 0 {
+		cpath, err := loadFilePath(cfg, sched.Reporter.Path)
+		if err != nil {
+			return nil, err
+		}
+		f, err := os.Create(cpath)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("report will be written to %s\n", cpath)
+		bg.rptf = f
+		bg.rptc = make(chan string)
+		if len(sched.Reporter.Format) > 0 {
+			bg.rptFormater, err = makeSegments(sched.Reporter.Format)
+			if err != nil {
+				return nil, err
+			}
+		}
+		go bg.waitReport()
+	}
+	return bg, nil
 }
 func create(cfg *config.Config) []*plan {
 	if len(cfg.Schedules) == 0 {
@@ -92,7 +120,10 @@ func create(cfg *config.Config) []*plan {
 	var plans []*plan
 
 	for _, s := range cfg.Schedules {
-		bg := createBackground(cfg, s)
+		bg, err := createBackground(cfg, s)
+		if err != nil {
+			glog.Fatalf("schedule %s create background fail, err: %v", s.Name, err)
+		}
 		tests := strings.Split(s.Tests, "|")
 		if len(tests) == 0 {
 			glog.Fatalf("schedule %s contains no tests", s.Name)
@@ -125,7 +156,7 @@ func create(cfg *config.Config) []*plan {
 					h.Host = urls[1]
 				}
 			}
-			if err := h.Check(); err != nil {
+			if err = h.Check(); err != nil {
 				glog.Fatalf("host %s check fail: %v", t.Host, err)
 			}
 			client, err := loadHTTPClient(h, t.Timeout)
@@ -196,7 +227,7 @@ func create(cfg *config.Config) []*plan {
 				}
 			}
 
-			runner, err := makeRunner(prv, client, csm)
+			runner, err := makeRunner(prv, client, csm, t.PreProcess...)
 			if err != nil {
 				glog.Fatalf("make test %s runner fail, err %v", name, err)
 			}
@@ -216,6 +247,16 @@ func create(cfg *config.Config) []*plan {
 		}
 		if s.Concurrency > 1 {
 			p.concurrent = s.Concurrency
+		}
+
+		if len(s.PreProcess) > 0 {
+			for _, str := range s.PreProcess {
+				segs, err := makeSegments(str)
+				if err != nil {
+					glog.Fatalf("schedule %s make preprocess %s fail, err: %v", s.Name, str, err)
+				}
+				p.preprocess = append(p.preprocess, segs)
+			}
 		}
 		plans = append(plans, p)
 	}
@@ -276,6 +317,10 @@ func Start(path string) {
 			n := p.run()
 			results[p.name] = n
 		}
+	}
+
+	for _, p := range plans {
+		p.close()
 	}
 
 	fmt.Println("--------------------------------")
