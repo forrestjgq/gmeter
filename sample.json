@@ -9,7 +9,7 @@
     "Messages": {
         "req": {
             "Method": "POST",
-            "Path": "/debug/detect/all",
+            "Path": "/debug/detect/face",
             "Headers": {
                 "content-type": "application/json"
             },
@@ -29,18 +29,20 @@
     "Tests": {
         "recognize": {
             "PreProcess": [
-                "`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
+                "`list /home/forrest/project/gmeter/img.list | envw JSON`",
                 "`json .image $(JSON) | envw IMAGE`",
-                "`json .roi.[0] $(JSON) | envw X`",
-                "`json .roi.[1] $(JSON) | envw Y`",
-                "`json .roi.[2] $(JSON) | envw W`",
-                "`json .roi.[3] $(JSON) | envw H`"
+                "`json .x $(JSON) | envw X`",
+                "`json .y $(JSON) | envw Y`",
+                "`json .w $(JSON) | envw W`",
+                "`json .h $(JSON) | envw H`"
             ],
             "Host": "vse",
             "Request": "req",
             "Response": {
-                "Check": [
-                    "`assert $(STATUS) != 200`",
+                "Success": [
+                    "`report`"
+                ],
+                "Failure": [
                     "`report`"
                 ],
                 "Template": null
@@ -56,7 +58,7 @@
             "Tests": "recognize",
             "Reporter": {
                 "Path": "report.log",
-                "Format": "{\"err\": $(ERROR), \"status\": $(STATUS), \"response\": $(RESPONSE)}\n"
+                "Format": "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n"
             },
             "Count": 0,
             "Concurrency": 1,

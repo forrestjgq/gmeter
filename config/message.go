@@ -44,30 +44,7 @@ func (m *Request) Check() error {
 }
 
 type Response struct {
-	// Examples:
-	// Response body could be:
-	// {
-	//    "a": {
-	//        "b": "b-value",
-	//        "c": 10
-	//    },
-	//    "d": [
-	//        {
-	//            "e": false,
-	//            "f": 10,
-	//        }, {
-	//            "e": true,
-	//            "f": 0,
-	//        }
-	//    ]
-	// }
-	//
-	// $(Status) == 200, $(Status) != 400, $(Status) < 300, here ${Status} is current status code
-	// .a.b == "b-value", compare field, here returns true
-	// .d[] > 0, xx[] indicates that xx is an array and xx[] is number of this array
-	// select .d[?].e == false | .f > 1, select from ".d" array where ".e" is "false", then pass element to next pipe
-	//        which is ".f > 1" to judge value
-	// select .d[*] | .
-	Check    []string
+	Success  []string
+	Failure  []string
 	Template json.RawMessage
 }

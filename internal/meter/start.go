@@ -96,20 +96,10 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 		if err != nil {
 			return nil, err
 		}
-		f, err := os.Create(cpath)
+		err = bg.createReport(cpath, sched.Reporter.Format)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("report will be written to %s\n", cpath)
-		bg.rptf = f
-		bg.rptc = make(chan string)
-		if len(sched.Reporter.Format) > 0 {
-			bg.rptFormater, err = makeSegments(sched.Reporter.Format)
-			if err != nil {
-				return nil, err
-			}
-		}
-		go bg.waitReport()
 	}
 	return bg, nil
 }
@@ -205,7 +195,7 @@ func create(cfg *config.Config) []*plan {
 				s.Count = math.MaxUint64 - 1
 			}
 
-			feeder, err := makeDynamicFeeder(m, s.Count)
+			feeder, err := makeDynamicFeeder(m, s.Count, t.PreProcess)
 			if err != nil {
 				glog.Fatalf("test %s create feeder fail, err: %v", name, err)
 			}
@@ -220,14 +210,14 @@ func create(cfg *config.Config) []*plan {
 			if cfg.Options[config.OptionAbortIfFail] == "true" {
 				decision = abortOnFail
 			}
-			if rsp != nil && len(rsp.Check) > 0 {
-				csm, err = makeDynamicConsumer(rsp.Check, decision)
+			if rsp != nil {
+				csm, err = makeDynamicConsumer(rsp.Success, rsp.Failure, decision)
 				if err != nil {
 					glog.Fatalf("make test %s consumer fail, err %v", name, err)
 				}
 			}
 
-			runner, err := makeRunner(prv, client, csm, t.PreProcess...)
+			runner, err := makeRunner(prv, client, csm)
 			if err != nil {
 				glog.Fatalf("make test %s runner fail, err %v", name, err)
 			}

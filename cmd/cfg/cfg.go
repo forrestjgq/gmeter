@@ -32,7 +32,7 @@ func main() {
 		Tests: map[string]*config.Test{
 			"recognize": &config.Test{
 				PreProcess: []string{
-					"`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
+					"`list /home/forrest/project/gmeter/img.list | envw JSON`",
 					"`json .image $(JSON) | envw IMAGE`",
 					"`json .x $(JSON) | envw X`",
 					"`json .y $(JSON) | envw Y`",
@@ -41,13 +41,18 @@ func main() {
 				},
 				Host:    "vse",
 				Request: "req",
-				Response: &config.Response{Check: []string{
-					//"`assert $(STATUS) == 200`",
-					//"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
-					//"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
-					//"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
-					"`report`",
-				}},
+				Response: &config.Response{
+					Success: []string{
+						"`report`",
+					},
+					Failure: []string{
+						//"`assert $(STATUS) == 200`",
+						//"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
+						//"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
+						//"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
+						"`report`",
+					},
+				},
 				Timeout: "10s",
 			},
 		},
@@ -63,7 +68,7 @@ func main() {
 				Reporter: config.Report{
 					Path: "report.log",
 					//Format: "`json .Result.Faces.[0].Features $(RESPONSE)`\n",
-					Format: "$(W): $(RESPONSE)\n",
+					Format: "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n",
 				},
 			},
 		},
