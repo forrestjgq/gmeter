@@ -12,7 +12,7 @@ var reqstr = "{ \"image\": { \"url\": \"$(IMAGE)\" }, \"roi\": { \"X\": \"`cvt -
 func main() {
 	req := &config.Request{
 		Method: "POST",
-		Path:   "/debug/detect/face",
+		Path:   "/debug/detect/all",
 		Headers: map[string]string{
 			"content-type": "application/json",
 		},
@@ -41,13 +41,18 @@ func main() {
 				},
 				Host:    "vse",
 				Request: "req",
-				Response: &config.Response{Check: []string{
-					//"`assert $(STATUS) == 200`",
-					//"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
-					//"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
-					//"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
-					"`report`",
-				}},
+				Response: &config.Response{
+					Success: []string{
+						"`report`",
+					},
+					Failure: []string{
+						//"`assert $(STATUS) == 200`",
+						//"`json .Result.InnerStatus $(RESPONSE) | assert $(INPUT) == 200`",
+						//"`json -n .Result.Pedestrian $(RESPONSE) | assert $(INPUT) == 8`",
+						//"`json -n .Result.Faces $(RESPONSE) | assert $(INPUT) == 1`",
+						"`report`",
+					},
+				},
 				Timeout: "10s",
 			},
 		},
@@ -61,9 +66,8 @@ func main() {
 				Concurrency: 1,
 				Env:         nil,
 				Reporter: config.Report{
-					Path: "report.log",
-					//Format: "`json .Result.Faces.[0].Features $(RESPONSE)`\n",
-					Format: "$(W): $(RESPONSE)\n",
+					Path:   "report.log",
+					Format: "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n",
 				},
 			},
 		},

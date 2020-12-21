@@ -13,10 +13,9 @@ import (
 
 // runner is a single http sender
 type runner struct {
-	h            *http.Client
-	p            provider
-	c            consumer
-	preprocessor []segments
+	h *http.Client
+	p provider
+	c consumer
 }
 
 func (r *runner) run(bg *background) next {
@@ -35,18 +34,6 @@ func (r *runner) run(bg *background) next {
 
 	if p == nil || c == nil || bg == nil {
 		return nextAbortAll
-	}
-
-	if len(r.preprocessor) > 0 {
-		for _, segs := range r.preprocessor {
-			_, err = segs.compose(bg)
-			if err != nil {
-				if isEof(err) {
-					return nextFinished
-				}
-				return c.processFailure(bg, err)
-			}
-		}
 	}
 
 	if decision = p.hasMore(bg); decision != nextContinue {
@@ -128,7 +115,7 @@ Body: %s
 
 // makeRunner will create a runner with valid provider.
 // if http.Client h or consumer c is not provided, a default one will be used.
-func makeRunner(p provider, h *http.Client, c consumer, preprocess ...string) (runnable, error) {
+func makeRunner(p provider, h *http.Client, c consumer) (runnable, error) {
 	if p == nil {
 		return nil, errors.New("provider must be provided")
 	}
@@ -138,20 +125,9 @@ func makeRunner(p provider, h *http.Client, c consumer, preprocess ...string) (r
 	if c == nil {
 		c = defaultConsumer
 	}
-	var segs []segments
-	for _, pp := range preprocess {
-		if len(pp) > 0 {
-			seg, err := makeSegments(pp)
-			if err != nil {
-				return nil, err
-			}
-			segs = append(segs, seg)
-		}
-	}
 	return &runner{
-		h:            h,
-		p:            p,
-		c:            c,
-		preprocessor: segs,
+		h: h,
+		p: p,
+		c: c,
 	}, nil
 }

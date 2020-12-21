@@ -7,11 +7,15 @@ import (
 	"regexp"
 )
 
+// Request defines parameters to generate an HTTP request.
+// Note that any part of any member can contain embedded commands.
+//
+// Note that Body is accepted only when it's empty, or it's a valid json.
 type Request struct {
-	Method  string // default to be GET
-	Path    string // /path/to/target
-	Headers map[string]string
-	Body    json.RawMessage
+	Method  string            // default to be GET, could be GET/POST/PUT/DELETE
+	Path    string            // /path/to/target, parameter is supported like /path?param1=1&param2=hello...
+	Headers map[string]string // extra headers like "Content-Type: application/json"
+	Body    json.RawMessage   // Json body to send, or "" if no body is required.
 }
 
 func (m *Request) Check() error {
@@ -43,31 +47,18 @@ func (m *Request) Check() error {
 	return nil
 }
 
+// Response defines how to process successful request and failed request.
+//
+// While HTTP server responds, even with non-2xx status code, Success will
+// be called.
+//
+// While HTTP request timeout, or any error occurs in the processing, Failure
+// will be called. $(ERROR) indicates what kind of error it is. Note that $(URL),
+// $(REQUEST), $(STATUS) and $(RESPONSE) may be empty. Any other variables generated
+// before HTTP sending are also may empty.
+//
 type Response struct {
-	// Examples:
-	// Response body could be:
-	// {
-	//    "a": {
-	//        "b": "b-value",
-	//        "c": 10
-	//    },
-	//    "d": [
-	//        {
-	//            "e": false,
-	//            "f": 10,
-	//        }, {
-	//            "e": true,
-	//            "f": 0,
-	//        }
-	//    ]
-	// }
-	//
-	// $(Status) == 200, $(Status) != 400, $(Status) < 300, here ${Status} is current status code
-	// .a.b == "b-value", compare field, here returns true
-	// .d[] > 0, xx[] indicates that xx is an array and xx[] is number of this array
-	// select .d[?].e == false | .f > 1, select from ".d" array where ".e" is "false", then pass element to next pipe
-	//        which is ".f > 1" to judge value
-	// select .d[*] | .
-	Check    []string
-	Template json.RawMessage
+	Success  []string        // segments called after server responds.
+	Failure  []string        // segments called if any error occurs.
+	Template json.RawMessage // Template is not currently used.
 }

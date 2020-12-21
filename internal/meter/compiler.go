@@ -30,24 +30,40 @@ type command interface {
 ////////////////////////////////////////////////////////////////////////////////
 
 type segment interface {
+	iterable() bool
 	getString(bg *background) (string, error)
 }
 type staticSegment string
 
+func (ss staticSegment) iterable() bool {
+	return false
+}
 func (ss staticSegment) getString(bg *background) (string, error) {
 	return string(ss), nil
 }
 
 type dynamicSegment struct {
-	f func(bg *background) (string, error)
+	isIterable bool
+	f          func(bg *background) (string, error)
 }
 
+func (ds dynamicSegment) iterable() bool {
+	return ds.isIterable
+}
 func (ds dynamicSegment) getString(bg *background) (string, error) {
 	return ds.f(bg)
 }
 
 type segments []segment
 
+func (s segments) iterable() bool {
+	for _, seg := range s {
+		if seg.iterable() {
+			return true
+		}
+	}
+	return false
+}
 func (s segments) isStatic() bool {
 	for _, seg := range s {
 		if _, ok := seg.(staticSegment); ok {
@@ -655,16 +671,13 @@ func (c *cmdList) produce(bg *background) {
 
 	if c.scan.Scan() {
 		t := c.scan.Text()
-		glog.Error("List: ", t)
 		if len(t) > 0 {
 			bg.setOutput(t)
 		} else {
-			glog.Error("List EOF")
 			bg.setError(EOF)
 			c.close()
 		}
 	} else {
-		glog.Error("List EOF")
 		bg.setError(EOF)
 		c.close()
 	}
@@ -1338,21 +1351,8 @@ const (
 	phaseString
 )
 
-type propReceiver func(k, v string)
-
 // makeSegments creates a segment list which will create a string eventually.
-// prop is a callback to receive following properties:
-// - "iterable", if property is sent, it's value is always "1" and indicates this segments is iterable, which
-//               means it self-produces batch of data like reading from list and each compose will produce only
-//               one of them. Iterable segments will generate "EOF" error in the ends of feeding.
-func makeSegments(str string, prop ...propReceiver) (segments, error) {
-	var rx propReceiver
-	if len(prop) > 0 {
-		rx = prop[0]
-	}
-	if rx == nil {
-		rx = func(k, v string) {}
-	}
+func makeSegments(str string) (segments, error) {
 
 	r := []rune(str)
 	start := 0
@@ -1402,17 +1402,17 @@ func makeSegments(str string, prop ...propReceiver) (segments, error) {
 					if err != nil {
 						return nil, err
 					}
-					if cmd.iterable() {
-						rx("iterable", "1")
-					}
-					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
+					seg := &dynamicSegment{f: func(bg *background) (string, error) {
 						cmd.produce(bg)
 						errStr := bg.getError()
 						if len(errStr) > 0 {
 							return "", errors.New(errStr)
 						}
 						return bg.getOutput(), nil
-					}})
+					}}
+
+					seg.isIterable = cmd.iterable()
+					segs = append(segs, seg)
 				}
 			case phaseEnv:
 			case phaseLocal:

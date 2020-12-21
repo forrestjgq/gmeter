@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	"github.com/forrestjgq/gomark/gmi"
 )
@@ -21,6 +24,7 @@ const (
 const (
 	// Global
 	KeyDebug    = "DEBUG"
+	KeyConfig   = "CONFIG"
 	KeySchedule = "SCHEDULE"
 	KeyTPath    = "TPATH"
 
@@ -101,21 +105,34 @@ type background struct {
 	rptc          chan string
 	rptf          io.WriteCloser
 	rptFormater   segments
+	rptRuns       bool
 }
+
+const (
+	GMeterExit = "gmeter-exit"
+)
 
 // globalClose should only be called by root background
 func (bg *background) globalClose() {
-	close(bg.rptc)
+	if bg.requireReport() {
+		bg.report(GMeterExit)
+		for bg.rptRuns {
+			time.Sleep(100 * time.Millisecond)
+		}
+		close(bg.rptc)
+	}
 }
 func (bg *background) dup() *background {
 	return &background{
-		name:    bg.name,
-		counter: bg.counter,
-		local:   bg.local.dup(),
-		global:  bg.global,
-		lr:      bg.lr,
-		rptc:    bg.rptc,
-		rptf:    bg.rptf,
+		name:        bg.name,
+		counter:     bg.counter,
+		local:       bg.local.dup(),
+		global:      bg.global,
+		lr:          bg.lr,
+		rptc:        bg.rptc,
+		rptf:        nil,
+		rptFormater: bg.rptFormater,
+		rptRuns:     false,
 	}
 }
 func (bg *background) next() {
@@ -127,8 +144,39 @@ func (bg *background) cleanup() {
 	bg.setOutput("")
 	bg.setError("")
 }
+func (bg *background) createReport(path, format string) error {
+	var err error
+	if len(path) > 0 {
+		dir := filepath.Dir(path)
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return err
+		}
+		bg.rptf, err = os.Create(path)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("report will be written to %s\n", path)
+	} else {
+		bg.rptf = os.Stdout
+		fmt.Printf("report will be written to stdout\n")
+	}
+
+	bg.rptc = make(chan string, 1000)
+	if len(format) > 0 {
+		bg.rptFormater, err = makeSegments(format)
+		if err != nil {
+			return err
+		}
+	}
+	go bg.waitReport()
+	return nil
+}
 func (bg *background) waitReport() {
+	bg.rptRuns = true
 	for c := range bg.rptc {
+		if c == GMeterExit {
+			break
+		}
 		if bg.rptf != nil {
 			_, _ = bg.rptf.Write([]byte(c))
 		}
@@ -136,9 +184,10 @@ func (bg *background) waitReport() {
 	if bg.rptf != nil {
 		_ = bg.rptf.Close()
 	}
+	bg.rptRuns = false
 }
 func (bg *background) requireReport() bool {
-	return bg.rptc != nil
+	return bg.rptRuns && bg.rptc != nil
 }
 func (bg *background) reportDefault() {
 	if bg.requireReport() {

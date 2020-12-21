@@ -88,28 +88,24 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 			bg.setLocalEnv(k, v)
 		}
 	}
+	bg.setGlobalEnv(KeyConfig, cfg.Name)
+
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {
 		bg.setGlobalEnv(KeyDebug, debug)
 	}
-	if len(sched.Reporter.Path) > 0 {
-		cpath, err := loadFilePath(cfg, sched.Reporter.Path)
+
+	// report
+	var err error
+	cpath := sched.Reporter.Path
+	if len(cpath) > 0 {
+		cpath, err = loadFilePath(cfg, sched.Reporter.Path)
 		if err != nil {
 			return nil, err
 		}
-		f, err := os.Create(cpath)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("report will be written to %s\n", cpath)
-		bg.rptf = f
-		bg.rptc = make(chan string)
-		if len(sched.Reporter.Format) > 0 {
-			bg.rptFormater, err = makeSegments(sched.Reporter.Format)
-			if err != nil {
-				return nil, err
-			}
-		}
-		go bg.waitReport()
+	}
+	err = bg.createReport(cpath, sched.Reporter.Format)
+	if err != nil {
+		return nil, err
 	}
 	return bg, nil
 }
@@ -205,7 +201,7 @@ func create(cfg *config.Config) []*plan {
 				s.Count = math.MaxUint64 - 1
 			}
 
-			feeder, err := makeDynamicFeeder(m, s.Count)
+			feeder, err := makeDynamicFeeder(m, s.Count, t.PreProcess)
 			if err != nil {
 				glog.Fatalf("test %s create feeder fail, err: %v", name, err)
 			}
@@ -220,14 +216,14 @@ func create(cfg *config.Config) []*plan {
 			if cfg.Options[config.OptionAbortIfFail] == "true" {
 				decision = abortOnFail
 			}
-			if rsp != nil && len(rsp.Check) > 0 {
-				csm, err = makeDynamicConsumer(rsp.Check, decision)
+			if rsp != nil {
+				csm, err = makeDynamicConsumer(rsp.Success, rsp.Failure, decision)
 				if err != nil {
 					glog.Fatalf("make test %s consumer fail, err %v", name, err)
 				}
 			}
 
-			runner, err := makeRunner(prv, client, csm, t.PreProcess...)
+			runner, err := makeRunner(prv, client, csm)
 			if err != nil {
 				glog.Fatalf("make test %s runner fail, err %v", name, err)
 			}
@@ -284,7 +280,11 @@ func Start(path string) {
 		glog.Fatal("unmarshal json fail, ", err)
 	}
 
-	cfg.Options[config.OptionCfgPath] = filepath.Dir(path)
+	cfg.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		glog.Fatalf("get config path(%s) fail: %v", path, err)
+	}
+
 	plans := create(&cfg)
 
 	type result struct {
@@ -325,11 +325,17 @@ func Start(path string) {
 
 	fmt.Println("--------------------------------")
 	fmt.Printf("test %s done:\n", cfg.Name)
+	failed := false
 	for k, v := range results {
 		str := "success"
 		if v != nextFinished {
 			str = "fail"
+			failed = true
 		}
 		fmt.Printf("\t%s: %s\n", k, str)
+	}
+
+	if failed {
+		os.Exit(128)
 	}
 }

@@ -1,9 +1,8 @@
 package meter
 
 import (
+	"math"
 	"sync"
-
-	"github.com/golang/glog"
 )
 
 type category string
@@ -86,11 +85,13 @@ type baby struct {
 	err error
 }
 type dynamicFeeder struct {
-	source   map[string]segments
-	c        chan *baby
-	seq      uint64
-	count    uint64
-	iterable bool
+	source     map[string]segments
+	c          chan *baby
+	seq        uint64
+	count      uint64
+	end        bool
+	iterable   bool
+	preprocess []segments
 }
 
 func (f *dynamicFeeder) feed(bg *background) (content, error) {
@@ -98,7 +99,6 @@ func (f *dynamicFeeder) feed(bg *background) (content, error) {
 		bg: bg,
 	}
 
-	glog.Error("Feed one")
 	b.wg.Add(1)
 	f.c <- b
 	b.wg.Wait()
@@ -107,6 +107,9 @@ func (f *dynamicFeeder) feed(bg *background) (content, error) {
 }
 
 func (f *dynamicFeeder) full() bool {
+	if f.end {
+		return true
+	}
 	if f.count == 0 {
 		return false
 	}
@@ -124,6 +127,22 @@ func (f *dynamicFeeder) run() {
 			b.err = EofError
 			b.wg.Done()
 			continue
+		}
+
+		if len(f.preprocess) > 0 {
+			toNext := false
+			for _, segs := range f.preprocess {
+				_, err := segs.compose(b.bg)
+				if err != nil {
+					b.err = err
+					b.wg.Done()
+					toNext = true
+					break
+				}
+			}
+			if toNext {
+				continue
+			}
 		}
 
 		for k := range b.c {
@@ -156,26 +175,41 @@ func (f *dynamicFeeder) run() {
 	}
 }
 
-func makeDynamicFeeder(cfg map[string]string, count uint64) (*dynamicFeeder, error) {
+func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string) (*dynamicFeeder, error) {
 	f := &dynamicFeeder{
 		source: make(map[string]segments),
 		c:      make(chan *baby),
 		count:  count,
 	}
 
-	prop := make(map[string]string)
+	iterable := false
 	for k, v := range cfg {
-		if s, err := makeSegments(v, func(k, v string) {
-			prop[k] = v
-		}); err != nil {
+		if s, err := makeSegments(v); err != nil {
 			return nil, err
 		} else {
 			f.source[k] = s
+			if s.iterable() {
+				iterable = true
+			}
 		}
 	}
-	if _, exist := prop["iterable"]; exist {
+
+	if len(preprocess) > 0 {
+		for _, str := range preprocess {
+			segs, err := makeSegments(str)
+			if err != nil {
+				return nil, err
+			}
+			f.preprocess = append(f.preprocess, segs)
+			if segs.iterable() {
+				iterable = true
+			}
+		}
+	}
+
+	if iterable {
 		f.iterable = true
-		f.count = 1
+		f.count = math.MaxUint64 - 1
 	}
 
 	go f.run()
