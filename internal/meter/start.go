@@ -274,7 +274,10 @@ func Start(path string) {
 		glog.Fatal("unmarshal json fail, ", err)
 	}
 
-	cfg.Options[config.OptionCfgPath] = filepath.Dir(path)
+	cfg.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		glog.Fatalf("get config path(%s) fail: %v", path, err)
+	}
 	plans := create(&cfg)
 
 	type result struct {
@@ -315,11 +318,17 @@ func Start(path string) {
 
 	fmt.Println("--------------------------------")
 	fmt.Printf("test %s done:\n", cfg.Name)
+	failed := false
 	for k, v := range results {
 		str := "success"
 		if v != nextFinished {
 			str = "fail"
+			failed = true
 		}
 		fmt.Printf("\t%s: %s\n", k, str)
+	}
+
+	if failed {
+		os.Exit(128)
 	}
 }

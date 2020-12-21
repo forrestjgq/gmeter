@@ -65,7 +65,6 @@ func (d *dynamicConsumer) decideFailure(bg *background, err error) next {
 }
 func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	bg.setError(err.Error())
-
 	for _, s := range d.fail {
 		_, _ = s.compose(bg)
 	}

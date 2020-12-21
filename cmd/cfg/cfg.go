@@ -12,7 +12,7 @@ var reqstr = "{ \"image\": { \"url\": \"$(IMAGE)\" }, \"roi\": { \"X\": \"`cvt -
 func main() {
 	req := &config.Request{
 		Method: "POST",
-		Path:   "/debug/detect/face",
+		Path:   "/debug/detect/all",
 		Headers: map[string]string{
 			"content-type": "application/json",
 		},
@@ -32,7 +32,7 @@ func main() {
 		Tests: map[string]*config.Test{
 			"recognize": &config.Test{
 				PreProcess: []string{
-					"`list /home/forrest/project/gmeter/img.list | envw JSON`",
+					"`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
 					"`json .image $(JSON) | envw IMAGE`",
 					"`json .x $(JSON) | envw X`",
 					"`json .y $(JSON) | envw Y`",
@@ -66,8 +66,7 @@ func main() {
 				Concurrency: 1,
 				Env:         nil,
 				Reporter: config.Report{
-					Path: "report.log",
-					//Format: "`json .Result.Faces.[0].Features $(RESPONSE)`\n",
+					Path:   "report.log",
 					Format: "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n",
 				},
 			},
