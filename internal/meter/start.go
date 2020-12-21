@@ -88,18 +88,24 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 			bg.setLocalEnv(k, v)
 		}
 	}
+	bg.setGlobalEnv(KeyConfig, cfg.Name)
+
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {
 		bg.setGlobalEnv(KeyDebug, debug)
 	}
-	if len(sched.Reporter.Path) > 0 {
-		cpath, err := loadFilePath(cfg, sched.Reporter.Path)
+
+	// report
+	var err error
+	cpath := sched.Reporter.Path
+	if len(cpath) > 0 {
+		cpath, err = loadFilePath(cfg, sched.Reporter.Path)
 		if err != nil {
 			return nil, err
 		}
-		err = bg.createReport(cpath, sched.Reporter.Format)
-		if err != nil {
-			return nil, err
-		}
+	}
+	err = bg.createReport(cpath, sched.Reporter.Format)
+	if err != nil {
+		return nil, err
 	}
 	return bg, nil
 }
@@ -278,6 +284,7 @@ func Start(path string) {
 	if err != nil {
 		glog.Fatalf("get config path(%s) fail: %v", path, err)
 	}
+
 	plans := create(&cfg)
 
 	type result struct {

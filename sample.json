@@ -57,7 +57,7 @@
             "PreProcess": [],
             "Tests": "recognize",
             "Reporter": {
-                "Path": "report.log",
+                "Path1": "report.log",
                 "Format": "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n"
             },
             "Count": 0,
@@ -67,6 +67,6 @@
     ],
     "Options": {
         "AbortIfFail": "true",
-        "Debug": "true"
+        "Debug": "false"
     }
 }

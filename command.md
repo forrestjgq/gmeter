@@ -20,6 +20,7 @@ It is persisted across the whole lifetime of schedule.
 
 | Variable | Type   | Read-Only | Description                        |
 | --       | --     | --        | --                                 |
+| CONFIG   | string | true      | name of current config             |
 | SCHEDULE | string | true      | name of current schedule           |
 | TPATH    | string | true      | Path of test config file directory |
 

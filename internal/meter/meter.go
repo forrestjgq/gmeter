@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,7 @@ const (
 const (
 	// Global
 	KeyDebug    = "DEBUG"
+	KeyConfig   = "CONFIG"
 	KeySchedule = "SCHEDULE"
 	KeyTPath    = "TPATH"
 
@@ -143,22 +145,30 @@ func (bg *background) cleanup() {
 	bg.setError("")
 }
 func (bg *background) createReport(path, format string) error {
+	var err error
 	if len(path) > 0 {
-		f, err := os.Create(path)
+		dir := filepath.Dir(path)
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return err
+		}
+		bg.rptf, err = os.Create(path)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("report will be written to %s\n", path)
-		bg.rptf = f
-		bg.rptc = make(chan string, 1000)
-		if len(format) > 0 {
-			bg.rptFormater, err = makeSegments(format)
-			if err != nil {
-				return err
-			}
-		}
-		go bg.waitReport()
+	} else {
+		bg.rptf = os.Stdout
+		fmt.Printf("report will be written to stdout\n")
 	}
+
+	bg.rptc = make(chan string, 1000)
+	if len(format) > 0 {
+		bg.rptFormater, err = makeSegments(format)
+		if err != nil {
+			return err
+		}
+	}
+	go bg.waitReport()
 	return nil
 }
 func (bg *background) waitReport() {
