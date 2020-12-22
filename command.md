@@ -30,7 +30,6 @@ Local variables are defined in a single run of test pipeline. When next run star
 | Variable | Type   | Read-Only | Description                               |
 | --       | --     | --        | --                                        |
 | TEST     | string | true      | name of current test                      |
-| SEQUENCE | int64  | true      | Test running sequence number start from 0 |
 | URL      | string | false     | HTTP request URL                          |
 | REQUEST  | string | false     | HTTP request body                         |
 | STATUS   | int    | false     | HTTP response status code                 |
@@ -48,9 +47,13 @@ Gmeter command is just like shell, with a few different.
 5. GMeter is a case sensitive system.
 
 ## cvt
-`cvt [-b] [-d] <content>/$(INPUT)`
+`cvt [-b] [-i] [-f] [-r] <content>/$(INPUT)`
 
-convert `<content>` or `$(INPUT)` to a bool(`-b`) or number(`-d`).
+convert `<content>` or `$(INPUT)` to :
+- `-b`: bool value
+- `-i`: integer value
+- `-f`: float value
+- `-r`: raw string value
 
 This is used in json boolean value or number value representation. While we need produce a boolean or number as value of json, quote is not allowed to wrap it. For example:
 ```json
@@ -75,10 +78,50 @@ Now if we use command to produce number:
 ```
 we'll get `"1.0"` instead of `1.0`.
 
-To support value of boolean and number, you need append a command `cvt [-b]/[-d]`:
+To support value of boolean and number, you need append a command `cvt [-b]/[-i]/[-f]`:
 ```json
 {
-    "number": "`echo 1.0 | cvt -d`"
+    "number": "`echo 1.0 | cvt -f`"
+}
+```
+
+There is another situation, while we define a template:
+```json
+{
+    "body": "$(RESPONSE)"
+}
+```
+here `$(RESPONSE)` is a json string like:
+```json
+{
+    "name": "gmeter",
+    "age": 10
+}
+```
+we expect to get output of:
+```json
+{
+    "body": {
+        "name": "gmeter",
+        "age": 10
+    }
+}
+```
+but actually we got:
+```json
+{
+    "body": "{
+        "name": "gmeter",
+        "age": 10
+    }"
+}
+```
+a pair of quote mark ruins json grammar.
+
+so we need remove extra `""` surrounding `$(RESPONSE)`, apply `cvt -r`:
+```json
+{
+    "body": "`cvt -r $(RESPONSE)`"
 }
 ```
 
@@ -86,6 +129,7 @@ To support value of boolean and number, you need append a command `cvt [-b]/[-d]
 `echo <content>/$(INPUT)`
 
 write `<content>` or `$(INPUT)` to `$(OUTPUT)`
+
 ## cat
 `cat <path>/$(INPUT)`
 
@@ -96,24 +140,44 @@ Read all file content from given `<path>` and write to $(OUTPUT).
 
 Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
 
-## env
+## print
+`print <content>/$(INPUT)`
+
+print string into stdout.
+
+## escape
+`escape <content>/$(INPUT)`
+
+replace `"` with `\"` in `<content>` or `$(INPUT)` to `$(OUTPUT)`
+
+if you want to write a string value might containing `"` into a json, you need escape it to avoid json grammar error.
+
+## strrepl
+`strrepl <content> <substring> [<newstring>]`
+
+replace substring `<substring>` in string `<content>` with `<newstring>`, if `<newstring>` is absent, all `<substring>` in `<content>` will be deleted.
+
+## env command family
 ```
 # write local environment variable
 envw [-c <content>] <variable>
 envd <variable>
+envmv <src> <dst>
 ```
-`env` commands provide:
+
+`env` command family includes:
 - `envw`: Write `<content>` to local variable named by `<variable>`
 - `envd` deletes local variable named by `<variable>`
+- `envmv` move local variable `$(src)` value to `$(dst)`, `$(src)` will be cleared
 
 ## assert
 ```
-assert <expr>
+assert <condition>
 ```
 
-assert will report an error if `<expr>` is evaluated as `false`.
+assert will report an error if `<condition>` is evaluated as `false`.
 
-`<expr>` accepts two forms: compare and logical judgment:
+`<condition>` accepts two forms: compare and logical judgment:
 
 ### compare expression
 ```
@@ -141,6 +205,8 @@ when logical judgment operators are used, `a` can be
 - `0`
 - `true`
 - `false`
+
+specially, `!$(var)` while `$(var)` is empty will be treat as true.
 
 ## list
 `list <file>`
@@ -232,6 +298,34 @@ Here gives some examples of path:
 - `.list` is `["line1", "line2"]`
 - `.list.[1]` is `line1`
 
+## if-then-else
+```
+if <condition> then <command1> [else <command2>]
+```
+if `<condition>` evaluates as `true`, then `<command1>` is executed, otherwise if `<command2>` is defined, it will be executed.
+
+`<condition>` has same definition of `assert`.
+`<command1>` and `<command2>` could be any command except `if-then-else` itself.
+
+## report
+```
+report [-n] [-f format] [-t template]
+```
+`report` command is used to write strings into report file, which is defined by [Report](https://pkg.go.dev/github.com/forrestjgq/gmeter/config#Report) in [Schedule](https://pkg.go.dev/github.com/forrestjgq/gmeter/config#Schedule) of [Config](https://pkg.go.dev/github.com/forrestjgq/gmeter/config#Config).
+
+If `Report.Path` is empty, all reports will be written to stdout.
+
+The content to be written depends on a format string, which could be a formation string with embedded commands or vairables. This is an example of format string:
+```
+"{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE)}\n"
+```
+it uses stored error string/http response status code/http response status body as a json, ending with a new line to seperate. You should know that gmeter does not append any new line for you.
+
+Format string is retrieved from two sources: `Report.Format` in `Schedule` config, or optional `[-f format]` parameter. And `[-f format]` is preferred. If `[-t template]` is present, `Report.Templates[template]` will be applied as formation string.
+
+If report without a valid format string, nothing is reported.
+
+if `[-n]` is present, an extra newline `\n` is appended.
 
 ## Pipeline
 A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may use `$(INPUT)` as its parameter.

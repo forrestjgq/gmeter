@@ -96,14 +96,13 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 
 	// report
 	var err error
-	cpath := sched.Reporter.Path
-	if len(cpath) > 0 {
-		cpath, err = loadFilePath(cfg, sched.Reporter.Path)
+	if len(sched.Reporter.Path) > 0 {
+		sched.Reporter.Path, err = loadFilePath(cfg, sched.Reporter.Path)
 		if err != nil {
 			return nil, err
 		}
 	}
-	err = bg.createReport(cpath, sched.Reporter.Format)
+	bg.rpt, err = makeReporter(&sched.Reporter)
 	if err != nil {
 		return nil, err
 	}
@@ -217,13 +216,13 @@ func create(cfg *config.Config) []*plan {
 				decision = abortOnFail
 			}
 			if rsp != nil {
-				csm, err = makeDynamicConsumer(rsp.Success, rsp.Failure, decision)
+				csm, err = makeDynamicConsumer(rsp.Check, rsp.Success, rsp.Failure, decision)
 				if err != nil {
 					glog.Fatalf("make test %s consumer fail, err %v", name, err)
 				}
 			}
 
-			runner, err := makeRunner(prv, client, csm)
+			runner, err := makeRunner(name, prv, client, csm)
 			if err != nil {
 				glog.Fatalf("make test %s runner fail, err %v", name, err)
 			}

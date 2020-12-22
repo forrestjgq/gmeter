@@ -123,6 +123,7 @@ type cmdCvt struct {
 	toInt   bool
 	toFloat bool
 	toBool  bool
+	toRaw   bool
 	exp     *regexp.Regexp
 }
 
@@ -162,6 +163,8 @@ func (c *cmdCvt) produce(bg *background) {
 				}
 				bg.setOutput("`" + content + "`")
 			}
+		} else if c.toRaw {
+			bg.setOutput("`" + content + "`")
 		} else {
 			bg.setOutput(content)
 		}
@@ -175,9 +178,11 @@ func makeCvt(v []string) (command, error) {
 	boolVal := false
 	floatVal := false
 	intVal := false
+	rawVal := false
 	fs.BoolVar(&boolVal, "b", false, "convert to bool")
 	fs.BoolVar(&floatVal, "f", false, "convert to float number")
 	fs.BoolVar(&intVal, "i", false, "convert to integer number")
+	fs.BoolVar(&rawVal, "r", false, "convert to raw string(to strip quotes)")
 
 	err := fs.Parse(v)
 	if err != nil {
@@ -203,6 +208,7 @@ func makeCvt(v []string) (command, error) {
 		toBool:  boolVal,
 		toFloat: floatVal,
 		toInt:   intVal,
+		toRaw:   rawVal,
 	}
 	if intVal {
 		exp, err := regexp.Compile(`^-?[0-9]+(\.0*)?$`)
@@ -219,6 +225,123 @@ func makeCvt(v []string) (command, error) {
 		c.exp = exp
 	}
 	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                            escape                         ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdEscape struct {
+	raw     string
+	content segments
+}
+
+func (c *cmdEscape) iterable() bool {
+	return false
+}
+
+func (c *cmdEscape) close() {
+	c.content = nil
+}
+
+func (c *cmdEscape) produce(bg *background) {
+	content := ""
+	var err error
+	if content, err = c.content.compose(bg); err != nil {
+		bg.setErrorf("escape %s compose content fail: %v", c.raw, err)
+	}
+	if len(content) > 0 {
+		content = strings.ReplaceAll(content, "\"", "\\\"")
+	}
+	bg.setOutput(content)
+}
+
+func makeEscape(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	c := &cmdEscape{
+		raw: raw,
+	}
+	content := "$(" + KeyInput + ")"
+	if len(v) == 1 {
+		content = v[0]
+	} else if len(v) > 1 {
+		return nil, fmt.Errorf("escape(%s) invalid args", raw)
+	}
+
+	var err error
+	if c.content, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                           strrepl                        ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdStrRepl struct {
+	raw       string
+	content   segments
+	substring segments
+	newstring segments
+}
+
+func (c *cmdStrRepl) iterable() bool {
+	return false
+}
+
+func (c *cmdStrRepl) close() {
+	c.content = nil
+	c.newstring = nil
+}
+
+func (c *cmdStrRepl) produce(bg *background) {
+	content := ""
+	newstring := ""
+	substring := ""
+	var err error
+	if content, err = c.content.compose(bg); err != nil {
+		bg.setErrorf("strrepl %s compose content fail: %v", c.raw, err)
+	}
+	if substring, err = c.substring.compose(bg); err != nil {
+		bg.setErrorf("strrepl %s compose substring fail: %v", c.raw, err)
+	}
+	if newstring, err = c.newstring.compose(bg); err != nil {
+		bg.setErrorf("strrepl %s compose newstring fail: %v", c.raw, err)
+	}
+	if len(content) > 0 && len(substring) > 0 {
+		content = strings.ReplaceAll(content, substring, newstring)
+	}
+
+	bg.setOutput(content)
+}
+
+func makeStrRepl(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	c := &cmdStrRepl{
+		raw: raw,
+	}
+	if len(v) >= 2 {
+		var err error
+		if c.content, err = makeSegments(v[0]); err != nil {
+			return nil, err
+		}
+		if c.substring, err = makeSegments(v[1]); err != nil {
+			return nil, err
+		}
+		if len(v) > 2 {
+			if c.newstring, err = makeSegments(v[2]); err != nil {
+				return nil, err
+			}
+		} else {
+			if c.newstring, err = makeSegments(""); err != nil {
+				return nil, err
+			}
+		}
+
+		return c, nil
+	}
+	return nil, fmt.Errorf("strrepl(%s) invalid args", raw)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -499,12 +622,57 @@ func makeIf(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                           print                           ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdPrint struct {
+	raw    string
+	format segments
+}
+
+func (c *cmdPrint) iterable() bool {
+	return false
+}
+func (c *cmdPrint) close() {
+	c.format = nil
+}
+
+func (c *cmdPrint) produce(bg *background) {
+	if c.format != nil {
+		content, err := c.format.compose(bg)
+		if err != nil {
+			bg.setErrorf("print(%s) compose fail: %v", c.raw, err)
+			return
+		}
+		fmt.Print(content)
+	}
+}
+
+func makePrint(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	if len(v) != 1 {
+		return nil, errors.New("print requires a content argument")
+	}
+	if format, err := makeSegments(v[0]); err != nil {
+		return nil, err
+	} else {
+		return &cmdPrint{
+			raw:    raw,
+			format: format,
+		}, nil
+	}
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                           report                          ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
 type cmdReport struct {
-	raw    string
-	format segments
+	raw      string
+	format   segments
+	template bool
+	newline  bool
 }
 
 func (c *cmdReport) iterable() bool {
@@ -515,39 +683,49 @@ func (c *cmdReport) close() {
 }
 
 func (c *cmdReport) produce(bg *background) {
-	if !bg.requireReport() {
-		return
-	}
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
 			bg.setErrorf("report(%s) compose fail: %v", c.raw, err)
 			return
 		}
-		bg.report(content)
+		if c.template {
+			bg.reportTemplate(content, c.newline)
+		} else {
+			bg.report(content, c.newline)
+		}
 	} else {
-		bg.reportDefault()
+		bg.reportDefault(c.newline)
 	}
 
 }
 
 func makeReport(v []string) (command, error) {
 	raw := strings.Join(v, " ")
+	c := &cmdReport{
+		raw: raw,
+	}
+
 	format := ""
+	template := ""
 	fs := flag.NewFlagSet("report", flag.ContinueOnError)
 	fs.StringVar(&format, "f", "", "format to report, use predefined if not present")
+	fs.StringVar(&template, "t", "", "format from template")
+	fs.BoolVar(&c.newline, "n", false, "append new line in the end")
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, err
-	}
-	c := &cmdReport{
-		raw: raw,
 	}
 
 	if len(format) > 0 {
 		if c.format, err = makeSegments(format); err != nil {
 			return nil, err
 		}
+	} else if len(template) > 0 {
+		if c.format, err = makeSegments(template); err != nil {
+			return nil, err
+		}
+		c.template = true
 	}
 	return c, nil
 }
@@ -559,13 +737,15 @@ func makeReport(v []string) (command, error) {
 const (
 	envWrite = iota
 	envDelete
+	envMove
 )
 
 type cmdEnv struct {
-	op       int
-	variable segments
-	value    segments
-	raw      string
+	op          int
+	variable    segments
+	dstVariable segments
+	value       segments
+	raw         string
 }
 
 func (c *cmdEnv) iterable() bool {
@@ -591,6 +771,14 @@ func (c *cmdEnv) produce(bg *background) {
 			return
 		}
 		bg.setLocalEnv(variable, value)
+	} else if c.op == envMove {
+		dst, err := c.dstVariable.compose(bg)
+		if err != nil {
+			bg.setErrorf("env(%s) compose value fail: %v", c.raw, err)
+			return
+		}
+		bg.setLocalEnv(dst, bg.getLocalEnv(variable))
+		bg.delLocalEnv(variable)
 	} else {
 		bg.setErrorf("env(%s): unknown operator %d", c.raw, c.op)
 	}
@@ -618,6 +806,24 @@ func makeEnvw(v []string) (command, error) {
 		return nil, err
 	}
 	if c.value, err = makeSegments(content); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+func makeEnvMv(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	if len(v) != 2 {
+		return nil, fmt.Errorf("envw variable not provided")
+	}
+	c := &cmdEnv{
+		raw: raw,
+		op:  envMove,
+	}
+	var err error
+	if c.variable, err = makeSegments(v[0]); err != nil {
+		return nil, err
+	}
+	if c.dstVariable, err = makeSegments(v[1]); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -978,7 +1184,7 @@ func (c *cmdAssert) judge(bg *background) string {
 		return ""
 	}
 	if c.op == opNot {
-		if a == "0" || a == "false" {
+		if a == "0" || a == "false" || a == "" {
 			return ""
 		}
 		return "assert failure: !" + a
@@ -1295,6 +1501,8 @@ func parseCmdArgs(args []string) (command, error) {
 		return makeCat(args)
 	case "envw":
 		return makeEnvw(args)
+	case "envmv":
+		return makeEnvMv(args)
 	case "envd":
 		return makeEnvd(args)
 	case "write":
@@ -1313,6 +1521,12 @@ func parseCmdArgs(args []string) (command, error) {
 		return makeIf(args)
 	case "report":
 		return makeReport(args)
+	case "print":
+		return makePrint(args)
+	case "strrepl":
+		return makeStrRepl(args)
+	case "escape":
+		return makeEscape(args)
 	default:
 		return nil, fmt.Errorf("cmd %s not supported", name)
 	}
