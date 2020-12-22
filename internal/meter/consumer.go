@@ -1,6 +1,10 @@
 package meter
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/golang/glog"
+)
 
 // consumer should be a component that process response and failure
 type consumer interface {
@@ -30,6 +34,7 @@ const (
 
 type dynamicConsumer struct {
 	// set to true if you need process failure as response
+	check    []segments
 	success  []segments
 	fail     []segments
 	decision failDecision
@@ -37,7 +42,7 @@ type dynamicConsumer struct {
 
 func (d *dynamicConsumer) processResponse(bg *background) next {
 
-	for _, s := range d.success {
+	for _, s := range d.check {
 		_, err := s.compose(bg)
 		if err == nil {
 			errstr := bg.getError()
@@ -48,13 +53,16 @@ func (d *dynamicConsumer) processResponse(bg *background) next {
 
 		// if error occurs, stops response processing
 		if err != nil {
-			return d.decideFailure(bg, err)
+			return d.processFailure(bg, err)
 		}
 	}
+	d.processSuccess(bg)
 	return nextContinue
 }
 
 func (d *dynamicConsumer) decideFailure(bg *background, err error) next {
+	glog.Errorf("%s|%s|%s failed: %v",
+		bg.getGlobalEnv(KeyConfig), bg.getGlobalEnv(KeySchedule), bg.getLocalEnv(KeyTest), err)
 	switch d.decision {
 	case abortOnFail:
 		return nextAbortPlan
@@ -62,6 +70,11 @@ func (d *dynamicConsumer) decideFailure(bg *background, err error) next {
 		return nextContinue
 	}
 	return nextAbortAll
+}
+func (d *dynamicConsumer) processSuccess(bg *background) {
+	for _, s := range d.success {
+		_, _ = s.compose(bg)
+	}
 }
 func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	bg.setError(err.Error())
@@ -71,10 +84,21 @@ func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	return d.decideFailure(bg, err)
 }
 
-func makeDynamicConsumer(success, fail []string, failAction failDecision) (*dynamicConsumer, error) {
+func makeDynamicConsumer(check, success, fail []string, failAction failDecision) (*dynamicConsumer, error) {
 	d := &dynamicConsumer{}
 	d.decision = failAction
 
+	for _, c := range check {
+		if len(c) == 0 {
+			continue
+		}
+		seg, err := makeSegments(c)
+		if err != nil {
+			return nil, err
+		}
+
+		d.check = append(d.check, seg)
+	}
 	for _, c := range success {
 		if len(c) == 0 {
 			continue

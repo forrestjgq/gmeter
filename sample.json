@@ -39,11 +39,14 @@
             "Host": "vse",
             "Request": "req",
             "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ],
                 "Success": [
-                    "`report`"
+                    "`report -n -t common`"
                 ],
                 "Failure": [
-                    "`report`"
+                    "`envmv ERROR FAILURE |escape $(FAILURE)| report -n`"
                 ],
                 "Template": null
             },
@@ -58,7 +61,10 @@
             "Tests": "recognize",
             "Reporter": {
                 "Path1": "report.log",
-                "Format": "{ \"Error\": \"$(ERROR)\", \"Status\": $(STATUS), \"Response\": $(RESPONSE) }\n"
+                "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Templates": {
+                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
+                }
             },
             "Count": 0,
             "Concurrency": 1,

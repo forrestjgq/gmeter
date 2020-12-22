@@ -81,7 +81,6 @@ func (p *plan) runConcurrent(n int) next {
 	return result
 }
 func (p *plan) run() next {
-	p.bg.setLocalEnv(KeyTest, p.name)
 	if len(p.preprocess) > 0 {
 		for _, segs := range p.preprocess {
 			_, err := segs.compose(p.bg)

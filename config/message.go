@@ -49,16 +49,20 @@ func (m *Request) Check() error {
 
 // Response defines how to process successful request and failed request.
 //
-// While HTTP server responds, even with non-2xx status code, Success will
-// be called.
+// While HTTP server responds, even with non-2xx status code, Check will
+// be called. If any error is reported in Check, Check will be aborted.
 //
-// While HTTP request timeout, or any error occurs in the processing, Failure
-// will be called. $(ERROR) indicates what kind of error it is. Note that $(URL),
-// $(REQUEST), $(STATUS) and $(RESPONSE) may be empty. Any other variables generated
-// before HTTP sending are also may empty.
+// If any error is reported in HTTP and Check processing, Failure will be called.
+// Fail reason is recorded in $(ERROR). Note that $(URL), $(REQUEST), $(STATUS)
+// and $(RESPONSE) may be empty. Any other variables generated before HTTP sending
+// (if any) may also be empty.
+//
+// If no error is reported in HTTP and Check processing, Success will be called.
+// Any error reported in Success will NOT trigger Failure.
 //
 type Response struct {
-	Success  []string        // segments called after server responds.
+	Check    []string        // segments called after server responds.
+	Success  []string        // segments called if error is reported during http request and Check
 	Failure  []string        // segments called if any error occurs.
 	Template json.RawMessage // Template is not currently used.
 }

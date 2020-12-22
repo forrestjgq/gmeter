@@ -12,7 +12,7 @@
 //  - PreProcess: prepare for request generation, like setting up environment
 //  - Request generation: parsing request definition and generates an HTTP request.
 //  - HTTP execution: send HTTP request, and write status code and response into environment.
-//  - Response processing: including response check, failure processing, or report writing.
+//  - Response processing: including response check, success and failure processing, or report writing.
 //
 // Before reading the following samples, it's strongly recommended for you to read Config and all
 // related definitions.
@@ -128,7 +128,7 @@
 //		                "quantity": "`cvt -i $(QTY)`"
 //		            },
 //		            "Response": {
-//		                "Success": [
+//		                "Check": [
 //		                    "`assert $(STATUS) == 200`"
 //		                ]
 //		            }
@@ -137,7 +137,7 @@
 //		            "Method": "GET",
 //		            "Path": "/repo?type=$(FRUIT)",
 //		            "Response": {
-//		                "Success": [
+//		                "Check": [
 //		                    "`assert $(STATUS) == 200`",
 //		                    "`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
 //		                    "`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
@@ -148,7 +148,7 @@
 //		            "Method": "DELETE",
 //		            "Path": "/repo?type=$(FRUIT)",
 //		            "Response": {
-//		                "Success": [
+//		                "Check": [
 //		                    "`assert $(STATUS) == 200`"
 //		                ]
 //		            }
@@ -203,6 +203,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 )
@@ -266,8 +267,13 @@ const (
 )
 
 // Report allows test write customized content into given file.
+//
 // Format behaves as an template and guide gmeter to parse it's definition,
-// and compose eventually string and write to file indicated by Path.
+// and compose eventually string and write to file indicated by Path. It's
+// used only while command `report` is called without `-f` and `-t` options.
+//
+// Templates defines some json templates, referred with key by `report -t` to
+// provides a convenient template definition for complex json.
 //
 // If Path is empty, but format is not, content will be written to stdout.
 //
@@ -284,12 +290,21 @@ type Report struct {
 	// Any necessary parents in path will be created.
 	Path string
 
-	// Format defines a template of report content.
+	// Format defines a default format of report content. it's implicitly quoted as argument
+	// if command `report` is used without given an argument `-f <format>`.
+	//
 	// For example, this will write response of every successful response body:
 	// 		"$(RESPONSE)\n"
 	// or this will create a json to save request body, response status, and response body.
 	//		"{\"Request\": $(REQUEST), \"Status\": $(STATUS), \"Response\": $(RESPONSE)}\n"
 	Format string
+
+	// Templates is used to compose a complicate json reporting while Format is not good enough
+	// for you.
+	//
+	// `report -t <key>` could refer the key of Templates to report a json formation content
+	// by parsing `Templates[key]`.
+	Templates map[string]json.RawMessage
 }
 
 // Schedule defines how to run a pipeline of test.
