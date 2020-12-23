@@ -1,12 +1,16 @@
 // Package config defines a configuration for gmeter to use to start a series HTTP restful test.
 //
+//     Note: Fields defined in this package with `[dynamic]` comments allows environment variables and commands
+//     embedding. Refer to of gmeter command document(https://github.com/forrestjgq/gmeter/blob/main/command.md)
+//     for detail description.
+//
 // gmeter runs HTTP by definition of Schedule(s). Each schedule, defining one HTTP test, or a pipeline
 // of HTTP tests, is ran by gmeter independently, and contains a series of HTTP requests execution.
 // These requests can be linearly executed one by one, or concurrently executed through multiple routines.
 //
-// Request can be executed repeatedly for specified times, or be dynamically generated each time it's
-// scheduled by gmeter environment variables and embedded command system. Refer to of gmeter command
-// document(https://github.com/forrestjgq/gmeter/blob/main/command.md) for detail description.
+// Request can be executed repeatedly for specified rounds, or be dynamically generated until it reaches
+// EOF. See iterable command section in command document for more information:
+//          https://github.com/forrestjgq/gmeter/blob/main/command.md#iterable-command
 //
 // Each request execution contains these steps:
 //  - PreProcess: prepare for request generation, like setting up environment
@@ -242,7 +246,7 @@ func (h *Host) Check() error {
 //
 // If any failure occurs duration above procedures, Response.Failure will be called.
 type Test struct {
-	PreProcess []string  // processing before each HTTP request
+	PreProcess []string  // [dynamic] processing before each HTTP request
 	Host       string    // `key` to Config.Hosts, or : [<proxy>|]<host>
 	Request    string    // `key` to Config.Messages
 	Response   *Response // Optional entity used to process response or failure
@@ -288,6 +292,8 @@ type Report struct {
 	// If Path already exists, it will be truncated.
 	//
 	// Any necessary parents in path will be created.
+	//
+	// [dynamic]
 	Path string
 
 	// Format defines a default format of report content. it's implicitly quoted as argument
@@ -297,6 +303,8 @@ type Report struct {
 	// 		"$(RESPONSE)\n"
 	// or this will create a json to save request body, response status, and response body.
 	//		"{\"Request\": $(REQUEST), \"Status\": $(STATUS), \"Response\": $(RESPONSE)}\n"
+	//
+	// [dynamic]
 	Format string
 
 	// Templates is used to compose a complicate json reporting while Format is not good enough
@@ -304,6 +312,8 @@ type Report struct {
 	//
 	// `report -t <key>` could refer the key of Templates to report a json formation content
 	// by parsing `Templates[key]`.
+	//
+	// [dynamic]
 	Templates map[string]json.RawMessage
 }
 
@@ -326,6 +336,8 @@ type Schedule struct {
 
 	// PreProcess defines a group of segment which will be composed before tests runs.
 	// Note that this preprocessing will be called only once.
+	//
+	// [dynamic]
 	PreProcess []string
 
 	// Tests defined a test pipeline composed of one or more tests.

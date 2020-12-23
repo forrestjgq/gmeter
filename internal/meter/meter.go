@@ -34,7 +34,8 @@ const (
 	KeyOutput   = "OUTPUT"
 	KeyError    = "ERROR"
 
-	EOF = "EOF"
+	KeyFailure = "FAILURE"
+	EOF        = "EOF"
 )
 
 var (
@@ -99,6 +100,7 @@ type background struct {
 	lr            gmi.Marker
 	err           error
 	rpt           *reporter
+	predefine     map[string]string
 }
 
 const (
@@ -124,9 +126,12 @@ func (bg *background) next() {
 	bg.seq = bg.counter.next()
 }
 func (bg *background) cleanup() {
-	bg.setInput("")
-	bg.setOutput("")
-	bg.setError("")
+	bg.local = make(simpEnv)
+	if bg.predefine != nil {
+		for k, v := range bg.predefine {
+			bg.setLocalEnv(k, v)
+		}
+	}
 }
 func (bg *background) reportDefault(newline bool) {
 	bg.rpt.reportDefault(bg, newline)
@@ -136,6 +141,9 @@ func (bg *background) report(content string, newline bool) {
 }
 func (bg *background) reportTemplate(template string, newline bool) {
 	bg.rpt.reportTemplate(bg, template, newline)
+}
+func (bg *background) predefineLocalEnv(m map[string]string) {
+	bg.predefine = m
 }
 func (bg *background) getInput() string {
 	return bg.local.get(KeyInput)

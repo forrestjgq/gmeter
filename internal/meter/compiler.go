@@ -1664,3 +1664,48 @@ func makeSegments(str string) (segments, error) {
 
 	return segs, nil
 }
+
+type group struct {
+	segs        []segments
+	ignoreError bool
+	isIterable  bool
+}
+
+func (g *group) compose(bg *background) (string, error) {
+	for _, seg := range g.segs {
+		bg.setInput(bg.getOutput())
+		s, err := seg.compose(bg)
+		if err != nil {
+			if g.ignoreError {
+				bg.setOutput("")
+				bg.setError("")
+			} else {
+				return "", err
+			}
+		} else {
+			bg.setOutput(s)
+		}
+	}
+	return bg.getOutput(), nil
+}
+
+func (g *group) iterable() bool {
+	return g.isIterable
+}
+func makeGroup(src []string, ignoreError bool) (*group, error) {
+	g := &group{
+		segs:        nil,
+		ignoreError: ignoreError,
+	}
+	for _, s := range src {
+		segs, err := makeSegments(s)
+		if err != nil {
+			return nil, err
+		}
+		g.segs = append(g.segs, segs)
+		if segs.iterable() {
+			g.isIterable = true
+		}
+	}
+	return g, nil
+}

@@ -13,9 +13,9 @@ import (
 // Note that Body is accepted only when it's empty, or it's a valid json.
 type Request struct {
 	Method  string            // default to be GET, could be GET/POST/PUT/DELETE
-	Path    string            // /path/to/target, parameter is supported like /path?param1=1&param2=hello...
+	Path    string            // [dynamic] /path/to/target, parameter is supported like /path?param1=1&param2=hello...
 	Headers map[string]string // extra headers like "Content-Type: application/json"
-	Body    json.RawMessage   // Json body to send, or "" if no body is required.
+	Body    json.RawMessage   // [dynamic] Json body to send, or "" if no body is required.
 }
 
 func (m *Request) Check() error {
@@ -61,8 +61,8 @@ func (m *Request) Check() error {
 // Any error reported in Success will NOT trigger Failure.
 //
 type Response struct {
-	Check    []string        // segments called after server responds.
-	Success  []string        // segments called if error is reported during http request and Check
-	Failure  []string        // segments called if any error occurs.
-	Template json.RawMessage // Template is not currently used.
+	Check    []string        // [dynamic] segments called after server responds.
+	Success  []string        // [dynamic] segments called if error is reported during http request and Check
+	Failure  []string        // [dynamic] segments called if any error occurs.
+	Template json.RawMessage // [dynamic] Template is not currently used.
 }

@@ -21,7 +21,7 @@ make sure you've add $GOPATH into your $PATH, then:
 ```
 gmeter -config <config>
 ```
-`<config>` is configure json file path, a sample can be get [here](./sample.json)
+`<config>` is configure json file path, a sample can be get [here](example/sample.json)
 
 # configuration
 All gmeter need is a configuration file. 
