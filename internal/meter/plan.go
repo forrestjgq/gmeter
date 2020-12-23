@@ -2,6 +2,8 @@ package meter
 
 import (
 	"fmt"
+	"strconv"
+	"sync/atomic"
 
 	"github.com/golang/glog"
 )
@@ -12,6 +14,7 @@ type plan struct {
 	bg         *background
 	concurrent int
 	preprocess *group
+	seq        int64
 }
 
 func (p *plan) close() {
@@ -22,6 +25,9 @@ func (p *plan) close() {
 func (p *plan) runOneByOne() next {
 	for {
 		p.bg.next()
+		p.bg.setLocalEnv("ROUTINE", "-1")
+		seq := atomic.AddInt64(&p.seq, 1)
+		p.bg.setLocalEnv(KeySequence, strconv.Itoa(int(seq)))
 
 		decision := p.target.run(p.bg)
 		if decision != nextContinue {
@@ -47,10 +53,14 @@ func (p *plan) runConcurrent(n int) next {
 	stop := false
 	c := make(chan next)
 	for i := 0; i < n; i++ {
-		go func() {
+		go func(n int) {
+			sn := strconv.Itoa(n)
 			bg := p.bg.dup()
 			for !stop {
 				bg.next()
+				bg.setLocalEnv("ROUTINE", sn)
+				seq := atomic.AddInt64(&p.seq, 1)
+				bg.setLocalEnv(KeySequence, strconv.Itoa(int(seq)))
 				if decision := p.target.run(bg); decision != nextContinue {
 					// maybe error, may finished
 					c <- decision
@@ -58,7 +68,7 @@ func (p *plan) runConcurrent(n int) next {
 			}
 
 			c <- nextAbortPlan
-		}()
+		}(i)
 	}
 
 	waiting := n

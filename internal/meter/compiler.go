@@ -373,10 +373,8 @@ func makeEcho(v []string) (command, error) {
 	raw := strings.Join(v, " ")
 	content := "$(" + KeyInput + ")"
 
-	if len(v) == 1 {
-		content = v[0]
-	} else if len(v) > 1 {
-		return nil, fmt.Errorf("echo(%s) invalid args", raw)
+	if len(v) > 0 {
+		content = raw
 	}
 
 	seg, err := makeSegments(content)
@@ -644,23 +642,26 @@ func (c *cmdPrint) produce(bg *background) {
 			bg.setErrorf("print(%s) compose fail: %v", c.raw, err)
 			return
 		}
-		fmt.Print(content)
+		fmt.Print(content, "\n")
 	}
 }
 
 func makePrint(v []string) (command, error) {
 	raw := strings.Join(v, " ")
-	if len(v) != 1 {
-		return nil, errors.New("print requires a content argument")
+	content := "$(" + KeyInput + ")"
+
+	if len(v) > 0 {
+		content = raw
 	}
-	if format, err := makeSegments(v[0]); err != nil {
+
+	seg, err := makeSegments(content)
+	if err != nil {
 		return nil, err
-	} else {
-		return &cmdPrint{
-			raw:    raw,
-			format: format,
-		}, nil
 	}
+	return &cmdPrint{
+		raw:    raw,
+		format: seg,
+	}, nil
 
 }
 

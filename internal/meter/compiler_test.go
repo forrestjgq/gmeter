@@ -65,6 +65,7 @@ func TestSegments(t *testing.T) {
 		"echo: `echo \"$(FILE)\"` ends":                                              "echo: " + name + " ends",
 		"echo: `echo` ends":                                                          "echo: input ends",
 		"echo: `echo \"what oop\"s` ends":                                            "echo: what oops ends",
+		"echo: `echo what oops` ends":                                                "echo: what oops ends",
 		"cat: `cat " + name + "` ends":                                               "cat: " + content + " ends",
 		"cat: `cat $(FILE)` ends":                                                    "cat: " + content + " ends",
 		"write: `write -c $(FILE) ${OUT} | cat ${OUT}` ends":                         "write: " + name + " ends",

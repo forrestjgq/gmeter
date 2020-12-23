@@ -26,6 +26,8 @@ const (
 
 	// Local
 	KeyTest     = "TEST"
+	KeyRoutine  = "ROUTINE"
+	KeySequence = "SEQUENCE"
 	KeyURL      = "URL"
 	KeyRequest  = "REQUEST"
 	KeyStatus   = "STATUS"

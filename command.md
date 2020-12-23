@@ -31,6 +31,8 @@ Local variables are defined in a single run of test pipeline. When next run star
 | Variable | Type   | Read-Only | Description                                                                      |
 | --       | --     | --        | --                                                                               |
 | TEST     | string | true      | name of current test, set on test is scheduled to run                            |
+| SEQUENCE | int    | true      | sequence number of test, start from 1                                            |
+| ROUTINE  | int    | true      | routine id of test, start from 0                                                 |
 | URL      | string | false     | HTTP request URL, set before HTTP request sent                                   |
 | REQUEST  | string | false     | HTTP request body, set before HTTP request sent                                  |
 | STATUS   | int    | false     | HTTP response status code, set after HTTP request being responded                |
@@ -195,9 +197,13 @@ so we need remove extra `""` surrounding `$(RESPONSE)`, apply `cvt -r`:
 ```
 
 ## echo - write string to $(OUTPUT)
-`echo <content>/$(INPUT)`
+`echo <content...>/$(INPUT)`
 
-write `<content>` or `$(INPUT)` to `$(OUTPUT)`
+write `<content...>` or `$(INPUT)` to `$(OUTPUT)`
+Note that `<content...>` could be a space seperated string without quote like:
+```
+echo ${SCHEDULE} runs in routine $(ROUTINE) seq $(SEQUENCE)
+```
 
 ## cat - write content of a file as string to $(OUTPUT)
 `cat <path>/$(INPUT)`
@@ -210,9 +216,13 @@ Read all file content from given `<path>` and write to $(OUTPUT).
 Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
 
 ## print - print string to stdout
-`print <content>/$(INPUT)`
+`print <content...>/$(INPUT)`
 
-print string into stdout.
+print string into stdout, an extra new line `\n` is appended.
+Note that `<content...>` could be a space seperated string without quote like:
+```
+print ${SCHEDULE} runs in routine $(ROUTINE) seq $(SEQUENCE)
+```
 
 ## escape - escape quotes
 `escape <content>/$(INPUT)`

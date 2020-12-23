@@ -196,7 +196,7 @@
 // applies a preprocess, which read a line from list and write fruit and quantity into environment variable
 // `$(FRUIT)` and `$(QTY)`. These two variables will be quoted in request generation and response checking.
 //
-// You may note that each case adds a `Response|Success`, containing one or several commands to check response
+// You may note that each case adds a `Response|Check`, containing one or several commands to check response
 // status and content.
 //
 // and in `Schedules` a concurrency of 100 is applied.
