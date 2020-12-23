@@ -1,0 +1,79 @@
+{
+    "Name": "fruit-repo",
+    "Hosts": {
+        "localhost": {
+            "Host": "http://127.0.0.1:8000"
+        }
+    },
+    "Messages": {
+        "quantity-write": {
+            "Method": "POST",
+            "Path": "/repo",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "repo": "fruit",
+                "type": "$(FRUIT)",
+                "quantity": "`cvt -i $(QTY)`"
+            },
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            }
+        },
+        "quantity-read": {
+            "Method": "GET",
+            "Path": "/repo?type=$(FRUIT)",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`",
+                    "`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
+                    "`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
+                ]
+            }
+        },
+        "quantity-delete": {
+            "Method": "DELETE",
+            "Path": "/repo?type=$(FRUIT)",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            }
+        }
+    },
+    "Tests": {
+        "test-write": {
+            "PreProcess": [
+                "`list /path/to/fruit/list | envw JSON`",
+                "`json .fruit | envw FRUIT`",
+                "`json .quantity | envw QTY`"
+            ],
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "3s"
+        },
+        "test-read": {
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "1s"
+        },
+        "test-delete": {
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "1s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "quantity",
+            "Tests": "test-write|test-read|test-delete",
+            "Concurrency": 100
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true"
+    }
+}

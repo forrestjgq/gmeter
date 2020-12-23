@@ -1,8 +1,12 @@
+# Overview
+gmeter provides environment variables and a set of commands support for test cases to dynamically generate cases, check responses, report response with customized formation.
+
+All the power of gmeter comes from commands and variables.
 
 # Variable
 Variable refers to an environment value indexed by string.
 
-There are two types of variable: local variable and global variable. Local variable is defined and can only be accessed in the domain of a test plan, and global variable is defined globally and can be accessed anywhere.
+There are two types of variable: **local variable** and **global variable**. Local variable is defined and can only be accessed in the domain of a test plan, and global variable is defined globally and can be accessed anywhere.
 
 Two forms of variable representation are defined:
 - `$(name)`: local variable
@@ -10,9 +14,6 @@ Two forms of variable representation are defined:
 
 Here `name` is variable name which is started with alpha or `_` and composed of `[a-zA-Z0-9_-.]`.
 
-To read from variable, just use `$(name)` or `${name}`.
-
-To write to variable, use express of `$(name) = "something with whitespace"` or `${name} = something`. Quotes are not required here except that white spaces is included.
 
 ## Global Variables
 Global variables are those defined inside a schedule and can be accessed by all its tests in every stage at any time.
@@ -27,26 +28,94 @@ It is persisted across the whole lifetime of schedule.
 ## Local Variables
 Local variables are defined in a single run of test pipeline. When next run starts, all previous variables will be obsolete.
 
-| Variable | Type   | Read-Only | Description                               |
-| --       | --     | --        | --                                        |
-| TEST     | string | true      | name of current test                      |
-| URL      | string | false     | HTTP request URL                          |
-| REQUEST  | string | false     | HTTP request body                         |
-| STATUS   | int    | false     | HTTP response status code                 |
-| RESPONSE | string | false     | HTTP response body                        |
-| INPUT    | string | false     | Input of command segments                 |
-| OUTPUT   | string | false     | Output of command segments                |
-| ERROR    | string | false     | Error output of command segments          |
+| Variable | Type   | Read-Only | Description                                                                      |
+| --       | --     | --        | --                                                                               |
+| TEST     | string | true      | name of current test, set on test is scheduled to run                            |
+| URL      | string | false     | HTTP request URL, set before HTTP request sent                                   |
+| REQUEST  | string | false     | HTTP request body, set before HTTP request sent                                  |
+| STATUS   | int    | false     | HTTP response status code, set after HTTP request being responded                |
+| RESPONSE | string | false     | HTTP response body, set after HTTP request being responded and there is any body |
+| INPUT    | string | false     | Input of command segments, set to $(OUTPUT) before a command is called           |
+| OUTPUT   | string | false     | Output of command segments, set by command to write output                       |
+| ERROR    | string | false     | Error output of command segments, set if command generate an error               |
+| FAILURE  | string | true      | HTTP fail reason, set after HTTP process fails and before fail process is called |
+
+When a new test(or tests group) starts a new round, all local will be cleared.
+
+Local variables are concurrent-safe. If test runs in concurrent routines, each routine maintains an independant local variable.
+
+Through `env` command family, test cases are able to manipulate local variables.
+
+## Variable reference
+Variables can be referenced in the string of config or command, for example, a `config.Test` is defined as:
+```json
+        "quantity-write": {
+            "Method": "POST",
+            "Path": "/repo",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "repo": "fruit",
+                "type": "$(FRUIT)",
+                "quantity": "`cvt -i $(QTY)`"
+            },
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            }
+        }
+```
+
+In the request body, we defined a json with 3 members: `repo`, `type`, `quantity`. 
+`repo` has a value of static string `"fruit"`, `type` defines an dynamic string which refers to a local variable `$(FRUIT)`, `quantity` defines a command refers to `$(QTY)`. Vairables referred in a string will be replaced with its value, and vairables referred in a command will be treated as an argument even its value contains spaces inside(just like refers variables in shell command line).
 
 # Command
-Gmeter command is just like shell, with a few different.
+gmeter command acts just like shell, with a few difference:
 1. instead of stdin/stdout/stderr, `$(INPUT)`/`$(OUTPUT)`/`$(ERROR)` are defined.
 2. command alternatively reads parameter from variable if not explictely present. For example, `cmd <arg>/$(INPUT)` indicates if `<arg>` is not present, use `$(INPUT)` as parameter instead.
-3. output will be writtern to `$(OUTPUT)`
-4. error will be writtern to `$(ERROR)`
-5. GMeter is a case sensitive system.
+3. output, if any, will be writtern to `$(OUTPUT)`
+4. if any error occurs, error string will be writtern to `$(ERROR)`
+5. gmeter is a case sensitive system.
 
-## cvt
+gmeter command process only strings, although some command will treat strings as numbers or booleans, it basicly takes string inputs and generates string output.
+
+## iterable command
+
+An iterable command is a command that generates valid output by keep calling it and at last reachs an end, at which time it generates an `EOF` error. An example of iterable command is `list`, which reads a line from a file each time it's called until end of file.
+
+Iterable command is usually used in test preprocess to read cases from a list and write parameters used in test case into environment variables.
+
+Iterable command alters gmeter's action on controlling test counts. If there is no iterable command, how many times test should runs in a shcedule depends on the `config.Schedule.Count`. But there is is any iterable commands in the preprocessing and request generating, `config.Schedule.Count` is discarded and test will be running until any iterable command generates an `EOF`.
+
+## Pipeline
+A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may(NOT must) use `$(INPUT)` as its parameter.
+
+So it works just like shell pipe.
+
+This is how a pipeline is defined:
+`cmd1 | cmd2 | cmd3 | ...`
+
+If any command in a pipeline write `EOF` to `$(ERROR)`, pipeline finishes.
+
+If any command in a pipeline write an error other than `EOF` to `$(ERROR)`, pipeline aborts.
+
+## Group
+Commands and pipelines can be grouped as a list, for example, we define several `Check`s in `config.Response` to check HTTP response:
+```json
+	"Check": [
+		"`assert $(STATUS) == 200`",
+		"`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
+		"`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
+	]
+```
+Each of these commands or pipelines are called in the sequence they are defined.
+
+In most cases, group behaves as if a long pipeline is splitted into several short pipelines. If error occurs, following pipelines won't be called. But there are exceptions:
+   Any error happened in `config.Response.Success` and `config.Response.Fail` will abort current pipeline, but following pipelines will still be called.
+
+## cvt - strip quotes and convert string to specified type
 `cvt [-b] [-i] [-f] [-r] <content>/$(INPUT)`
 
 convert `<content>` or `$(INPUT)` to :
@@ -125,34 +194,34 @@ so we need remove extra `""` surrounding `$(RESPONSE)`, apply `cvt -r`:
 }
 ```
 
-## echo
+## echo - write string to $(OUTPUT)
 `echo <content>/$(INPUT)`
 
 write `<content>` or `$(INPUT)` to `$(OUTPUT)`
 
-## cat
+## cat - write content of a file as string to $(OUTPUT)
 `cat <path>/$(INPUT)`
 
 Read all file content from given `<path>` and write to $(OUTPUT).
 
-## write
+## write - write string to a file
 `write [-c <content>] <path> `
 
 Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
 
-## print
+## print - print string to stdout
 `print <content>/$(INPUT)`
 
 print string into stdout.
 
-## escape
+## escape - escape quotes
 `escape <content>/$(INPUT)`
 
 replace `"` with `\"` in `<content>` or `$(INPUT)` to `$(OUTPUT)`
 
 if you want to write a string value might containing `"` into a json, you need escape it to avoid json grammar error.
 
-## strrepl
+## strrepl - replace or delete substring
 `strrepl <content> <substring> [<newstring>]`
 
 replace substring `<substring>` in string `<content>` with `<newstring>`, if `<newstring>` is absent, all `<substring>` in `<content>` will be deleted.
@@ -170,7 +239,7 @@ envmv <src> <dst>
 - `envd` deletes local variable named by `<variable>`
 - `envmv` move local variable `$(src)` value to `$(dst)`, `$(src)` will be cleared
 
-## assert
+## assert - condition checking
 ```
 assert <condition>
 ```
@@ -208,7 +277,7 @@ when logical judgment operators are used, `a` can be
 
 specially, `!$(var)` while `$(var)` is empty will be treat as true.
 
-## list
+## list - read line by line from a file
 `list <file>`
 
 Read lines one by one from `<file>`, ignore empty lines.
@@ -243,7 +312,7 @@ second HTTP request will get request body:
 **NOTE**:
     obviously list will use parameter at the first call, so any change of parameter will be useless after that.
 
-## b64
+## b64 - base64 encoding
 
 ```sh
 # Encode string:
@@ -255,7 +324,7 @@ b64 -f <file>/$(INPUT)
 
 Base64 encode a string or file
 
-## json
+## json - json query
 ```
 json [-e] [-n] <path> <content>/$(INPUT)
 ```
@@ -298,7 +367,7 @@ Here gives some examples of path:
 - `.list` is `["line1", "line2"]`
 - `.list.[1]` is `line1`
 
-## if-then-else
+## if-then-else - if condition
 ```
 if <condition> then <command1> [else <command2>]
 ```
@@ -307,7 +376,7 @@ if `<condition>` evaluates as `true`, then `<command1>` is executed, otherwise i
 `<condition>` has same definition of `assert`.
 `<command1>` and `<command2>` could be any command except `if-then-else` itself.
 
-## report
+## report - write string to report file
 ```
 report [-n] [-f format] [-t template]
 ```
@@ -327,20 +396,11 @@ If report without a valid format string, nothing is reported.
 
 if `[-n]` is present, an extra newline `\n` is appended.
 
-## Pipeline
-A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may use `$(INPUT)` as its parameter.
-
-So it works just like shell pipe.
-
-This is how a pipeline is defined:
-`cmd1 | cmd2 | cmd3 | ...`
-
-If any command in a pipeline write "EOF" to `$(ERROR)`, pipeline finishes.
-
-If any command in a pipeline write an error other than "EOF" to `$(ERROR)`, pipeline aborts and test will fail.
 
 ## lua support
-You may embed lua script inside and by read and write variable to communicates with GMeter.
+NOT SUPPORTED YET.
+
+You may embed lua script inside and by read and write variable to communicates with gmeter.
 
 lua script can be embedded inside `<<` and `>>`, multiple lines are supported, or read from file
 

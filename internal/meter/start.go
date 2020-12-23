@@ -83,12 +83,10 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 
 	bg.setGlobalEnv(KeySchedule, sched.Name)
 	bg.setGlobalEnv(KeyTPath, cfg.Options[config.OptionCfgPath])
-	if sched.Env != nil {
-		for k, v := range sched.Env {
-			bg.setLocalEnv(k, v)
-		}
-	}
 	bg.setGlobalEnv(KeyConfig, cfg.Name)
+	if sched.Env != nil {
+		bg.predefine = sched.Env
+	}
 
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {
 		bg.setGlobalEnv(KeyDebug, debug)
@@ -245,12 +243,9 @@ func create(cfg *config.Config) []*plan {
 		}
 
 		if len(s.PreProcess) > 0 {
-			for _, str := range s.PreProcess {
-				segs, err := makeSegments(str)
-				if err != nil {
-					glog.Fatalf("schedule %s make preprocess %s fail, err: %v", s.Name, str, err)
-				}
-				p.preprocess = append(p.preprocess, segs)
+			p.preprocess, err = makeGroup(s.PreProcess, false)
+			if err != nil {
+				glog.Fatalf("schedule %s make preprocesss fail, err: %v", s.Name, err)
 			}
 		}
 		plans = append(plans, p)

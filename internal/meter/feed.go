@@ -91,7 +91,7 @@ type dynamicFeeder struct {
 	count      uint64
 	end        bool
 	iterable   bool
-	preprocess []segments
+	preprocess *group
 }
 
 func (f *dynamicFeeder) feed(bg *background) (content, error) {
@@ -129,18 +129,11 @@ func (f *dynamicFeeder) run() {
 			continue
 		}
 
-		if len(f.preprocess) > 0 {
-			toNext := false
-			for _, segs := range f.preprocess {
-				_, err := segs.compose(b.bg)
-				if err != nil {
-					b.err = err
-					b.wg.Done()
-					toNext = true
-					break
-				}
-			}
-			if toNext {
+		if f.preprocess != nil {
+			_, err := f.preprocess.compose(b.bg)
+			if err != nil {
+				b.err = err
+				b.wg.Done()
 				continue
 			}
 		}
@@ -195,16 +188,14 @@ func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string)
 	}
 
 	if len(preprocess) > 0 {
-		for _, str := range preprocess {
-			segs, err := makeSegments(str)
-			if err != nil {
-				return nil, err
-			}
-			f.preprocess = append(f.preprocess, segs)
-			if segs.iterable() {
-				iterable = true
-			}
+		g, err := makeGroup(preprocess, false)
+		if err != nil {
+			return nil, err
 		}
+		if g.iterable() {
+			iterable = true
+		}
+		f.preprocess = g
 	}
 
 	if iterable {

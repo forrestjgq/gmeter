@@ -1,0 +1,58 @@
+{
+    "Name": "fruit-repo",
+    "Hosts": {
+        "localhost": {
+            "Host": "http://127.0.0.1:8000"
+        }
+    },
+    "Messages": {
+        "quantity-write": {
+            "Method": "POST",
+            "Path": "/repo",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "repo": "fruit",
+                "type": "apple",
+                "quantity": 300
+            }
+        },
+        "quantity-read": {
+            "Method": "GET",
+            "Path": "/repo?type=apple"
+        },
+        "quantity-delete": {
+            "Method": "DELETE",
+            "Path": "/repo?type=apple"
+        }
+    },
+    "Tests": {
+        "test-write": {
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "3s"
+        },
+        "test-read": {
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "1s"
+        },
+        "test-delete": {
+            "Host": "localhost",
+            "Request": "write",
+            "Timeout": "1s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "quantity",
+            "Tests": "test-write|test-read|test-delete",
+            "Count": 100000,
+            "Concurrency": 100,
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+    }
+}
