@@ -1,8 +1,8 @@
 // Package config defines a configuration for gmeter to use to start a series HTTP restful test.
 //
-//     Note: Fields defined in this package with `[dynamic]` comments allows environment variables and commands
-//     embedding. Refer to of gmeter command document(https://github.com/forrestjgq/gmeter/blob/main/command.md)
-//     for detail description.
+//     Note: Fields defined in this package with `[dynamic]` comments allows environment
+//     variables and commands embedding. Refer to of gmeter command document
+//     https://github.com/forrestjgq/gmeter/blob/main/command.md for detail description.
 //
 // gmeter runs HTTP by definition of Schedule(s). Each schedule, defining one HTTP test, or a pipeline
 // of HTTP tests, is ran by gmeter independently, and contains a series of HTTP requests execution.
@@ -15,8 +15,10 @@
 // Each request execution contains these steps:
 //  - PreProcess: prepare for request generation, like setting up environment
 //  - Request generation: parsing request definition and generates an HTTP request.
-//  - HTTP execution: send HTTP request, and write status code and response into environment.
-//  - Response processing: including response check, success and failure processing, or report writing.
+//  - HTTP execution: send HTTP request, and write status code and response
+//    into environment.
+//  - Response processing: including response check, success and failure processing,
+//    or report writing.
 //
 // Before reading the following samples, it's strongly recommended for you to read Config and all
 // related definitions.
@@ -199,7 +201,7 @@
 // You may note that each case adds a `Response|Check`, containing one or several commands to check response
 // status and content.
 //
-// and in `Schedules` a concurrency of 100 is applied.
+// In `Schedules` a concurrency of 100 is applied.
 //
 // These covers all your needs.
 //
@@ -320,16 +322,17 @@ type Report struct {
 // Schedule defines how to run a pipeline of test.
 // A schedule runs on its own and has no side effect with other schedules, if any.
 //
-// PreProcess will be called before test runs. and then test(s) will be scheduled. The
-// decision for gmeter of how to schedule tests depends on:
-//  - iterable test: if any iterable command like `list` is defined in anywhere before
-//    test actually sending HTTP request to server, the test will be treated as an iterable
-//    one, and test will end if any command issues an EOF, disregards of Count setting.
+// PreProcess will be called before test runs. and then test(s) will be scheduled.
+// The decision for gmeter of how to schedule tests depends on:
+//  - iterable test: if any iterable command like `list` is defined in anywhere
+//    before test actually sending HTTP request to server, the test will be treated
+//    as an iterable one, and test will end if any command issues an EOF, disregards
+//    of  Count setting.
 //
-//  - Count: for non-iterable test, this defines how many HTTP executions test should run.
+//  - Count: for non-iterable test, defines how many HTTP executions test should run
 //
-//  - Concurrency: how many routines should be created to run test concurrently for both
-//    iterable and non-iterable cases.
+//  - Concurrency: how many routines should be created to run test concurrently for
+//    both iterable and non-iterable cases.
 type Schedule struct {
 	// Name defines name of schedule, and by read ${SCHEDULE} to get.
 	Name string
