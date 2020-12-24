@@ -36,6 +36,9 @@
                 ],
                 "Success": [
                     "`report -n -t common`"
+                ],
+                "Failure": [
+                    "`report -n -t common`"
                 ]
             },
             "Timeout": "10s"
@@ -53,7 +56,7 @@
                     "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
                 }
             },
-            "Count": 100,
+            "Count": 1000,
             "Concurrency": 10
         }
     ],

@@ -32,7 +32,7 @@ To create a dynamic and powerful test configuration, you need be familiar with g
 
 gmeter attempts to provide json configuration guide through go doc system:
 
-[Config](https://pkg.go.dev/github.com/forrestjgq/gmeter/config)
+[Config](https://godoc.org/github.com/forrestjgq/gmeter/config)
 
 It's recommended that you read this package overview first, and then jump to Config and its members.
 

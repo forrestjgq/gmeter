@@ -2,16 +2,20 @@ package meter
 
 import (
 	"errors"
-	"io"
 )
 
 // provider should be a component that provides information runner requires
 type provider interface {
-	hasMore(bg *background) next
 	getMethod(bg *background) string
 	getUrl(bg *background) (string, next)
 	getHeaders(bg *background) (map[string]string, next)
 	getRequestBody(bg *background) (string, next)
+}
+
+// providerSource provide a capability to dynamically generating provider.
+// This makes concurrent generating of provider possible.
+type providerSource interface {
+	getProvider(bg *background) (provider, next)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,14 +30,20 @@ type staticProvider struct {
 	body        string
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// as providerSource
+////////////////////////////////////////////////////////////////////////////////
+
+func (s *staticProvider) getProvider(bg *background) (provider, next) {
+	if bg.seq < s.count {
+		return s, nextContinue
+	}
+	return nil, nextFinished
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // as provider
 ////////////////////////////////////////////////////////////////////////////////
-func (s *staticProvider) hasMore(bg *background) next {
-	if bg.seq < s.count {
-		return nextContinue
-	}
-	return nextFinished
-}
 
 func (s *staticProvider) getMethod(bg *background) string {
 	return s.method
@@ -51,16 +61,6 @@ func (s *staticProvider) getRequestBody(bg *background) (string, next) {
 	return s.body, nextContinue
 }
 
-func (s *staticProvider) processResponse(bg *background, status int, body io.Reader) next {
-	if status != 200 {
-		return nextAbortPlan
-	}
-	return nextContinue
-}
-
-func (s *staticProvider) processFailure(bg *background, err error) next {
-	return nextAbortPlan
-}
 func (s *staticProvider) check() error {
 	if len(s.url) > 0 && len(s.method) > 0 {
 		return nil
@@ -82,62 +82,40 @@ func makeStaticProvider(method, url string, body string, count uint64) (*staticP
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Feed Provider
+// Feed Provider as providerSource
 ////////////////////////////////////////////////////////////////////////////////
 
 // feedProvider
 type feedProvider struct {
-	s      *staticProvider
 	feeder feeder
 }
 
-func (f *feedProvider) hasMore(bg *background) next {
-	if err := f.feed(bg); err != nil {
+func (f *feedProvider) getProvider(bg *background) (provider, next) {
+	var err error
+	var prov *staticProvider
+
+	if prov, err = f.feed(bg); err != nil {
 		if isEof(err) {
-			return nextFinished
+			return nil, nextFinished
 		} else {
 			bg.setError(err.Error())
-			return nextAbortPlan
+			return nil, nextAbortPlan
 		}
 	}
-	if err := f.s.check(); err != nil {
+
+	if err = prov.check(); err != nil {
 		bg.setError(err.Error())
-		return nextAbortPlan
+		return nil, nextAbortPlan
 	}
-	return nextContinue
+	return prov, nextContinue
 }
 
-func (f *feedProvider) getMethod(bg *background) string {
-	return f.s.getMethod(bg)
-}
-
-func (f *feedProvider) getUrl(bg *background) (string, next) {
-	return f.s.getUrl(bg)
-}
-
-func (f *feedProvider) getHeaders(bg *background) (map[string]string, next) {
-	return f.s.getHeaders(bg)
-}
-
-func (f *feedProvider) getRequestBody(bg *background) (string, next) {
-	return f.s.getRequestBody(bg)
-}
-
-func (f *feedProvider) processResponse(bg *background, status int, body io.Reader) next {
-	return f.s.processResponse(bg, status, body)
-}
-
-func (f *feedProvider) processFailure(bg *background, err error) next {
-	return f.s.processFailure(bg, err)
-}
-
-func (f *feedProvider) feed(bg *background) error {
+func (f *feedProvider) feed(bg *background) (*staticProvider, error) {
 	c, err := f.feeder.feed(bg)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	f.s = &staticProvider{}
-	s := f.s
+	s := &staticProvider{}
 	if c != nil {
 		oldHdr := s.headers
 		s.headers = make(map[string]string)
@@ -157,15 +135,14 @@ func (f *feedProvider) feed(bg *background) error {
 			s.headers = oldHdr
 		}
 	}
-	return nil
+	return s, nil
 }
 
-func makeFeedProvider(feeder feeder) (provider, error) {
+func makeFeedProvider(feeder feeder) (providerSource, error) {
 	if feeder == nil {
 		return nil, errors.New("invalid feed provider")
 	}
 	p := &feedProvider{
-		s:      &staticProvider{},
 		feeder: feeder,
 	}
 

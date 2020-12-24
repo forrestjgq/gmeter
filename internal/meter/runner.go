@@ -15,10 +15,10 @@ import (
 
 // runner is a single http sender
 type runner struct {
-	h    *http.Client
-	p    provider
-	c    consumer
-	name string
+	h       *http.Client
+	provSrc providerSource
+	c       consumer
+	name    string
 }
 
 func (r *runner) run(bg *background) next {
@@ -30,18 +30,18 @@ func (r *runner) run(bg *background) next {
 		req      *http.Request
 		rsp      *http.Response
 		err      error
+		p        provider
 	)
 
-	p := r.p
 	c := r.c
 
-	if p == nil || c == nil || bg == nil {
+	if r.provSrc == nil || c == nil || bg == nil {
 		glog.Error("invalid runner")
 		return nextAbortAll
 	}
 	bg.setLocalEnv(KeyTest, r.name)
 
-	if decision = p.hasMore(bg); decision != nextContinue {
+	if p, decision = r.provSrc.getProvider(bg); decision != nextContinue {
 		return decision
 	}
 
@@ -68,11 +68,11 @@ func (r *runner) run(bg *background) next {
 
 	if debug {
 		fmt.Printf(`
---------Request-------------
+--------Request %s-%s -------------
 URL: %s %s
 Header: %v
 Body: %s
-`, method, url, headers, body)
+`, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), method, url, headers, body)
 	}
 
 	if req, err = http.NewRequest(method, url, rd); err != nil {
@@ -103,10 +103,10 @@ Body: %s
 		if debug {
 			fmt.Printf(`
 
---------Response------------
+--------Response %s-%s ------------
 Status: %d
 Body: %s
-`, rsp.StatusCode, string(b))
+`, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), rsp.StatusCode, string(b))
 		}
 		if err != nil {
 			return c.processFailure(bg, err)
@@ -122,8 +122,8 @@ Body: %s
 
 // makeRunner will create a runner with valid provider.
 // if http.Client h or consumer c is not provided, a default one will be used.
-func makeRunner(name string, p provider, h *http.Client, c consumer) (runnable, error) {
-	if p == nil {
+func makeRunner(name string, provSrc providerSource, h *http.Client, c consumer) (runnable, error) {
+	if provSrc == nil {
 		return nil, errors.New("provider must be provided")
 	}
 	if h == nil {
@@ -133,9 +133,9 @@ func makeRunner(name string, p provider, h *http.Client, c consumer) (runnable, 
 		c = defaultConsumer
 	}
 	return &runner{
-		name: name,
-		h:    h,
-		p:    p,
-		c:    c,
+		name:    name,
+		h:       h,
+		provSrc: provSrc,
+		c:       c,
 	}, nil
 }
