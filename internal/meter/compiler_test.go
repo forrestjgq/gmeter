@@ -76,6 +76,7 @@ func TestSegments(t *testing.T) {
 		"env: `envw -c \"content\" ENVW |echo $(ENVW)`":                              "env: content",
 		"env: `envw ENVW |echo $(ENVW)`":                                             "env: input",
 		"env: `envw ENVW |envd ENVW | echo $(ENVW)`":                                 "env: ",
+		"`assert 1 != 1 -h jgq $(OUTPUT)`":                                           "ERROR",
 		"`assert 1 == 1 | assert 1.0 == 1.0 | assert abc == abc | echo $(ERROR)`":    "",
 		"`assert 1 != 2 | assert 1.1 != 1.0 | assert abc != bbc | echo $(ERROR)`":    "",
 		"`assert 2 >= 1 | assert 2 > 1 | assert 2 >= 2 | echo $(ERROR)`":             "",
@@ -94,6 +95,7 @@ func TestSegments(t *testing.T) {
 		"`json  .list.[1] $(JSON)`":                                                  "line2",
 		"`json  .list $(JSON) | json [1]. `":                                         "line2",
 		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
+		"`envw -c jgq TEMP | echo I am $(TEMP)`":                                     "I am jgq",
 	}
 
 	for k, v := range m {
@@ -107,6 +109,8 @@ func TestSegments(t *testing.T) {
 			if res, err := seg.compose(bg); err != nil {
 				if v != "ERROR" {
 					t.Fatal(err)
+				} else {
+					t.Log("get error: ", err)
 				}
 			} else if res != v {
 				if v == "NE" {

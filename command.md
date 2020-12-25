@@ -251,10 +251,10 @@ envmv <src> <dst>
 
 ## assert - condition checking
 ```
-assert <condition>
+assert <condition...> [-h <hints...>]
 ```
 
-assert will report an error if `<condition>` is evaluated as `false`.
+assert will report an error if `<condition>` is evaluated as `false`. If `-h <hints...>` is present, error string will evaluate `<hints...>` and attach to error string for debugging.
 
 `<condition>` accepts two forms: compare and logical judgment:
 

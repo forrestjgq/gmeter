@@ -38,6 +38,9 @@ const (
 
 	KeyFailure = "FAILURE"
 	EOF        = "EOF"
+
+	// Temp
+	KeyTemp = "TEMP"
 )
 
 var (
@@ -147,6 +150,9 @@ func (bg *background) reportTemplate(template string, newline bool) {
 func (bg *background) predefineLocalEnv(m map[string]string) {
 	bg.predefine = m
 }
+func (bg *background) getTemp() string {
+	return bg.local.get(KeyTemp)
+}
 func (bg *background) getInput() string {
 	return bg.local.get(KeyInput)
 }
@@ -160,6 +166,9 @@ func (bg *background) hasError() bool {
 	return len(bg.local.get(KeyError)) > 0
 }
 
+func (bg *background) setTemp(value string) {
+	bg.local.put(KeyTemp, value)
+}
 func (bg *background) setInput(value string) {
 	bg.local.put(KeyInput, value)
 }

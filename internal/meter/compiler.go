@@ -1044,6 +1044,7 @@ type cmdAssert struct {
 	op    int
 	float *regexp.Regexp
 	num   *regexp.Regexp
+	hint  segments
 }
 
 func (c *cmdAssert) iterable() bool {
@@ -1207,6 +1208,11 @@ func (c *cmdAssert) judge(bg *background) string {
 func (c *cmdAssert) produce(bg *background) {
 	err := c.judge(bg)
 	if len(err) != 0 {
+		if c.hint != nil {
+			if hint, _ := c.hint.compose(bg); len(hint) > 0 {
+				err = err + ", hint: " + hint
+			}
+		}
 		bg.setError(err)
 	}
 }
@@ -1220,6 +1226,22 @@ func makeAssert(v []string) (command, error) {
 	if len(v) == 0 {
 		return nil, errors.New("assert nothing")
 	}
+
+	for i, s := range v {
+		if s == "-h" {
+			if i < len(v)-1 {
+				hint := strings.Join(v[i+1:], " ")
+				seg, err := makeSegments(hint)
+				if err != nil {
+					return nil, err
+				}
+				c.hint = seg
+			}
+			v = v[0:i]
+			break
+		}
+	}
+
 	if v[0] == "!" {
 		c.op = opNot
 		if len(v) > 2 {
@@ -1495,6 +1517,11 @@ func (p pipeline) close() {
 func parseCmdArgs(args []string) (command, error) {
 	name := args[0]
 	args = args[1:]
+	for i, s := range args {
+		if s == "$" {
+			args[i] = "$(" + KeyTemp + ")"
+		}
+	}
 	switch name {
 	case "echo":
 		return makeEcho(args)
@@ -1657,7 +1684,7 @@ func makeSegments(str string) (segments, error) {
 	}
 
 	if phase != phaseString {
-		return nil, fmt.Errorf("parse finish with phase %d", phase)
+		return nil, fmt.Errorf("parse finish with phase %d, source: %s", phase, str)
 	}
 	if len(r) > start {
 		segs = append(segs, staticSegment(r[start:]))
