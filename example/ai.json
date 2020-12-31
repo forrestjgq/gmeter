@@ -1,0 +1,100 @@
+{
+  "Name": "sample",
+  "Hosts": {
+    "vse": {
+      "Host": "http://127.0.0.1:8009",
+      "Proxy": ""
+    }
+  },
+  "Messages": {
+    "req": {
+      "Method": "POST",
+      "Path": "/ai/detect/all",
+      "Headers": {
+        "content-type": "application/json"
+      },
+      "Body": {
+        "image": {
+          "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg"
+        }
+      }
+    }
+  },
+  "Tests": {
+    "recognize": {
+      "Host": "vse",
+      "Request": "req",
+      "Response": {
+        "Check": [
+        ],
+        "Success": [
+          "`report -n -t common`"
+        ],
+        "Failure": [
+          "`envmv ERROR FAILURE |escape $(FAILURE)| report -n`"
+        ],
+        "Template": {
+          "Context": {
+            "Status": "`assert $ == 200`"
+          },
+          "Result": {
+            "InnerStatus": "`assert $ == 200`",
+            "Pedestrian": [
+              {
+                "`list`": "`json -n .[] $ | assert $(OUTPUT) == 8`",
+                "`item`": [
+                  "`json -e .PedesAttr $`",
+                  "`json -e .PedesAttr.Sex $`"
+                ],
+                "`default`": [
+                  "`json .Img.Cutboard.X $ | envw -c $(OUTPUT) X `",
+                  "`json .Img.Cutboard.Y $ | envw -c $(OUTPUT) Y `",
+                  "`print cutboard(x: $(X), y: $(Y))`"
+                ]
+              },
+              {
+                "Id: optional": "`assert $ > 0`",
+                "Img: index": {
+                  "Cutboard": {
+                    "X": "`assert $ >= 1530 | assert $ < 1550`",
+                    "Y": "`assert $ >= 650 | assert $ < 665`"
+                  }
+                },
+                "PedesAttr": {
+                  "`default`": [
+                    "`print found pedestrian property: $<key>`"
+                  ]
+                },
+                "Features": "`strlen $ | assert $(OUTPUT) > 400`",
+                "HasFace": false
+              }
+            ]
+          }
+        }
+      },
+      "Timeout": "10s"
+    }
+  },
+  "Mode": "",
+  "Schedules": [
+    {
+      "Name": "recog-image",
+      "PreProcess": [],
+      "Tests": "recognize",
+      "Reporter": {
+        "Path": "report.log",
+        "Format": "{ \"Error\": \"$(FAILURE)\" }",
+        "Templates": {
+          "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
+        }
+      },
+      "Count": 1,
+      "Concurrency": 1,
+      "Env": null
+    }
+  ],
+  "Options": {
+    "AbortIfFail": "true",
+    "Debug": "false"
+  }
+}

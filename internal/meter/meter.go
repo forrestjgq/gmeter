@@ -53,6 +53,10 @@ func isEof(err error) bool {
 
 type simpEnv map[string]string
 
+func (s simpEnv) pop(bg *background) {
+	panic("implement me")
+}
+
 func (s simpEnv) get(key string) string {
 	return s[key]
 }
@@ -102,6 +106,7 @@ type background struct {
 	counter       *counter
 	seq           uint64
 	local, global env
+	dyn           []env
 	lr            gmi.Marker
 	err           error
 	rpt           *reporter
@@ -150,6 +155,42 @@ func (bg *background) reportTemplate(template string, newline bool) {
 func (bg *background) predefineLocalEnv(m map[string]string) {
 	bg.predefine = m
 }
+func (bg *background) pushJsonEnv(e env) {
+	bg.dyn = append(bg.dyn, e)
+}
+func (bg *background) popJsonEnv() {
+	if len(bg.dyn) == 0 {
+		return
+	}
+	bg.dyn = bg.dyn[:len(bg.dyn)-1]
+}
+func (bg *background) topEnv() env {
+	if len(bg.dyn) == 0 {
+		return nil
+	}
+	return bg.dyn[len(bg.dyn)-1]
+}
+func (bg *background) getJsonEnv(key string) string {
+	e := bg.topEnv()
+	if e == nil {
+		panic("no json env " + key)
+	}
+	return e.get(key)
+}
+func (bg *background) setJsonEnv(key, value string) {
+	e := bg.topEnv()
+	if e == nil {
+		panic("no json env " + key)
+	}
+	e.put(key, value)
+}
+func (bg *background) deleteJsonEnv(key string) {
+	e := bg.topEnv()
+	if e == nil {
+		panic("no json env")
+	}
+	e.delete(key)
+}
 func (bg *background) getTemp() string {
 	return bg.local.get(KeyTemp)
 }
@@ -180,7 +221,7 @@ func (bg *background) setError(value string) {
 }
 func (bg *background) setErrorf(format string, a ...interface{}) {
 	err := fmt.Errorf(format, a...)
-	bg.local.put(KeyError, err.Error())
+	bg.setError(err.Error())
 }
 
 func (bg *background) getLocalEnv(key string) string {

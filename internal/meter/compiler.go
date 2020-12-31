@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/golang/glog"
 
@@ -23,6 +24,10 @@ type command interface {
 	iterable() bool
 	produce(bg *background)
 	close()
+}
+
+type composable interface {
+	compose(bg *background) (string, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -228,6 +233,26 @@ func makeCvt(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                              nop                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdNop struct{}
+
+func (c *cmdNop) close() {
+}
+
+func (c *cmdNop) iterable() bool {
+	return false
+}
+
+func (c *cmdNop) produce(_ *background) {
+}
+
+func makeNop(v []string) (command, error) {
+	return &cmdNop{}, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                            escape                         ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -271,6 +296,53 @@ func makeEscape(v []string) (command, error) {
 	var err error
 	if c.content, err = makeSegments(content); err != nil {
 		return nil, err
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                            strlen                         ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdStrLen struct {
+	raw     string
+	content segments
+}
+
+func (c *cmdStrLen) iterable() bool {
+	return false
+}
+
+func (c *cmdStrLen) close() {
+	c.content = nil
+}
+
+func (c *cmdStrLen) produce(bg *background) {
+	content := ""
+	var err error
+	if content, err = c.content.compose(bg); err != nil {
+		bg.setErrorf("strrepl %s compose content fail: %v", c.raw, err)
+	} else {
+		len := utf8.RuneCountInString(content)
+		bg.setOutput(strconv.Itoa(len))
+	}
+}
+
+func makeStrLen(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	content := "$(" + KeyInput + ")"
+	if len(v) == 1 {
+		content = v[0]
+	} else if len(v) > 1 {
+		return nil, fmt.Errorf("strlen(%s) invalid args", raw)
+	}
+	c := &cmdStrLen{
+		raw: raw,
+	}
+	var err error
+	c.content, err = makeSegments(content)
+	if err != nil {
+		return nil, fmt.Errorf("strlen(%s) make content fail: %v", raw, err)
 	}
 	return c, nil
 }
@@ -342,6 +414,50 @@ func makeStrRepl(v []string) (command, error) {
 		return c, nil
 	}
 	return nil, fmt.Errorf("strrepl(%s) invalid args", raw)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                             fail                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdFail struct {
+	raw     string
+	content segments
+}
+
+func (c *cmdFail) iterable() bool {
+	return false
+}
+
+func (c *cmdFail) close() {
+	c.content = nil
+}
+
+func (c *cmdFail) produce(bg *background) {
+	if content, err := c.content.compose(bg); err != nil {
+		bg.setErrorf("fail %s compose fail: %v", c.raw, err)
+	} else {
+		bg.setError(content)
+	}
+}
+
+func makeFail(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	content := "$(" + KeyInput + ")"
+
+	if len(v) > 0 {
+		content = raw
+	}
+
+	seg, err := makeSegments(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cmdFail{
+		raw:     raw,
+		content: seg,
+	}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1320,6 +1436,16 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 	}
 	segs := strings.Split(path, ".")
 
+	// if path is "." or ".." ..., remove useless path segs
+	var temp []string
+	for i := range segs {
+		s := strings.TrimSpace(segs[i])
+		if i == 0 || len(s) > 0 {
+			temp = append(temp, s)
+		}
+	}
+	segs = temp
+
 	var value interface{}
 	if err := json.Unmarshal([]byte(content), &value); err != nil {
 		return nil, err
@@ -1339,7 +1465,10 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 		r := []rune(key)
 		switch c := value.(type) {
 		case []interface{}:
-			if r[0] != '[' || r[len(r)-1] != ']' {
+			if len(key) == 0 {
+				continue
+			}
+			if len(r) < 2 || r[0] != '[' || r[len(r)-1] != ']' {
 				return nil, errors.New("expect json list path")
 			}
 			x := string(r[1 : len(r)-1])
@@ -1519,12 +1648,14 @@ func parseCmdArgs(args []string) (command, error) {
 	args = args[1:]
 	for i, s := range args {
 		if s == "$" {
-			args[i] = "$(" + KeyTemp + ")"
+			args[i] = "$<" + jsonEnvValue + ">"
 		}
 	}
 	switch name {
 	case "echo":
 		return makeEcho(args)
+	case "fail":
+		return makeFail(args)
 	case "cat":
 		return makeCat(args)
 	case "envw":
@@ -1553,8 +1684,12 @@ func parseCmdArgs(args []string) (command, error) {
 		return makePrint(args)
 	case "strrepl":
 		return makeStrRepl(args)
+	case "strlen":
+		return makeStrLen(args)
 	case "escape":
 		return makeEscape(args)
+	case "nop":
+		return makeNop(args)
 	default:
 		return nil, fmt.Errorf("cmd %s not supported", name)
 	}
@@ -1590,6 +1725,7 @@ const (
 	phaseEnv
 	phaseLocal
 	phaseGlobal
+	phaseJsonEnv
 	phaseString
 )
 
@@ -1619,11 +1755,17 @@ func makeSegments(str string) (segments, error) {
 				phase = phaseLocal
 			} else if c == '{' {
 				phase = phaseGlobal
+			} else if c == '<' {
+				phase = phaseJsonEnv
 			} else {
 				return nil, errors.New("expect '(' or '{' after '$'")
 			}
 		case phaseLocal:
 			if c == ')' {
+				phase = phaseString
+			}
+		case phaseJsonEnv:
+			if c == '>' {
 				phase = phaseString
 			}
 		case phaseGlobal:
@@ -1657,6 +1799,16 @@ func makeSegments(str string) (segments, error) {
 					segs = append(segs, seg)
 				}
 			case phaseEnv:
+			case phaseJsonEnv:
+				if i > start {
+					name := string(r[start:i])
+					if len(name) == 0 {
+						return nil, errors.New("json env variable name is missing")
+					}
+					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
+						return bg.getJsonEnv(name), nil
+					}})
+				}
 			case phaseLocal:
 				if i > start {
 					name := string(r[start:i])

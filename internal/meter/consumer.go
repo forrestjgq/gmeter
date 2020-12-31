@@ -1,6 +1,8 @@
 package meter
 
 import (
+	"encoding/json"
+
 	"github.com/golang/glog"
 )
 
@@ -35,10 +37,16 @@ type dynamicConsumer struct {
 	check    *group
 	success  *group
 	fail     *group
+	template jsonRule
 	decision failDecision
 }
 
 func (d *dynamicConsumer) processResponse(bg *background) next {
+	if d.template != nil {
+		if err := compareTemplate(d.template, bg, bg.getLocalEnv(KeyResponse)); err != nil {
+			return d.processFailure(bg, err)
+		}
+	}
 
 	if d.check != nil {
 		_, err := d.check.compose(bg)
@@ -79,7 +87,7 @@ func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	return d.decideFailure(bg, err)
 }
 
-func makeDynamicConsumer(check, success, fail []string, failAction failDecision) (*dynamicConsumer, error) {
+func makeDynamicConsumer(check, success, fail []string, template json.RawMessage, failAction failDecision) (*dynamicConsumer, error) {
 	d := &dynamicConsumer{}
 	d.decision = failAction
 
@@ -98,6 +106,13 @@ func makeDynamicConsumer(check, success, fail []string, failAction failDecision)
 	}
 	if len(fail) > 0 {
 		d.fail, err = makeGroup(fail, true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(template) > 0 {
+		d.template, err = makeJsonTemplate(template)
 		if err != nil {
 			return nil, err
 		}

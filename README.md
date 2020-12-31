@@ -16,6 +16,10 @@ gmeter is a dynamic HTTP request tool with benchmark and monitor support. It's j
 
 `go get github.com/forrestjgq/gmeter`
 
+or directly install:
+
+`curl -sf https://gobinaries.com/forrestjgq/gmeter | sh`
+
 # Usage
 make sure you've add $GOPATH into your $PATH, then:
 ```

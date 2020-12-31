@@ -11,6 +11,7 @@ There are two types of variable: **local variable** and **global variable**. Loc
 Two forms of variable representation are defined:
 - `$(name)`: local variable
 - `${name}`: global variable
+- `$<name>`: json compare environment variable
 
 Here `name` is variable name which is started with alpha or `_` and composed of `[a-zA-Z0-9_-.]`.
 
@@ -47,6 +48,12 @@ When a new test(or tests group) starts a new round, all local will be cleared.
 Local variables are concurrent-safe. If test runs in concurrent routines, each routine maintains an independant local variable.
 
 Through `env` command family, test cases are able to manipulate local variables.
+
+## Json compare environment variables
+These environment contains two predefined variables:
+- `$<key>`: json object member key, only present if current target is an object member.
+- `$<value>`: json value, for basic type(bool/number/string) it's their string formation, for object and list it's mashalled json string.
+
 
 ## Variable reference
 Variables can be referenced in the string of config or command, for example, a `config.Test` is defined as:
@@ -196,6 +203,20 @@ so we need remove extra `""` surrounding `$(RESPONSE)`, apply `cvt -r`:
 }
 ```
 
+## nop - do nothing
+`nop`
+
+nop is a command that does nothing.
+
+## fail - fail case by write string to $(ERROR)
+`fail <content...>/$(INPUT)`
+
+write `<content...>` or `$(INPUT)` to `$(ERROR)`
+Note that `<content...>` could be a space seperated string without quote like:
+```
+fail ${SCHEDULE} fails in routine $(ROUTINE) seq $(SEQUENCE)
+```
+
 ## echo - write string to $(OUTPUT)
 `echo <content...>/$(INPUT)`
 
@@ -235,6 +256,11 @@ if you want to write a string value might containing `"` into a json, you need e
 `strrepl <content> <substring> [<newstring>]`
 
 replace substring `<substring>` in string `<content>` with `<newstring>`, if `<newstring>` is absent, all `<substring>` in `<content>` will be deleted.
+
+## strlen - get string length
+`strlen <content>/$(INPUT)`
+
+get the string length by UTF-8 counting and write to `$(OUTPUT)`
 
 ## env command family
 ```

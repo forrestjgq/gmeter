@@ -49,20 +49,23 @@ func (m *Request) Check() error {
 
 // Response defines how to process successful request and failed request.
 //
-// While HTTP server responds, even with non-2xx status code, Check will
-// be called. If any error is reported in Check, Check will be aborted.
+// HTTP Response processing:
+//     While HTTP server responds, even with non-2xx status code, Template will
+//     be called for json comparing with HTTP response if it's defined.
+//     If Template succeeds or it's not defined , Check will be called.
+//     If any error is reported in Check processing, Check will be aborted.
 //
-// If any error is reported in HTTP and Check processing, Failure will be called.
+// If any error is reported in HTTP and HTTP response processing, Failure will be called.
 // Fail reason is recorded in $(ERROR). Note that $(URL), $(REQUEST), $(STATUS)
 // and $(RESPONSE) may be empty. Any other variables generated before HTTP sending
 // (if any) may also be empty.
 //
-// If no error is reported in HTTP and Check processing, Success will be called.
+// If no error is reported in HTTP and HTTP response processing, Success will be called.
 // Any error reported in Success will NOT trigger Failure.
 //
 type Response struct {
 	Check    []string        // [dynamic] segments called after server responds.
 	Success  []string        // [dynamic] segments called if error is reported during http request and Check
 	Failure  []string        // [dynamic] segments called if any error occurs.
-	Template json.RawMessage // [dynamic] Template is not currently used.
+	Template json.RawMessage // [dynamic] Template is a json compare template to compare with response.
 }
