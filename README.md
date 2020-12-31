@@ -27,6 +27,8 @@ gmeter -config <config>
 ```
 `<config>` is configure json file path, a sample can be get [here](example/sample.json)
 
+Specially, to use a template in `config.Response.Template`, you should read [jsonc](jsonc.md) to construct a json template.
+
 # configuration
 All gmeter need is a configuration file. 
 
