@@ -136,6 +136,11 @@ func TestListStatic(t *testing.T) {
 	fail(t, src, `[]`)
 	success(t, src, src)
 }
+func TestListDynamic(t *testing.T) {
+	src := "[ \"`assert $ > 1`\", \"`assert $ > 2`\"]"
+	success(t, src, `[2, 3]`)
+	fail(t, src, `[ 2, 2]`)
+}
 func TestListBasic(t *testing.T) {
 	src := "[ { \"`list`\": [ \"`json  -n .[] $ | assert $(OUTPUT) >= 3`\" ], \"`item`\":  \"`assert $ > 0`\"  }, 1, 2 ]"
 	fail(t, src, `[1, 2]`)       // len >= 3
@@ -158,6 +163,59 @@ func TestListStringList(t *testing.T) {
 	success(t, src, s1)
 	f1 := ` [[ "abc", "def", "sssss" ], [ "abc", "def", "sssss" ], [ "abc", "def", "s" ]]`
 	fail(t, src, f1)
+}
+
+func TestListTemplate(t *testing.T) {
+	src := "[ { \"`template`\": { \"a\": \"`assert $ > 10`\", \"b\": \"`assert $`\", \"c\": \"`assert $ < 5`\" } } ]"
+	s1 := `
+
+  [
+    {
+      "a": 11,
+      "b": true,
+      "c": 3
+    },
+    {
+      "a": 12,
+      "b": true,
+      "c": 1,
+      "d": 10
+    }
+  ]
+`
+	success(t, src, s1)
+	f1 := `
+
+  [
+    {
+      "a": 10,
+      "b": true,
+      "c": 3
+    }
+  ]
+`
+	fail(t, src, f1)
+	f2 := `
+
+  [
+    {
+      "a": 11,
+      "b": false,
+      "c": 3
+    }
+  ]
+`
+	fail(t, src, f2)
+	f3 := `
+
+  [
+    {
+      "a": 11,
+      "c": 3
+    }
+  ]
+`
+	fail(t, src, f3)
 }
 
 /*
@@ -266,6 +324,42 @@ func TestListSearch(t *testing.T) {
 ]
 `
 	fail(t, src, f4)
+}
+func TestListSearchOptional(t *testing.T) {
+	src := "[ { \"`default`\": \"`nop`\" }, { \"a: index, optional\": \"`assert $ == 1`\", \"b\": \"`assert $ > 1`\" } ]"
+	s1 := `
+[
+  {
+    "a": 1,
+    "b": 20
+  },
+  {
+    "a": 2,
+    "b": 1,
+    "c": 30
+  },
+  {
+    "a": 12,
+    "b": -1
+  }
+]
+`
+	success(t, src, s1)
+
+	s2 := `
+[
+  {
+    "a": 2,
+    "b": 2,
+    "c": 30
+  },
+  {
+    "a": 12,
+    "b": -1
+  }
+]
+`
+	success(t, src, s2)
 }
 func TestListCompareMember(t *testing.T) {
 	src := "[ { \"`default`\": \"`json .b $ | assert $(OUTPUT) < 0`\" }, { \"a\": \"`assert $ >= 1`\", \"b\": \"`assert $ >= 10`\" }, { \"a\": \"`assert $ < 1`\", \"b\": \"`assert $ > 100`\", \"c\": \"`assert $ > 30`\" } ]"
@@ -410,5 +504,52 @@ func TestObjectChildObject(t *testing.T) {
 	s1 := ` { "a": {"b": 1, "c": 4} } `
 	success(t, src, s1)
 	f1 := ` { "a": {"b": 1, "c": 2} } `
+	fail(t, src, f1)
+}
+func TestDemo(t *testing.T) {
+	src := "{ \"`default`\": [ \"`print found key $<key>`\" ], \"a: optional\": 1, \"b\": \"`strlen $ | assert $(OUTPUT) > 10`\", \"c\": false, \"d\": [ { \"`list`\": [ \"`assert $<length> > 4`\" ], \"`item`\": [ \"`assert $ > 0`\" ], \"`default`\": [ \"`assert $ > 10`\" ] }, 1, 2, 3 ], \"e\": [ { \"`template`\": { \"name\": \"`strlen $<key> | assert $(OUTPUT) > 3`\", \"qty\": \"`assert $ > 10`\" } }, { \"name: index\": \"apple\", \"qty\": \"`assert $ > 1000`\" } ] }"
+	s1 := `
+  {
+    "b": "abcdefg hijklmn opq",
+    "c": false,
+
+    "d": [
+      1,
+      2,
+      3,
+      12,
+      13
+    ],
+
+    "e": [
+      {
+        "name": "apple",
+        "qty": 1200
+      }
+    ]
+  }
+`
+	success(t, src, s1)
+	f1 := `
+  {
+    "b": "abcdefg hijklmn opq",
+    "c": false,
+
+    "d": [
+      1,
+      2,
+      3,
+      4,
+      13
+    ],
+
+    "e": [
+      {
+        "name": "apple",
+        "qty": 1200
+      }
+    ]
+  }
+`
 	fail(t, src, f1)
 }

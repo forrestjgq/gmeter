@@ -7,8 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
-
-	"github.com/golang/glog"
+	"unicode/utf8"
 )
 
 //
@@ -27,8 +26,9 @@ const (
 )
 
 const (
-	jsonEnvKey   = "key"
-	jsonEnvValue = "value"
+	jsonEnvKey    = "key"
+	jsonEnvValue  = "value"
+	jsonEnvLength = "length"
 )
 const (
 	indDefault = "default"
@@ -50,6 +50,15 @@ func (j *jsonEnv) get(key string) string {
 				j.simp.put(key, s)
 				v = s
 			}
+		} else if key == jsonEnvLength {
+			if j.value != nil {
+				if list, ok := j.value.([]interface{}); ok {
+					return strconv.Itoa(len(list))
+				} else if str, ok := j.value.(string); ok {
+					return strconv.Itoa(utf8.RuneCountInString(str))
+				}
+			}
+			v = "0"
 		}
 	}
 
@@ -168,6 +177,12 @@ func makeDynamicRule(value interface{}) (jsonRule, error) {
 func getStringOfValue(src interface{}) (string, error) {
 	e := ""
 	switch v := src.(type) {
+	case bool:
+		if v {
+			e = "true"
+		} else {
+			e = "false"
+		}
 	case string:
 		e = v
 	case float64:
@@ -237,6 +252,7 @@ func makeJsonKey(s string) (*jsonKey, error) {
 		if len(ts) != 0 {
 			opts := strings.Split(ts, ",")
 			for _, opt := range opts {
+				opt = strings.TrimSpace(opt)
 				switch opt {
 				case "optional":
 					key.prop = append(key.prop, jsonPropOptional)
@@ -251,9 +267,6 @@ func makeJsonKey(s string) (*jsonKey, error) {
 		}
 	}
 
-	if key.has(jsonPropIndex) && (key.has(jsonPropAbsent) || key.has(jsonPropOptional)) {
-		return nil, fmt.Errorf("key %s as index must be present", key.key)
-	}
 	return key, nil
 }
 
@@ -452,7 +465,19 @@ func (j *jsonObject) getKey() *jsonKey {
 func (j *jsonObject) hasIndex() bool {
 	return len(j.index) > 0
 }
+func (j *jsonObject) isIndexOptional() bool {
+	for _, v := range j.index {
+		if !v.getKey().has(jsonPropOptional) {
+			return false
+		}
+	}
+	return true
+}
 func (j *jsonObject) match(bg *background, key string, src interface{}) error {
+	// this is a try matching, any error should be abandon
+	errstr := bg.getError()
+	defer bg.setError(errstr)
+
 	defer makeJsonEnv(bg, key, src).pop(bg)
 
 	if src == nil {
@@ -546,6 +571,7 @@ func makeJsonObject(key *jsonKey, value map[string]interface{}) (*jsonObject, er
 				} else {
 					obj.rules[ind] = r
 				}
+
 			default:
 				return nil, errors.New("invalid json object ind: " + ind)
 			}
@@ -589,7 +615,6 @@ func (j *jsonList) getKey() *jsonKey {
 }
 
 func (j *jsonList) compare(bg *background, key string, src interface{}) error {
-	glog.Errorf("compare list %s", key)
 	defer makeJsonEnv(bg, key, src).pop(bg)
 
 	value, ok := src.([]interface{})
@@ -606,6 +631,14 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 
 	hasItem := false
 	if r, ok := j.rules["item"]; ok {
+		hasItem = true
+		for i := range value {
+			if err := r.compare(bg, "", value[i]); err != nil {
+				return err
+			}
+		}
+	}
+	if r, ok := j.rules["template"]; ok {
 		hasItem = true
 		for i := range value {
 			if err := r.compare(bg, "", value[i]); err != nil {
@@ -641,7 +674,7 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 					break
 				}
 			}
-			if !found {
+			if !found && !srch.isIndexOptional() {
 				return fmt.Errorf("searcher %d fails", k)
 			}
 		}
@@ -722,6 +755,8 @@ func makeJsonList(key *jsonKey, value []interface{}) (jsonRule, error) {
 					switch k {
 					case "`list`", "`item`", "`default`":
 						r, err = makeDynamicRule(v)
+					case "`template`":
+						r, err = makeJsonTemplateFromValue(v)
 					default:
 						err = fmt.Errorf("unknown list operation: %s", k)
 					}
@@ -824,12 +859,7 @@ func makeJsonRule(key *jsonKey, value interface{}) (jsonRule, error) {
 		return nil, fmt.Errorf("unsupported json value type %T, value: %v", value, value)
 	}
 }
-func makeJsonTemplate(raw json.RawMessage) (jsonRule, error) {
-	var value interface{}
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return nil, err
-	}
-
+func makeJsonTemplateFromValue(value interface{}) (jsonRule, error) {
 	switch v := value.(type) {
 	case []interface{}:
 		return makeJsonList(nil, v)
@@ -838,6 +868,15 @@ func makeJsonTemplate(raw json.RawMessage) (jsonRule, error) {
 	default:
 		return nil, fmt.Errorf("json type %T is not supported", v)
 	}
+
+}
+func makeJsonTemplate(raw json.RawMessage) (jsonRule, error) {
+	var value interface{}
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, err
+	}
+
+	return makeJsonTemplateFromValue(value)
 }
 
 func compareTemplate(template jsonRule, bg *background, msg string) error {

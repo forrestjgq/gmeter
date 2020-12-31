@@ -41,7 +41,7 @@
             "InnerStatus": "`assert $ == 200`",
             "Pedestrian": [
               {
-                "`list`": "`json -n .[] $ | assert $(OUTPUT) == 8`",
+                "`list`": "`assert $<length> == 8`",
                 "`item`": [
                   "`json -e .PedesAttr $`",
                   "`json -e .PedesAttr.Sex $`"
@@ -63,7 +63,11 @@
                 "PedesAttr": {
                   "`default`": [
                     "`print found pedestrian property: $<key>`"
-                  ]
+                  ],
+                  "Age": {
+                    "Id": "`assert $ == 3`",
+                    "Confidence": "`assert $ > 0.9`"
+                  }
                 },
                 "Features": "`strlen $ | assert $(OUTPUT) > 400`",
                 "HasFace": false
