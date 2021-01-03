@@ -871,6 +871,9 @@ func makeJsonTemplateFromValue(value interface{}) (jsonRule, error) {
 
 }
 func makeJsonTemplate(raw json.RawMessage) (jsonRule, error) {
+	if string(raw) == "null" {
+		return nil, nil
+	}
 	var value interface{}
 	if err := json.Unmarshal(raw, &value); err != nil {
 		return nil, err
