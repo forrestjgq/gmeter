@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -15,17 +14,14 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/pkg/errors"
+
 	"github.com/golang/glog"
 
 	"github.com/forrestjgq/gmeter/internal/argv"
 )
 
-type command interface {
-	iterable() bool
-	produce(bg *background)
-	close()
-}
-
+// composable is an entity which generates a string,
 type composable interface {
 	compose(bg *background) (string, error)
 }
@@ -36,14 +32,14 @@ type composable interface {
 
 type segment interface {
 	iterable() bool
-	getString(bg *background) (string, error)
+	produce(bg *background) (string, error)
 }
 type staticSegment string
 
 func (ss staticSegment) iterable() bool {
 	return false
 }
-func (ss staticSegment) getString(bg *background) (string, error) {
+func (ss staticSegment) produce(bg *background) (string, error) {
 	return string(ss), nil
 }
 
@@ -55,7 +51,7 @@ type dynamicSegment struct {
 func (ds dynamicSegment) iterable() bool {
 	return ds.isIterable
 }
-func (ds dynamicSegment) getString(bg *background) (string, error) {
+func (ds dynamicSegment) produce(bg *background) (string, error) {
 	return ds.f(bg)
 }
 
@@ -80,7 +76,7 @@ func (s segments) isStatic() bool {
 func (s segments) compose(bg *background) (string, error) {
 	arr := make([]string, len(s))
 	for i, seg := range s {
-		str, err := seg.getString(bg)
+		str, err := seg.produce(bg)
 		if err != nil {
 			return "", err
 		}
@@ -119,6 +115,17 @@ func (s segments) compose(bg *background) (string, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                          Commands                         ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+// command is an executable entity
+type command interface {
+	iterable() bool
+	execute(bg *background)
+	close()
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                             cvt                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -140,7 +147,7 @@ func (c *cmdCvt) close() {
 	c.content = nil
 }
 
-func (c *cmdCvt) produce(bg *background) {
+func (c *cmdCvt) execute(bg *background) {
 	if content, err := c.content.compose(bg); err != nil {
 		bg.setErrorf("cvt(%s) compose fail: %v", c.raw, err)
 	} else {
@@ -245,7 +252,7 @@ func (c *cmdNop) iterable() bool {
 	return false
 }
 
-func (c *cmdNop) produce(_ *background) {
+func (c *cmdNop) execute(_ *background) {
 }
 
 func makeNop(v []string) (command, error) {
@@ -269,7 +276,7 @@ func (c *cmdEscape) close() {
 	c.content = nil
 }
 
-func (c *cmdEscape) produce(bg *background) {
+func (c *cmdEscape) execute(bg *background) {
 	content := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
@@ -317,7 +324,7 @@ func (c *cmdStrLen) close() {
 	c.content = nil
 }
 
-func (c *cmdStrLen) produce(bg *background) {
+func (c *cmdStrLen) execute(bg *background) {
 	content := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
@@ -367,7 +374,7 @@ func (c *cmdStrRepl) close() {
 	c.newstring = nil
 }
 
-func (c *cmdStrRepl) produce(bg *background) {
+func (c *cmdStrRepl) execute(bg *background) {
 	content := ""
 	newstring := ""
 	substring := ""
@@ -433,7 +440,7 @@ func (c *cmdFail) close() {
 	c.content = nil
 }
 
-func (c *cmdFail) produce(bg *background) {
+func (c *cmdFail) execute(bg *background) {
 	if content, err := c.content.compose(bg); err != nil {
 		bg.setErrorf("fail %s compose fail: %v", c.raw, err)
 	} else {
@@ -477,7 +484,7 @@ func (c *cmdEcho) close() {
 	c.content = nil
 }
 
-func (c *cmdEcho) produce(bg *background) {
+func (c *cmdEcho) execute(bg *background) {
 	if content, err := c.content.compose(bg); err != nil {
 		bg.setErrorf("echo %s compose fail: %v", c.raw, err)
 	} else {
@@ -523,7 +530,7 @@ func (c *cmdCat) close() {
 	c.content = nil
 }
 
-func (c *cmdCat) produce(bg *background) {
+func (c *cmdCat) execute(bg *background) {
 	if len(c.content) == 0 {
 		path, err := c.path.compose(bg)
 		if err != nil {
@@ -587,7 +594,7 @@ func (c *cmdWrite) close() {
 	c.path = nil
 }
 
-func (c *cmdWrite) produce(bg *background) {
+func (c *cmdWrite) execute(bg *background) {
 	content, err := c.content.compose(bg)
 	if err != nil {
 		bg.setErrorf("write(%s) command compose content fail: %v", c.raw, err)
@@ -668,14 +675,14 @@ func (c *cmdIf) close() {
 	}
 }
 
-func (c *cmdIf) produce(bg *background) {
-	c.condition.produce(bg)
+func (c *cmdIf) execute(bg *background) {
+	c.condition.execute(bg)
 	err := bg.getError()
 	bg.setError("")
 	if len(err) == 0 {
-		c.cthen.produce(bg)
+		c.cthen.execute(bg)
 	} else if c.celse != nil {
-		c.celse.produce(bg)
+		c.celse.execute(bg)
 	}
 }
 func makeIf(v []string) (command, error) {
@@ -751,7 +758,7 @@ func (c *cmdPrint) close() {
 	c.format = nil
 }
 
-func (c *cmdPrint) produce(bg *background) {
+func (c *cmdPrint) execute(bg *background) {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
@@ -799,7 +806,7 @@ func (c *cmdReport) close() {
 	c.format = nil
 }
 
-func (c *cmdReport) produce(bg *background) {
+func (c *cmdReport) execute(bg *background) {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
@@ -873,7 +880,7 @@ func (c *cmdEnv) close() {
 	c.value = nil
 }
 
-func (c *cmdEnv) produce(bg *background) {
+func (c *cmdEnv) execute(bg *background) {
 	variable, err := c.variable.compose(bg)
 	if err != nil {
 		bg.setErrorf("env(%s) compose variable fail: %v", c.raw, err)
@@ -976,7 +983,7 @@ func (c *cmdList) close() {
 	}
 }
 
-func (c *cmdList) produce(bg *background) {
+func (c *cmdList) execute(bg *background) {
 	if c.file == nil {
 		var err error
 		path, err := c.path.compose(bg)
@@ -1045,7 +1052,7 @@ func (c *cmdB64) close() {
 	c.path = nil
 }
 
-func (c *cmdB64) produce(bg *background) {
+func (c *cmdB64) execute(bg *background) {
 	var err error
 	if len(c.encoded) == 0 {
 		encoded := ""
@@ -1321,7 +1328,7 @@ func (c *cmdAssert) judge(bg *background) string {
 	}
 
 }
-func (c *cmdAssert) produce(bg *background) {
+func (c *cmdAssert) execute(bg *background) {
 	err := c.judge(bg)
 	if len(err) != 0 {
 		if c.hint != nil {
@@ -1503,7 +1510,7 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	return value, nil
 }
-func (c *cmdJson) produce(bg *background) {
+func (c *cmdJson) execute(bg *background) {
 	content, err := c.content.compose(bg)
 	if err != nil {
 		bg.setError("json: " + err.Error())
@@ -1628,10 +1635,10 @@ func (p pipeline) iterable() bool {
 	}
 	return false
 }
-func (p pipeline) produce(bg *background) {
+func (p pipeline) execute(bg *background) {
 	for _, c := range p {
 		bg.setInput(bg.getOutput())
-		c.produce(bg)
+		c.execute(bg)
 		if bg.getError() != "" {
 			return
 		}
@@ -1787,7 +1794,7 @@ func makeSegments(str string) (segments, error) {
 						return nil, err
 					}
 					seg := &dynamicSegment{f: func(bg *background) (string, error) {
-						cmd.produce(bg)
+						cmd.execute(bg)
 						errStr := bg.getError()
 						if len(errStr) > 0 {
 							return "", errors.New(errStr)

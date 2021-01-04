@@ -1,12 +1,13 @@
 package meter
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
 

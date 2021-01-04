@@ -1,9 +1,10 @@
 package meter
 
 import (
-	"errors"
 	"fmt"
 	"sync/atomic"
+
+	"github.com/pkg/errors"
 
 	"github.com/forrestjgq/gomark/gmi"
 )

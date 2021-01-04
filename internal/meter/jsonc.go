@@ -2,12 +2,13 @@ package meter
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/pkg/errors"
 )
 
 //

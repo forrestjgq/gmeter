@@ -1,7 +1,7 @@
 package meter
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 )
 
 // provider should be a component that provides information runner requires
