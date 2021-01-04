@@ -92,17 +92,6 @@ func createDefaultBackground() (*background, error) {
 	bg.setGlobalEnv(KeySchedule, "default-schedule")
 	bg.setGlobalEnv(KeyTPath, path)
 	bg.setGlobalEnv(KeyConfig, "default")
-
-	// report
-	rpt := &config.Report{
-		Path:      "",
-		Format:    "",
-		Templates: nil,
-	}
-	bg.rpt, err = makeReporter(rpt)
-	if err != nil {
-		return nil, err
-	}
 	return bg, nil
 }
 func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
