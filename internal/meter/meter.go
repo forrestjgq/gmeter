@@ -1,7 +1,7 @@
 package meter
 
 import (
-	"fmt"
+	"io"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -42,11 +42,14 @@ const (
 )
 
 var (
-	EofError error = errors.New(EOF)
+	EofError = io.EOF
 )
 
 func isEof(err error) bool {
-	return err.Error() == EOF
+	if err != nil {
+		return errors.Cause(err).Error() == EOF
+	}
+	return false
 }
 
 type simpEnv map[string]string
@@ -136,6 +139,7 @@ func (bg *background) cleanup() {
 			bg.setLocalEnv(k, v)
 		}
 	}
+	bg.err = nil
 }
 func (bg *background) reportDefault(newline bool) {
 	bg.rpt.reportDefault(bg, newline)
@@ -192,11 +196,18 @@ func (bg *background) getJsonEnv(key string) string {
 func (bg *background) getOutput() string {
 	return bg.local.get(KeyOutput)
 }
-func (bg *background) getError() string {
-	return bg.local.get(KeyError)
+
+//func (bg *background) getErrorString() string {
+//	if bg.err != nil {
+//		return bg.err.Error()
+//	}
+//	return ""
+//}
+func (bg *background) getError() error {
+	return bg.err
 }
 func (bg *background) hasError() bool {
-	return len(bg.local.get(KeyError)) > 0
+	return bg.err != nil
 }
 
 func (bg *background) setInput(value string) {
@@ -205,15 +216,17 @@ func (bg *background) setInput(value string) {
 func (bg *background) setOutput(value string) {
 	bg.local.put(KeyOutput, value)
 }
-func (bg *background) setError(value string) {
-	bg.local.put(KeyError, value)
-}
-func (bg *background) setErrorf(format string, a ...interface{}) {
-	err := fmt.Errorf(format, a...)
-	bg.setError(err.Error())
+func (bg *background) setError(err error) {
+	bg.err = err
 }
 
 func (bg *background) getLocalEnv(key string) string {
+	if key == KeyError {
+		if bg.err == nil {
+			return ""
+		}
+		return bg.err.Error()
+	}
 	return bg.local.get(key)
 }
 func (bg *background) setLocalEnv(key string, value string) {

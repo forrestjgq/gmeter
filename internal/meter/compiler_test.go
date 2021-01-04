@@ -100,7 +100,7 @@ func TestSegments(t *testing.T) {
 
 	for k, v := range m {
 		bg.setOutput("input") // output will be put into input while pipeline starts
-		bg.setError("")
+		bg.setError(nil)
 
 		t.Log(k)
 		if seg, err := makeSegments(k); err != nil {
@@ -139,7 +139,7 @@ func TestSegments(t *testing.T) {
 		_, err = seg.compose(bg)
 		if err == nil {
 			t.Fatal("expect EOF")
-		} else if err.Error() != EOF {
+		} else if !isEof(err) {
 			t.Fatalf("expect EOF, got %s", err)
 		}
 	}

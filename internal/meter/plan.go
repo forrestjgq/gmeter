@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+
 	"github.com/golang/glog"
 )
 
@@ -32,7 +34,7 @@ func (p *plan) runOneByOne() next {
 		decision := p.target.run(p.bg)
 		if decision != nextContinue {
 			if decision != nextFinished {
-				fmt.Printf("plan %s failed, error: %s\n", p.name, p.bg.getError())
+				fmt.Printf("plan %s failed, error: %+v\n", p.name, p.bg.getError())
 				fmt.Printf("HTTP request: \n")
 				fmt.Printf("\tURL: %s\n\tBody: %s\n",
 					p.bg.getLocalEnv(KeyURL), p.bg.getLocalEnv(KeyRequest))
@@ -94,7 +96,7 @@ func (p *plan) run() next {
 	if p.preprocess != nil {
 		_, err := p.preprocess.compose(p.bg)
 		if err != nil {
-			p.bg.setErrorf("preprocess fail, err: %v", err)
+			p.bg.setError(errors.Wrapf(err, "plan %s preprocess", p.name))
 		}
 		if p.bg.hasError() {
 			return nextAbortPlan

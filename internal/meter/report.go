@@ -55,7 +55,7 @@ func (r *reporter) reportTemplate(bg *background, template string, newline bool)
 		if t, ok := r.templates[template]; ok {
 			str, err := t.compose(bg)
 			if err != nil {
-				bg.setError(err.Error())
+				bg.setError(err)
 			} else {
 				r.report(str, newline)
 			}
@@ -67,7 +67,7 @@ func (r *reporter) reportDefault(bg *background, newline bool) {
 		if r.fmt != nil {
 			str, err := r.fmt.compose(bg)
 			if err != nil {
-				bg.setError(err.Error())
+				bg.setError(err)
 			} else {
 				r.report(str, newline)
 			}

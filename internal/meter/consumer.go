@@ -78,7 +78,7 @@ func (d *dynamicConsumer) processSuccess(bg *background) {
 func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	// move error to failure if any to make sure fail processing without any error
 	bg.setLocalEnv(KeyFailure, err.Error())
-	bg.setError("")
+	bg.setError(nil)
 
 	if d.fail != nil {
 		_, _ = d.fail.compose(bg)

@@ -2,7 +2,6 @@ package meter
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -141,7 +140,7 @@ func makeDynamic(value interface{}) (composable, error) {
 		}
 		return nil, errors.New("default object accept only string or string list")
 	default:
-		return nil, fmt.Errorf("default object accept only string or string list, %T is not accepted", value)
+		return nil, errors.Errorf("default object accept only string or string list, %T is not accepted", value)
 	}
 }
 
@@ -208,18 +207,18 @@ type jsonKey struct {
 
 func (k *jsonKey) verify(bg *background, key string, value interface{}) error {
 	if key != k.key {
-		return fmt.Errorf("key not match: %s vs %s", key, k.key)
+		return errors.Errorf("key not match: %s vs %s", key, k.key)
 	}
 
 	if value == nil {
 		if !k.acceptNil() {
-			return fmt.Errorf("json obj %s not accept nil", k.key)
+			return errors.Errorf("json obj %s not accept nil", k.key)
 		}
 		return nil
 	}
 
 	if k.has(jsonPropAbsent) {
-		return fmt.Errorf("json obj %s must be nil", k.key)
+		return errors.Errorf("json obj %s must be nil", k.key)
 	}
 	return nil
 }
@@ -244,7 +243,7 @@ func makeJsonKey(s string) (*jsonKey, error) {
 		return nil, errors.New("key must not be empty")
 	}
 	if len(arr) > 2 {
-		return nil, fmt.Errorf("invalid key definition: %s", s)
+		return nil, errors.Errorf("invalid key definition: %s", s)
 	}
 
 	key.key = arr[0]
@@ -262,7 +261,7 @@ func makeJsonKey(s string) (*jsonKey, error) {
 				case "index":
 					key.prop = append(key.prop, jsonPropIndex)
 				default:
-					return nil, fmt.Errorf("unknown property %s in %s", opt, s)
+					return nil, errors.Errorf("unknown property %s in %s", opt, s)
 				}
 			}
 		}
@@ -289,13 +288,13 @@ func (jsv *jsonStaticValue) getKey() *jsonKey {
 
 func (jsv *jsonStaticValue) compare(bg *background, key string, src interface{}) error {
 	if key != jsv.key.key {
-		return fmt.Errorf("static value: key not match: %s -> %s", key, jsv.key.key)
+		return errors.Errorf("static value: key not match: %s -> %s", key, jsv.key.key)
 	}
 
 	switch dv := jsv.value.(type) {
 	case bool, string:
 		if src != jsv.value {
-			return fmt.Errorf("static compare fail: %v != %v", jsv.value, src)
+			return errors.Errorf("static compare fail: %v != %v", jsv.value, src)
 		}
 	case float64:
 		sf := float64(0)
@@ -305,25 +304,25 @@ func (jsv *jsonStaticValue) compare(bg *background, key string, src interface{})
 		case json.Number:
 			v, err := sv.Float64()
 			if err != nil {
-				return fmt.Errorf("compare fail: %s != %v, convert %v to float fail", jsv.str, src, src)
+				return errors.Errorf("compare fail: %s != %v, convert %v to float fail", jsv.str, src, src)
 			}
 			sf = v
 		default:
-			return fmt.Errorf("compare fail: %s != %v, not support type of src: %v", jsv.str, src, src)
+			return errors.Errorf("compare fail: %s != %v, not support type of src: %v", jsv.str, src, src)
 		}
 
 		if math.Abs(sf-dv) > 0.0000001 {
-			return fmt.Errorf("compare fail: %s != %v", jsv.str, src)
+			return errors.Errorf("compare fail: %s != %v", jsv.str, src)
 		}
 	case json.Number:
 		switch sv := src.(type) {
 		case float64:
 			// src: float, dst: number
 			if df, err := dv.Float64(); err != nil {
-				return fmt.Errorf("compare fail: %s != %v, convert %v to float fail", jsv.str, src, jsv.value)
+				return errors.Errorf("compare fail: %s != %v, convert %v to float fail", jsv.str, src, jsv.value)
 			} else {
 				if math.Abs(df-sv) > 0.0000001 {
-					return fmt.Errorf("compare fail: %s != %v", jsv.str, src)
+					return errors.Errorf("compare fail: %s != %v", jsv.str, src)
 				}
 			}
 		case json.Number:
@@ -349,13 +348,13 @@ func (jsv *jsonStaticValue) compare(bg *background, key string, src interface{})
 			}
 
 			if fail {
-				return fmt.Errorf("compare fail: %s != %v", jsv.str, src)
+				return errors.Errorf("compare fail: %s != %v", jsv.str, src)
 			}
 		default:
-			return fmt.Errorf("compare fail: %s != %v, not support type of src: %v", jsv.str, src, src)
+			return errors.Errorf("compare fail: %s != %v, not support type of src: %v", jsv.str, src, src)
 		}
 	default:
-		return fmt.Errorf("unsupported json static type %T, value %v", src, src)
+		return errors.Errorf("unsupported json static type %T, value %v", src, src)
 	}
 	return nil
 }
@@ -375,13 +374,13 @@ func makeJsonStaticValue(key *jsonKey, value interface{}) (jsonRule, error) {
 		jsv.str = strconv.FormatFloat(v, 'f', 8, 64)
 	case string:
 		if len(v) >= 2 && (v[0] == '`' || v[len(v)-1] == '`') {
-			return nil, fmt.Errorf("not a static value: %s", v)
+			return nil, errors.Errorf("not a static value: %s", v)
 		}
 		jsv.str = v
 	case json.Number:
 		jsv.str = v.String()
 	default:
-		return nil, fmt.Errorf("invalid static json value type: %T, value %v", value, value)
+		return nil, errors.Errorf("invalid static json value type: %T, value %v", value, value)
 	}
 	return jsv, nil
 }
@@ -462,8 +461,9 @@ func (j *jsonObject) isIndexOptional() bool {
 }
 func (j *jsonObject) match(bg *background, key string, src interface{}) error {
 	// this is a try matching, any error should be abandon
-	errstr := bg.getError()
-	defer bg.setError(errstr)
+	e := bg.getError()
+	defer bg.setError(e)
+	bg.setError(nil)
 
 	defer makeJsonEnv(bg, key, src).pop(bg)
 
@@ -473,7 +473,7 @@ func (j *jsonObject) match(bg *background, key string, src interface{}) error {
 
 	m, ok := src.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("json obj %s expect an object, but got %v", j.key.key, src)
+		return errors.Errorf("json obj %s expect an object, but got %v", j.key.key, src)
 	}
 
 	for k, r := range j.index {
@@ -493,7 +493,7 @@ func (j *jsonObject) compare(bg *background, key string, src interface{}) error 
 
 	m, ok := src.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("json obj %s expect an object, but got %v", j.key.key, src)
+		return errors.Errorf("json obj %s expect an object, but got %v", j.key.key, src)
 	}
 
 	// rules before member comparing
@@ -511,7 +511,7 @@ func (j *jsonObject) compare(bg *background, key string, src interface{}) error 
 				return err
 			}
 			if _, exist := keys[k]; !exist {
-				return fmt.Errorf("duplicate member %s", k)
+				return errors.Errorf("duplicate member %s", k)
 			}
 			delete(keys, k)
 		} else {
@@ -528,7 +528,7 @@ func (j *jsonObject) compare(bg *background, key string, src interface{}) error 
 		mkey := j.members[k].getKey()
 		if mkey != nil {
 			if !mkey.acceptNil() {
-				return fmt.Errorf("%s.%s must exist", key, mkey.key)
+				return errors.Errorf("%s.%s must exist", key, mkey.key)
 			}
 		}
 	}
@@ -604,7 +604,7 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 
 	value, ok := src.([]interface{})
 	if !ok {
-		return fmt.Errorf("not a list to compare: %T(%v)", src, src)
+		return errors.Errorf("not a list to compare: %T(%v)", src, src)
 	}
 
 	// compare list
@@ -634,7 +634,7 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 
 	if len(j.members) > 0 {
 		if len(value) < len(j.members) {
-			return fmt.Errorf("data length %d < %d", len(value), len(j.members))
+			return errors.Errorf("data length %d < %d", len(value), len(j.members))
 		}
 
 		for i := range j.members {
@@ -660,7 +660,7 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 				}
 			}
 			if !found && !srch.isIndexOptional() {
-				return fmt.Errorf("searcher %d fails", k)
+				return errors.Errorf("searcher %d fails", k)
 			}
 		}
 	}
@@ -674,7 +674,7 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 				}
 			}
 		} else if !hasItem {
-			return fmt.Errorf("no default process for the rest of list items")
+			return errors.Errorf("no default process for the rest of list items")
 		}
 	}
 	return nil
@@ -742,7 +742,7 @@ func makeJsonList(key *jsonKey, value []interface{}) (jsonRule, error) {
 					case "`template`":
 						r, err = makeJsonTemplateFromValue(v)
 					default:
-						err = fmt.Errorf("unknown list operation: %s", k)
+						err = errors.Errorf("unknown list operation: %s", k)
 					}
 
 					if err != nil {
@@ -793,13 +793,13 @@ func makeJsonList(key *jsonKey, value []interface{}) (jsonRule, error) {
 					}
 					list.members = append(list.members, r)
 				} else {
-					return nil, fmt.Errorf("expect %T but got %T(%v) in list[%d]", v, item, item, i)
+					return nil, errors.Errorf("expect %T but got %T(%v) in list[%d]", v, item, item, i)
 				}
 			}
 		case map[string]interface{}:
 			for i, item := range value {
 				if mv, ok := item.(map[string]interface{}); !ok {
-					return nil, fmt.Errorf("expect %T but got %T(%v) in list[%d]", v, mv, mv, i)
+					return nil, errors.Errorf("expect %T but got %T(%v) in list[%d]", v, mv, mv, i)
 				} else {
 					r, err := makeJsonObject(key, mv)
 					if err != nil {
@@ -813,12 +813,12 @@ func makeJsonList(key *jsonKey, value []interface{}) (jsonRule, error) {
 				}
 			}
 		default:
-			return nil, fmt.Errorf("unsupported json value type %T, value: %v", value, value)
+			return nil, errors.Errorf("unsupported json value type %T, value: %v", value, value)
 		}
 	}
 
 	if len(list.searcher) > 0 && len(list.members) > 0 {
-		return nil, fmt.Errorf("you can not partially search in the list %s", key.key)
+		return nil, errors.Errorf("you can not partially search in the list %s", key.key)
 	}
 	return list, nil
 }
@@ -840,7 +840,7 @@ func makeJsonRule(key *jsonKey, value interface{}) (jsonRule, error) {
 	case map[string]interface{}:
 		return makeJsonObject(key, v)
 	default:
-		return nil, fmt.Errorf("unsupported json value type %T, value: %v", value, value)
+		return nil, errors.Errorf("unsupported json value type %T, value: %v", value, value)
 	}
 }
 func makeJsonTemplateFromValue(value interface{}) (jsonRule, error) {
@@ -850,7 +850,7 @@ func makeJsonTemplateFromValue(value interface{}) (jsonRule, error) {
 	case map[string]interface{}:
 		return makeJsonObject(nil, v)
 	default:
-		return nil, fmt.Errorf("json type %T is not supported", v)
+		return nil, errors.Errorf("json type %T is not supported", v)
 	}
 
 }

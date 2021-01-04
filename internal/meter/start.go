@@ -217,7 +217,7 @@ func create(cfg *config.Config) []*plan {
 			if rsp != nil {
 				csm, err = makeDynamicConsumer(rsp.Check, rsp.Success, rsp.Failure, rsp.Template, decision)
 				if err != nil {
-					glog.Fatalf("make test %s consumer fail, err %v", name, err)
+					glog.Fatalf("make test %s consumer fail, err %+v", name, errors.Cause(err))
 				}
 			}
 

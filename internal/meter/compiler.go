@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -81,7 +82,6 @@ func (s segments) compose(bg *background) (string, error) {
 			return "", err
 		}
 		arr[i] = str
-
 	}
 	if len(arr) == 1 {
 		return arr[0], nil
@@ -121,7 +121,7 @@ func (s segments) compose(bg *background) (string, error) {
 // command is an executable entity
 type command interface {
 	iterable() bool
-	execute(bg *background)
+	execute(bg *background) error
 	close()
 }
 
@@ -147,9 +147,9 @@ func (c *cmdCvt) close() {
 	c.content = nil
 }
 
-func (c *cmdCvt) execute(bg *background) {
+func (c *cmdCvt) execute(bg *background) error {
 	if content, err := c.content.compose(bg); err != nil {
-		bg.setErrorf("cvt(%s) compose fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
 		if c.toBool {
 			if content == "0" || content == "false" {
@@ -157,17 +157,17 @@ func (c *cmdCvt) execute(bg *background) {
 			} else if content == "1" || content == "true" {
 				bg.setOutput("`true`")
 			} else {
-				bg.setErrorf("cvt(%s) convert to bool fail: %s", c.raw, content)
+				return errors.Errorf("%s convert %s to bool fail", c.raw, content)
 			}
 		} else if c.toFloat {
 			if !c.exp.MatchString(content) {
-				bg.setErrorf("cvt(%s) convert to number fail: %s", c.raw, content)
+				return errors.Errorf("%s convert %s to number fail", c.raw, content)
 			} else {
 				bg.setOutput("`" + content + "`")
 			}
 		} else if c.toInt {
 			if !c.exp.MatchString(content) {
-				bg.setErrorf("cvt(%s) convert to number fail: %s", c.raw, content)
+				return errors.Errorf("%s convert %s to int fail", c.raw, content)
 			} else {
 				idx := strings.Index(content, ".")
 				if idx >= 0 {
@@ -181,10 +181,12 @@ func (c *cmdCvt) execute(bg *background) {
 			bg.setOutput(content)
 		}
 	}
+
+	return nil
 }
 
 func makeCvt(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "cvt " + strings.Join(v, " ")
 
 	fs := flag.NewFlagSet("cvt", flag.ContinueOnError)
 	boolVal := false
@@ -198,7 +200,7 @@ func makeCvt(v []string) (command, error) {
 
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "parse on making %s", raw)
 	}
 
 	content := "$(" + KeyInput + ")"
@@ -207,12 +209,12 @@ func makeCvt(v []string) (command, error) {
 	if len(v) == 1 {
 		content = v[0]
 	} else if len(v) > 1 {
-		return nil, fmt.Errorf("cvt(%s) invalid args", raw)
+		return nil, errors.Errorf("%s invalid args", raw)
 	}
 
 	seg, err := makeSegments(content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 	c := &cmdCvt{
 		raw:     raw,
@@ -243,6 +245,7 @@ func makeCvt(v []string) (command, error) {
 //////////                              nop                          ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
+// cmdNop does nothing
 type cmdNop struct{}
 
 func (c *cmdNop) close() {
@@ -252,7 +255,8 @@ func (c *cmdNop) iterable() bool {
 	return false
 }
 
-func (c *cmdNop) execute(_ *background) {
+func (c *cmdNop) execute(_ *background) error {
+	return nil
 }
 
 func makeNop(v []string) (command, error) {
@@ -276,16 +280,17 @@ func (c *cmdEscape) close() {
 	c.content = nil
 }
 
-func (c *cmdEscape) execute(bg *background) {
+func (c *cmdEscape) execute(bg *background) error {
 	content := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
-		bg.setErrorf("escape %s compose content fail: %v", c.raw, err)
+		return errors.Wrapf(err, "escape %s compose content", c.raw)
 	}
 	if len(content) > 0 {
 		content = strings.ReplaceAll(content, "\"", "\\\"")
 	}
 	bg.setOutput(content)
+	return nil
 }
 
 func makeEscape(v []string) (command, error) {
@@ -297,12 +302,12 @@ func makeEscape(v []string) (command, error) {
 	if len(v) == 1 {
 		content = v[0]
 	} else if len(v) > 1 {
-		return nil, fmt.Errorf("escape(%s) invalid args", raw)
+		return nil, errors.Errorf("escape %s invalid args", raw)
 	}
 
 	var err error
 	if c.content, err = makeSegments(content); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "escape %s make content", raw)
 	}
 	return c, nil
 }
@@ -324,15 +329,14 @@ func (c *cmdStrLen) close() {
 	c.content = nil
 }
 
-func (c *cmdStrLen) execute(bg *background) {
-	content := ""
-	var err error
-	if content, err = c.content.compose(bg); err != nil {
-		bg.setErrorf("strrepl %s compose content fail: %v", c.raw, err)
+func (c *cmdStrLen) execute(bg *background) error {
+	if content, err := c.content.compose(bg); err != nil {
+		return errors.Wrapf(err, "strlen %s compose content", c.raw)
 	} else {
 		len := utf8.RuneCountInString(content)
 		bg.setOutput(strconv.Itoa(len))
 	}
+	return nil
 }
 
 func makeStrLen(v []string) (command, error) {
@@ -341,7 +345,7 @@ func makeStrLen(v []string) (command, error) {
 	if len(v) == 1 {
 		content = v[0]
 	} else if len(v) > 1 {
-		return nil, fmt.Errorf("strlen(%s) invalid args", raw)
+		return nil, errors.Errorf("strlen %s invalid args", raw)
 	}
 	c := &cmdStrLen{
 		raw: raw,
@@ -349,7 +353,7 @@ func makeStrLen(v []string) (command, error) {
 	var err error
 	c.content, err = makeSegments(content)
 	if err != nil {
-		return nil, fmt.Errorf("strlen(%s) make content fail: %v", raw, err)
+		return nil, errors.Wrapf(err, "strlen %s make content", raw)
 	}
 	return c, nil
 }
@@ -374,53 +378,54 @@ func (c *cmdStrRepl) close() {
 	c.newstring = nil
 }
 
-func (c *cmdStrRepl) execute(bg *background) {
+func (c *cmdStrRepl) execute(bg *background) error {
 	content := ""
 	newstring := ""
 	substring := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
-		bg.setErrorf("strrepl %s compose content fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose content", c.raw)
 	}
 	if substring, err = c.substring.compose(bg); err != nil {
-		bg.setErrorf("strrepl %s compose substring fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose substring", c.raw)
 	}
 	if newstring, err = c.newstring.compose(bg); err != nil {
-		bg.setErrorf("strrepl %s compose newstring fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose new string", c.raw)
 	}
 	if len(content) > 0 && len(substring) > 0 {
 		content = strings.ReplaceAll(content, substring, newstring)
 	}
 
 	bg.setOutput(content)
+	return nil
 }
 
 func makeStrRepl(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "strrepl " + strings.Join(v, " ")
 	c := &cmdStrRepl{
 		raw: raw,
 	}
 	if len(v) >= 2 {
 		var err error
 		if c.content, err = makeSegments(v[0]); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s make content", c.raw)
 		}
 		if c.substring, err = makeSegments(v[1]); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s make substring", c.raw)
 		}
 		if len(v) > 2 {
 			if c.newstring, err = makeSegments(v[2]); err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "%s make new string", c.raw)
 			}
 		} else {
 			if c.newstring, err = makeSegments(""); err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "%s make new string", c.raw)
 			}
 		}
 
 		return c, nil
 	}
-	return nil, fmt.Errorf("strrepl(%s) invalid args", raw)
+	return nil, fmt.Errorf("%s invalid args", raw)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -440,16 +445,16 @@ func (c *cmdFail) close() {
 	c.content = nil
 }
 
-func (c *cmdFail) execute(bg *background) {
+func (c *cmdFail) execute(bg *background) error {
 	if content, err := c.content.compose(bg); err != nil {
-		bg.setErrorf("fail %s compose fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose ", c.raw)
 	} else {
-		bg.setError(content)
+		return errors.New(content)
 	}
 }
 
 func makeFail(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "fail " + strings.Join(v, " ")
 	content := "$(" + KeyInput + ")"
 
 	if len(v) > 0 {
@@ -458,7 +463,7 @@ func makeFail(v []string) (command, error) {
 
 	seg, err := makeSegments(content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 
 	return &cmdFail{
@@ -484,25 +489,26 @@ func (c *cmdEcho) close() {
 	c.content = nil
 }
 
-func (c *cmdEcho) execute(bg *background) {
+func (c *cmdEcho) execute(bg *background) error {
 	if content, err := c.content.compose(bg); err != nil {
-		bg.setErrorf("echo %s compose fail: %v", c.raw, err)
+		return errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
 		bg.setOutput(content)
 	}
+	return nil
 }
 
 func makeEcho(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "echo " + strings.Join(v, " ")
 	content := "$(" + KeyInput + ")"
 
 	if len(v) > 0 {
-		content = raw
+		content = strings.Join(v, " ")
 	}
 
 	seg, err := makeSegments(content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s ,make content", raw)
 	}
 
 	return &cmdEcho{
@@ -530,19 +536,18 @@ func (c *cmdCat) close() {
 	c.content = nil
 }
 
-func (c *cmdCat) execute(bg *background) {
+func (c *cmdCat) execute(bg *background) error {
 	if len(c.content) == 0 {
 		path, err := c.path.compose(bg)
 		if err != nil {
-			bg.setErrorf("cat(%s) compose path fail, error: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose path ", c.raw)
 		}
 
 		if f, err := os.Open(filepath.Clean(path)); err != nil {
-			bg.setErrorf("cat(%s) %s: %v", c.raw, path, err)
+			return errors.Wrapf(err, "%s open file", c.raw)
 		} else {
 			if b, err1 := ioutil.ReadAll(f); err1 != nil {
-				bg.setErrorf("cat(%s) read file %s fail: %v", c.raw, path, err1)
+				return errors.Wrapf(err1, "%s read file %s", c.raw, path)
 			} else {
 				if c.static {
 					c.content = b
@@ -554,20 +559,21 @@ func (c *cmdCat) execute(bg *background) {
 	} else {
 		bg.setOutput(string(c.content))
 	}
+	return nil
 }
 
 func makeCat(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "cat " + strings.Join(v, " ")
 
 	path := "$(" + KeyInput + ")"
 	if len(v) == 1 {
 		path = v[0]
 	} else if len(v) > 1 {
-		return nil, fmt.Errorf("cat invalid: %v", v)
+		return nil, errors.Errorf("%s invalid argument number: %d", raw, len(v))
 	}
 	seg, err := makeSegments(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make path", raw)
 	}
 
 	return &cmdCat{
@@ -594,53 +600,51 @@ func (c *cmdWrite) close() {
 	c.path = nil
 }
 
-func (c *cmdWrite) execute(bg *background) {
+func (c *cmdWrite) execute(bg *background) error {
 	content, err := c.content.compose(bg)
 	if err != nil {
-		bg.setErrorf("write(%s) command compose content fail: %v", c.raw, err)
-		return
+		return errors.Wrapf(err, "%s compose content", c.raw)
 	}
 	// do not check content here
 	path, err := c.path.compose(bg)
 	if err != nil {
-		bg.setErrorf("write(%s) compose path fail: %v", c.raw, err)
-		return
+		return errors.Wrapf(err, "%s compose path", c.raw)
 	}
 	if len(path) == 0 {
-		bg.setErrorf("write(%s) compose empty file path", c.raw)
-		return
+		return errors.Errorf("%s compose empty file path", c.raw)
 	}
 
 	if f, err := os.Create(filepath.Clean(path)); err != nil {
-		bg.setErrorf("write(%s) create file %s fail: %v", c.raw, path, err)
+		return errors.Wrapf(err, "%s create file %s", c.raw, path)
 	} else {
 		if _, err1 := f.WriteString(content); err1 != nil {
-			bg.setErrorf("write(%s) write file %s fail: %v", c.raw, path, err1)
+			return errors.Wrapf(err1, "%s write file %s", c.raw, path)
 		}
 		_ = f.Close()
 	}
+	return nil
 }
 
 func makeWrite(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "write " + strings.Join(v, " ")
 	content := ""
 	fs := flag.NewFlagSet("write", flag.ContinueOnError)
 	fs.StringVar(&content, "c", "$(INPUT)", "content to write to file, default using local input")
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 	v = fs.Args()
 	if len(v) != 1 {
-		return nil, fmt.Errorf("write path not specified")
+		return nil, errors.Errorf("%s path not specified", raw)
 	}
 	path := v[0]
 	c := &cmdWrite{raw: raw}
 	if c.path, err = makeSegments(path); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make path", raw)
 	}
 	if c.content, err = makeSegments(content); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 	return c, nil
 }
@@ -675,19 +679,21 @@ func (c *cmdIf) close() {
 	}
 }
 
-func (c *cmdIf) execute(bg *background) {
-	c.condition.execute(bg)
-	err := bg.getError()
-	bg.setError("")
-	if len(err) == 0 {
-		c.cthen.execute(bg)
-	} else if c.celse != nil {
-		c.celse.execute(bg)
+func (c *cmdIf) execute(bg *background) error {
+	err := c.condition.execute(bg)
+	if err == nil {
+		return c.cthen.execute(bg)
 	}
+
+	if c.celse != nil {
+		return c.celse.execute(bg)
+	}
+
+	return nil
 }
 func makeIf(v []string) (command, error) {
 	c := &cmdIf{
-		raw: strings.Join(v, " "),
+		raw: "if " + strings.Join(v, " "),
 	}
 	var cmdCondition []string
 	var cmdThen []string
@@ -702,7 +708,7 @@ func makeIf(v []string) (command, error) {
 		}
 	}
 	if thenIdx == len(v) || thenIdx <= 0 {
-		return nil, fmt.Errorf("if(%s): then not found", c.raw)
+		return nil, errors.Errorf("%s: then not found", c.raw)
 	}
 	cmdCondition = v[:thenIdx]
 	for i := thenIdx + 1; i < len(v); i++ {
@@ -712,7 +718,7 @@ func makeIf(v []string) (command, error) {
 		}
 	}
 	if elseIdx == thenIdx+1 {
-		return nil, fmt.Errorf("if(%s): then command not found", c.raw)
+		return nil, errors.Errorf("%s: then command not found", c.raw)
 	}
 	cmdThen = v[thenIdx+1 : elseIdx]
 	if elseIdx < len(v)-1 {
@@ -720,22 +726,22 @@ func makeIf(v []string) (command, error) {
 	}
 
 	if len(cmdCondition) == 0 || len(cmdThen) == 0 {
-		return nil, fmt.Errorf("if(%s): invalid if clause", c.raw)
+		return nil, errors.Errorf("%s: invalid if clause", c.raw)
 	}
 
 	var err error
 	c.condition, err = makeAssert(cmdCondition)
 	if err != nil {
-		return nil, fmt.Errorf("if(%s): parse condition fail, err: %v", c.raw, err)
+		return nil, errors.Wrapf(err, "%s make condition", c.raw)
 	}
 	c.cthen, err = parseCmdArgs(cmdThen)
 	if err != nil {
-		return nil, fmt.Errorf("if(%s): parse then clause fail, err: %v", c.raw, err)
+		return nil, errors.Wrapf(err, "%s make then", c.raw)
 	}
 	if len(cmdElse) > 0 {
 		c.celse, err = parseCmdArgs(cmdElse)
 		if err != nil {
-			return nil, fmt.Errorf("if(%s): parse else clause fail, err: %v", c.raw, err)
+			return nil, errors.Wrapf(err, "%s make else", c.raw)
 		}
 	}
 
@@ -758,28 +764,28 @@ func (c *cmdPrint) close() {
 	c.format = nil
 }
 
-func (c *cmdPrint) execute(bg *background) {
+func (c *cmdPrint) execute(bg *background) error {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
-			bg.setErrorf("print(%s) compose fail: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose content", c.raw)
 		}
 		fmt.Print(content, "\n")
 	}
+	return nil
 }
 
 func makePrint(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "print " + strings.Join(v, " ")
 	content := "$(" + KeyInput + ")"
 
 	if len(v) > 0 {
-		content = raw
+		content = strings.Join(v, " ")
 	}
 
 	seg, err := makeSegments(content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 	return &cmdPrint{
 		raw:    raw,
@@ -806,12 +812,11 @@ func (c *cmdReport) close() {
 	c.format = nil
 }
 
-func (c *cmdReport) execute(bg *background) {
+func (c *cmdReport) execute(bg *background) error {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
-			bg.setErrorf("report(%s) compose fail: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose content", c.raw)
 		}
 		if c.template {
 			bg.reportTemplate(content, c.newline)
@@ -822,10 +827,11 @@ func (c *cmdReport) execute(bg *background) {
 		bg.reportDefault(c.newline)
 	}
 
+	return nil
 }
 
 func makeReport(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "report " + strings.Join(v, " ")
 	c := &cmdReport{
 		raw: raw,
 	}
@@ -838,16 +844,16 @@ func makeReport(v []string) (command, error) {
 	fs.BoolVar(&c.newline, "n", false, "append new line in the end")
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 
 	if len(format) > 0 {
 		if c.format, err = makeSegments(format); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s make format", raw)
 		}
 	} else if len(template) > 0 {
 		if c.format, err = makeSegments(template); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "%s make template", raw)
 		}
 		c.template = true
 	}
@@ -880,46 +886,44 @@ func (c *cmdEnv) close() {
 	c.value = nil
 }
 
-func (c *cmdEnv) execute(bg *background) {
+func (c *cmdEnv) execute(bg *background) error {
 	variable, err := c.variable.compose(bg)
 	if err != nil {
-		bg.setErrorf("env(%s) compose variable fail: %v", c.raw, err)
-		return
+		return errors.Wrapf(err, "%s compose variable", c.raw)
 	}
 	if c.op == envDelete {
 		bg.delLocalEnv(variable)
 	} else if c.op == envWrite {
 		value, err := c.value.compose(bg)
 		if err != nil {
-			bg.setErrorf("env(%s) compose value fail: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose value", c.raw)
 		}
 		bg.setLocalEnv(variable, value)
 	} else if c.op == envMove {
 		dst, err := c.dstVariable.compose(bg)
 		if err != nil {
-			bg.setErrorf("env(%s) compose value fail: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose dst value", c.raw)
 		}
 		bg.setLocalEnv(dst, bg.getLocalEnv(variable))
 		bg.delLocalEnv(variable)
 	} else {
-		bg.setErrorf("env(%s): unknown operator %d", c.raw, c.op)
+		return errors.Errorf("%s: unknown operator %d", c.raw, c.op)
 	}
+	return nil
 }
 
 func makeEnvw(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "envw " + strings.Join(v, " ")
 	content := ""
 	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
 	fs.StringVar(&content, "c", "$(INPUT)", "content to write to local environment, default using local input")
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 	v = fs.Args()
 	if len(v) != 1 {
-		return nil, fmt.Errorf("envw variable not provided")
+		return nil, errors.Errorf("%s variable not provided", raw)
 	}
 	variable := v[0]
 	c := &cmdEnv{
@@ -927,17 +931,17 @@ func makeEnvw(v []string) (command, error) {
 		op:  envWrite,
 	}
 	if c.variable, err = makeSegments(variable); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make variable", raw)
 	}
 	if c.value, err = makeSegments(content); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 	return c, nil
 }
 func makeEnvMv(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "envmv " + strings.Join(v, " ")
 	if len(v) != 2 {
-		return nil, fmt.Errorf("envw variable not provided")
+		return nil, errors.Errorf("%s variable not provided", raw)
 	}
 	c := &cmdEnv{
 		raw: raw,
@@ -945,20 +949,20 @@ func makeEnvMv(v []string) (command, error) {
 	}
 	var err error
 	if c.variable, err = makeSegments(v[0]); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make variable", raw)
 	}
 	if c.dstVariable, err = makeSegments(v[1]); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make dst variable", raw)
 	}
 	return c, nil
 }
 func makeEnvd(v []string) (command, error) {
-	raw := strings.Join(v, " ")
+	raw := "envd " + strings.Join(v, " ")
 	variable := v[0]
 	c := &cmdEnv{op: envDelete, raw: raw}
 	var err error
 	if c.variable, err = makeSegments(variable); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s delete variable", raw)
 	}
 	return c, nil
 }
@@ -983,18 +987,16 @@ func (c *cmdList) close() {
 	}
 }
 
-func (c *cmdList) execute(bg *background) {
+func (c *cmdList) execute(bg *background) error {
 	if c.file == nil {
 		var err error
 		path, err := c.path.compose(bg)
 		if err != nil {
-			bg.setErrorf("list(%s) compose path fail: %v", c.raw, err)
-			return
+			return errors.Wrapf(err, "%s compose path", c.raw)
 		}
 		c.file, err = os.Open(filepath.Clean(path))
 		if err != nil {
-			bg.setErrorf("list(%s) open file %s fail: %v", c.raw, path, err)
-			return
+			return errors.Wrapf(err, "%s: open file %s", c.raw, path)
 		}
 		c.scan = bufio.NewScanner(c.file)
 	}
@@ -1004,29 +1006,32 @@ func (c *cmdList) execute(bg *background) {
 		if len(t) > 0 {
 			bg.setOutput(t)
 		} else {
-			bg.setError(EOF)
 			c.close()
+			return io.EOF
 		}
 	} else {
-		bg.setError(EOF)
 		c.close()
+		return io.EOF
 	}
+
+	return nil
 }
 
 func makeList(v []string) (command, error) {
+	raw := "list " + strings.Join(v, " ")
 	if len(v) != 1 {
-		return nil, fmt.Errorf("list invalid: %v", v)
+		return nil, fmt.Errorf("%s invalid argument number %d", raw, len(v))
 	}
 	path := v[0]
 	if len(path) == 0 {
-		return nil, errors.New("list file path not provided")
+		return nil, errors.Errorf("%s: file path not provided", raw)
 	}
 	seg, err := makeSegments(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make path", raw)
 	}
 	return &cmdList{
-		raw:  strings.Join(v, " "),
+		raw:  raw,
 		path: seg,
 	}, nil
 }
@@ -1052,30 +1057,26 @@ func (c *cmdB64) close() {
 	c.path = nil
 }
 
-func (c *cmdB64) execute(bg *background) {
+func (c *cmdB64) execute(bg *background) error {
 	var err error
 	if len(c.encoded) == 0 {
 		encoded := ""
 		if c.file {
 			path, err := c.path.compose(bg)
 			if err != nil {
-				bg.setErrorf("b64(%s) compose path fail: %v", c.raw, err)
-				return
+				return errors.Wrapf(err, "%s compose path", c.raw)
 			}
 
 			if len(path) == 0 {
-				bg.setErrorf("b64(%s): file path is empty", c.raw)
-				return
+				return errors.Errorf("%s: file path is empty", c.raw)
 			}
 
 			if f, err := os.Open(filepath.Clean(path)); err != nil {
-				bg.setErrorf("b64(%s) open file %s fail: %v", c.raw, path, err)
-				return
+				return errors.Wrapf(err, "%s: open file %s", c.raw, path)
 			} else {
 				if b, err1 := ioutil.ReadAll(f); err1 != nil {
-					bg.setErrorf("b64(%s) read file %s fail: %v", c.raw, path, err)
 					_ = f.Close()
-					return
+					return errors.Wrapf(err1, "%s read file %s ", c.raw, path)
 				} else {
 					encoded = string(b)
 				}
@@ -1083,8 +1084,7 @@ func (c *cmdB64) execute(bg *background) {
 			}
 		} else {
 			if encoded, err = c.content.compose(bg); err != nil {
-				bg.setErrorf("b64(%s) compose content fail: %v", c.raw, err)
-				return
+				return errors.Wrapf(err, "%s compose content ", c.raw)
 			}
 		}
 
@@ -1096,11 +1096,13 @@ func (c *cmdB64) execute(bg *background) {
 	} else {
 		bg.setOutput(c.encoded)
 	}
+	return nil
 }
 
 func makeBase64(v []string) (command, error) {
+	raw := "b64 " + strings.Join(v, " ")
 	c := &cmdB64{
-		raw: strings.Join(v, " "),
+		raw: raw,
 	}
 	content := ""
 	path := ""
@@ -1109,7 +1111,7 @@ func makeBase64(v []string) (command, error) {
 	fs.BoolVar(&file, "f", false, "encode file content to base64")
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 	v = fs.Args()
 	if len(v) == 0 {
@@ -1125,17 +1127,17 @@ func makeBase64(v []string) (command, error) {
 			content = v[0]
 		}
 	} else {
-		return nil, fmt.Errorf("b64 parse error, unknown: %v", v)
+		return nil, errors.Errorf("%s: parse error", raw)
 	}
 
 	c.file = file
 	c.path, err = makeSegments(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make path", raw)
 	}
 	c.content, err = makeSegments(content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
 	c.static = c.path.isStatic() && c.content.isStatic()
 	return c, nil
@@ -1193,158 +1195,164 @@ const (
 	eps = 0.00000001
 )
 
-func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) string {
+func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) error {
 	var (
 		a, b float64
 		err  error
 	)
 	if a, err = strconv.ParseFloat(lhs, 64); err != nil {
-		return "convert to float fail: " + lhs
+		return errors.Wrapf(err, "convert %s", lhs)
 	}
 	if b, err = strconv.ParseFloat(rhs, 64); err != nil {
-		return "convert to float fail: " + rhs
+		return errors.Wrapf(err, "convert %s", rhs)
 	}
 
 	delta := a - b
 	switch c.op {
 	case opEqual:
 		if delta < -eps || delta > eps {
-			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
 		}
 	case opNotEqual:
 		if delta >= -eps && delta <= eps {
-			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
 		}
 	case opGreater:
 		if delta <= 0 {
-			return fmt.Sprintf("assert fail: %s > %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s > %s", lhs, rhs)
 		}
 	case opGreaterEqual:
 		if delta < 0 {
-			return fmt.Sprintf("assert fail: %s >= %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s >= %s", lhs, rhs)
 		}
 	case opLess:
 		if delta >= 0 {
-			return fmt.Sprintf("assert fail: %s < %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s < %s", lhs, rhs)
 		}
 	case opLessEqual:
 		if delta > 0 {
-			return fmt.Sprintf("assert fail: %s <= %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s <= %s", lhs, rhs)
 		}
 	default:
-		return fmt.Sprintf("assert(%s): unknown operator %d", c.raw, c.op)
+		return errors.Errorf("assert(%s): unknown operator %d", c.raw, c.op)
 	}
-	return ""
+	return nil
 }
-func (c *cmdAssert) doNum(lhs, rhs string, bg *background) string {
+func (c *cmdAssert) doNum(lhs, rhs string, bg *background) error {
 	var (
 		a, b int
 		err  error
 	)
 	if a, err = strconv.Atoi(lhs); err != nil {
-		return "convert to int fail: " + lhs
+		return errors.Wrapf(err, "convert %s", lhs)
 	}
 	if b, err = strconv.Atoi(rhs); err != nil {
-		return "convert to int fail: " + rhs
+		return errors.Wrapf(err, "convert %s", rhs)
 	}
 
 	delta := a - b
 	switch c.op {
 	case opEqual:
 		if delta != 0 {
-			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
 		}
 	case opNotEqual:
 		if delta == 0 {
-			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
 		}
 	case opGreater:
 		if delta <= 0 {
-			return fmt.Sprintf("assert fail: %s > %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s > %s", lhs, rhs)
 		}
 	case opGreaterEqual:
 		if delta < 0 {
-			return fmt.Sprintf("assert fail: %s >= %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s >= %s", lhs, rhs)
 		}
 	case opLess:
 		if delta >= 0 {
-			return fmt.Sprintf("assert fail: %s < %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s < %s", lhs, rhs)
 		}
 	case opLessEqual:
 		if delta > 0 {
-			return fmt.Sprintf("assert fail: %s <= %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s <= %s", lhs, rhs)
 		}
 	default:
-		return fmt.Sprintf("assert(%s): unknown operator %d", c.raw, c.op)
+		return errors.Errorf("assert(%s): unknown operator %d", c.raw, c.op)
 	}
-	return ""
+	return nil
 }
-func (c *cmdAssert) doStr(lhs, rhs string, bg *background) string {
+func (c *cmdAssert) doStr(lhs, rhs string, bg *background) error {
 	if c.op == opEqual {
 		if lhs != rhs {
-			return fmt.Sprintf("assert fail: %s == %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
 		}
 	} else if c.op == opNotEqual {
 		if lhs == rhs {
-			return fmt.Sprintf("assert fail: %s != %s", lhs, rhs)
+			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
 		}
 	} else {
-		return fmt.Sprintf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs)
+		return errors.Errorf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs)
 	}
-	return ""
+	return nil
 }
-func (c *cmdAssert) judge(bg *background) string {
+func (c *cmdAssert) judge(bg *background) error {
 	var (
 		a, b string
 		err  error
 	)
 	if a, err = c.a.compose(bg); err != nil {
-		return fmt.Sprintf("assert(%s) compose lhs fail: %v", c.raw, err)
+		return errors.Wrapf(err, "compose lhs")
 	}
 	if c.op == opIs {
 		if a == "1" || a == "true" {
-			return ""
+			return nil
 		}
-		bg.setError("assert failure: " + a)
-		return ""
+		return errors.Errorf("assert %s", a)
 	}
 	if c.op == opNot {
 		if a == "0" || a == "false" || a == "" {
-			return ""
+			return nil
 		}
-		return "assert failure: !" + a
+		return errors.Errorf("assert !%s", a)
 	}
 	if b, err = c.b.compose(bg); err != nil {
-		return fmt.Sprintf("assert(%s) compose rhs fail: %v", c.raw, err)
+		return errors.Wrapf(err, "compose rhs fail")
 	}
 
 	ta, tb := c.kindOf(a), c.kindOf(b)
 	if ta == isStr || tb == isStr {
-		return c.doStr(a, b, bg)
+		err = c.doStr(a, b, bg)
 	} else if ta == isFloat || tb == isFloat {
-		return c.doFloat(a, b, bg)
+		err = c.doFloat(a, b, bg)
 	} else {
-		return c.doNum(a, b, bg)
+		err = c.doNum(a, b, bg)
 	}
 
+	if err != nil {
+		return errors.Wrapf(err, "judge")
+	}
+	return nil
 }
-func (c *cmdAssert) execute(bg *background) {
+func (c *cmdAssert) execute(bg *background) error {
 	err := c.judge(bg)
-	if len(err) != 0 {
+	if err != nil {
 		if c.hint != nil {
 			if hint, _ := c.hint.compose(bg); len(hint) > 0 {
-				err = err + ", hint: " + hint
+				return errors.Wrapf(err, hint)
 			}
 		}
-		bg.setError(err)
+		return errors.Wrapf(err, c.raw)
 	}
+
+	return nil
 }
 
 func makeAssert(v []string) (command, error) {
 	var a string
 	var b string
+	raw := "assert " + strings.Join(v, " ")
 	c := &cmdAssert{
-		raw: strings.Join(v, " "),
+		raw: raw,
 	}
 	if len(v) == 0 {
 		return nil, errors.New("assert nothing")
@@ -1356,7 +1364,7 @@ func makeAssert(v []string) (command, error) {
 				hint := strings.Join(v[i+1:], " ")
 				seg, err := makeSegments(hint)
 				if err != nil {
-					return nil, err
+					return nil, errors.Wrapf(err, "%s make hint", raw)
 				}
 				c.hint = seg
 			}
@@ -1368,7 +1376,7 @@ func makeAssert(v []string) (command, error) {
 	if v[0] == "!" {
 		c.op = opNot
 		if len(v) > 2 {
-			return nil, errors.New("assert ! variable, but more comes")
+			return nil, errors.Errorf("%s: expect ! variable, but more comes", raw)
 		}
 		a = v[1]
 	} else if len(v) == 1 {
@@ -1395,25 +1403,25 @@ func makeAssert(v []string) (command, error) {
 		case "<=":
 			c.op = opLessEqual
 		default:
-			return nil, errors.New("invalid operator " + v[1])
+			return nil, errors.Errorf("%s: invalid operator %s", raw, v[1])
 		}
 	} else {
-		return nil, errors.New("assert expect expr as <a op b>")
+		return nil, errors.Errorf("%s: expect expr as <a op b>", raw)
 	}
 
 	var err error
 	if c.a, err = makeSegments(a); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make lhs %s", raw, a)
 	}
 	if c.b, err = makeSegments(b); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s make rhs %s", raw, b)
 	}
 
 	if c.float, err = regexp.Compile(`^-?[0-9]+\.[0-9]*$`); err != nil {
-		return nil, err
+		glog.Fatalf("compile float expr fail")
 	}
 	if c.num, err = regexp.Compile("^-?[0-9]+$"); err != nil {
-		return nil, err
+		glog.Fatalf("compile num expr fail")
 	}
 	return c, nil
 }
@@ -1423,6 +1431,7 @@ func makeAssert(v []string) (command, error) {
 ////////////////////////////////////////////////////////////////////////////////
 
 type cmdJson struct {
+	raw     string
 	path    segments
 	content segments
 	exist   bool
@@ -1455,7 +1464,7 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	var value interface{}
 	if err := json.Unmarshal([]byte(content), &value); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "unmarshal: %s", content)
 	}
 
 	rete := errors.New(path + " not found")
@@ -1510,102 +1519,99 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	return value, nil
 }
-func (c *cmdJson) execute(bg *background) {
+func (c *cmdJson) execute(bg *background) error {
 	content, err := c.content.compose(bg)
 	if err != nil {
-		bg.setError("json: " + err.Error())
-		return
+		return errors.Wrapf(err, "%s make content", c.raw)
 	}
 	// do not check content here
 	path, err := c.path.compose(bg)
 	if err != nil {
-		bg.setError("json: " + err.Error())
-		return
+		return errors.Wrapf(err, "%s compose path", c.raw)
 	}
 	if len(path) == 0 {
-		bg.setError("json: empty path")
-		return
+		return errors.Errorf("%s: empty path", c.raw)
 	}
 
 	v, err := c.find(content, path)
 
 	if c.numer {
+		// not found -> zero value of number -> 0
 		if err != nil {
 			bg.setOutput("0")
-			return
+			return nil
 		}
-		if c, ok := v.([]interface{}); !ok {
-			bg.setError("json path is not a list")
+
+		if cc, ok := v.([]interface{}); !ok {
+			return errors.Errorf("%s: %s is not a list", c.raw, path)
 		} else {
-			bg.setOutput(strconv.Itoa(len(c)))
+			bg.setOutput(strconv.Itoa(len(cc)))
+			return nil
 		}
-		return
 	}
 
 	if c.exist {
 		if err != nil {
-			bg.setError("json: " + err.Error())
-			return
+			return errors.Wrapf(err, "%s: check exist", c.raw)
 		}
 	} else {
+		// exist flag is not set, so set output to empty string
 		if err != nil {
 			bg.setOutput("")
-			return
+			return nil
 		}
 	}
 
-	switch c := v.(type) {
+	switch cc := v.(type) {
 	case bool:
-		if c {
+		if cc {
 			bg.setOutput("1")
 		} else {
 			bg.setOutput("0")
 		}
 	case float64:
-		bg.setOutput(strconv.FormatFloat(c, 'f', 8, 64))
+		bg.setOutput(strconv.FormatFloat(cc, 'f', 8, 64))
 	case string:
-		bg.setOutput(c)
+		bg.setOutput(cc)
 	case json.Number:
-		bg.setOutput(string(c))
-	case []interface{}:
-		if b, err := json.Marshal(c); err != nil {
-			bg.setError("json marshal: " + err.Error())
+		bg.setOutput(string(cc))
+	case []interface{}, map[string]interface{}:
+		if b, err := json.Marshal(cc); err != nil {
+			return errors.Wrapf(err, "%s: marshal %v", c.raw, cc)
 		} else {
 			bg.setOutput(string(b))
 		}
-	case map[string]interface{}:
-		if b, err := json.Marshal(c); err != nil {
-			bg.setError("json marshal: " + err.Error())
-		} else {
-			bg.setOutput(string(b))
-		}
+	default:
+		return errors.Errorf("%s: unknown value type %T", c.raw, cc)
 	}
+	return nil
 }
 
 func makeJson(v []string) (command, error) {
 	content := "$(INPUT)"
-	c := &cmdJson{}
+	raw := "json " + strings.Join(v, " ")
+	c := &cmdJson{raw: raw}
 
 	fs := flag.NewFlagSet("json", flag.ContinueOnError)
 	fs.BoolVar(&c.exist, "e", false, "check if path exists")
 	fs.BoolVar(&c.numer, "n", false, "get number of list item")
 	err := fs.Parse(v)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 	if c.exist && c.numer {
-		return nil, fmt.Errorf("json can not take both -n and -e option")
+		return nil, errors.Errorf("%s: can not take both -n and -e option", raw)
 	}
 	v = fs.Args()
 	if len(v) > 2 {
-		return nil, fmt.Errorf("json [-n] [-e] <path> [<content>]")
+		return nil, errors.Errorf("%s: [-n] [-e] <path> [<content>]", raw)
 	}
 	if len(v) < 1 {
-		return nil, fmt.Errorf("json path not specified")
+		return nil, errors.Errorf("%s: path not specified", raw)
 	}
 	path := v[0]
 	if c.path, err = makeSegments(path); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s: make path %s", raw, path)
 	}
 
 	if len(v) == 2 {
@@ -1613,7 +1619,7 @@ func makeJson(v []string) (command, error) {
 	}
 
 	if c.content, err = makeSegments(content); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "%s: make content %s", raw, content)
 	}
 	return c, nil
 }
@@ -1635,14 +1641,15 @@ func (p pipeline) iterable() bool {
 	}
 	return false
 }
-func (p pipeline) execute(bg *background) {
-	for _, c := range p {
+func (p pipeline) execute(bg *background) error {
+	for i, c := range p {
 		bg.setInput(bg.getOutput())
-		c.execute(bg)
-		if bg.getError() != "" {
-			return
+		err := c.execute(bg)
+		if err != nil {
+			return errors.Wrapf(err, "pipeline[%d]", i)
 		}
 	}
+	return nil
 }
 func (p pipeline) close() {
 	for _, c := range p {
@@ -1698,7 +1705,7 @@ func parseCmdArgs(args []string) (command, error) {
 	case "nop":
 		return makeNop(args)
 	default:
-		return nil, fmt.Errorf("cmd %s not supported", name)
+		return nil, errors.Errorf("cmd %s not supported", name)
 	}
 }
 func parse(str string) (command, error) {
@@ -1706,7 +1713,7 @@ func parse(str string) (command, error) {
 		return s, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("parse %s fail, err: %v", str, err)
+		return nil, errors.Wrapf(err, "parse %s ", str)
 	}
 
 	var pp pipeline
@@ -1718,7 +1725,7 @@ func parse(str string) (command, error) {
 
 		cmd, err = parseCmdArgs(v)
 		if err != nil {
-			return nil, fmt.Errorf("parse %s fail, err: %v", str, err)
+			return nil, errors.Wrapf(err, "parse %s", str)
 		} else {
 			pp = append(pp, cmd)
 		}
@@ -1765,7 +1772,7 @@ func makeSegments(str string) (segments, error) {
 			} else if c == '<' {
 				phase = phaseJsonEnv
 			} else {
-				return nil, errors.New("expect '(' or '{' after '$'")
+				return nil, errors.Errorf("[%d]: expect '(' or '{' after '$'", i)
 			}
 		case phaseLocal:
 			if c == ')' {
@@ -1791,13 +1798,12 @@ func makeSegments(str string) (segments, error) {
 				if i > start {
 					cmd, err := parse(string(r[start:i]))
 					if err != nil {
-						return nil, err
+						return nil, errors.Wrapf(err, "parse cmd")
 					}
 					seg := &dynamicSegment{f: func(bg *background) (string, error) {
-						cmd.execute(bg)
-						errStr := bg.getError()
-						if len(errStr) > 0 {
-							return "", errors.New(errStr)
+						err := cmd.execute(bg)
+						if err != nil {
+							return "", err
 						}
 						return bg.getOutput(), nil
 					}}
@@ -1843,7 +1849,7 @@ func makeSegments(str string) (segments, error) {
 	}
 
 	if phase != phaseString {
-		return nil, fmt.Errorf("parse finish with phase %d, source: %s", phase, str)
+		return nil, errors.Errorf("parse finish with phase %d, source: %s", phase, str)
 	}
 	if len(r) > start {
 		segs = append(segs, staticSegment(r[start:]))
@@ -1859,15 +1865,14 @@ type group struct {
 }
 
 func (g *group) compose(bg *background) (string, error) {
-	for _, seg := range g.segs {
+	for i, seg := range g.segs {
 		bg.setInput(bg.getOutput())
 		s, err := seg.compose(bg)
 		if err != nil {
 			if g.ignoreError {
 				bg.setOutput("")
-				bg.setError("")
 			} else {
-				return "", err
+				return "", errors.Wrapf(err, "group[%d]", i)
 			}
 		} else {
 			bg.setOutput(s)
@@ -1884,10 +1889,10 @@ func makeGroup(src []string, ignoreError bool) (*group, error) {
 		segs:        nil,
 		ignoreError: ignoreError,
 	}
-	for _, s := range src {
+	for i, s := range src {
 		segs, err := makeSegments(s)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "make group[%d]", i)
 		}
 		g.segs = append(g.segs, segs)
 		if segs.iterable() {

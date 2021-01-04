@@ -98,13 +98,13 @@ func (f *feedProvider) getProvider(bg *background) (provider, next) {
 		if isEof(err) {
 			return nil, nextFinished
 		} else {
-			bg.setError(err.Error())
+			bg.setError(err)
 			return nil, nextAbortPlan
 		}
 	}
 
 	if err = prov.check(); err != nil {
-		bg.setError(err.Error())
+		bg.setError(err)
 		return nil, nextAbortPlan
 	}
 	return prov, nextContinue

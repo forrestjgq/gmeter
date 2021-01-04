@@ -60,7 +60,7 @@
             "PreProcess": [],
             "Tests": "recognize",
             "Reporter": {
-                "Path1": "report.log",
+                "Path": "report.log",
                 "Format": "{ \"Error\": \"$(FAILURE)\" }",
                 "Templates": {
                     "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
