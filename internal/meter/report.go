@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	exitRpt = "gmeter-exit"
+	exitRpt = "gmeter-exit" // a special string to exit report routine
 )
 
 type reporter struct {
-	c         chan string
+	c         chan []string
 	f         io.WriteCloser
 	fmt       segments
 	templates map[string]segments
@@ -35,11 +35,13 @@ func (r *reporter) close() {
 func (r *reporter) run() {
 	r.running = true
 	for c := range r.c {
-		if c == exitRpt {
+		if c[0] == exitRpt {
 			break
 		}
 		if r.f != nil {
-			_, _ = r.f.Write([]byte(c))
+			for _, s := range c {
+				_, _ = r.f.Write([]byte(s))
+			}
 		}
 	}
 	if r.f != nil {
@@ -76,9 +78,10 @@ func (r *reporter) reportDefault(bg *background, newline bool) {
 }
 func (r *reporter) report(content string, newline bool) {
 	if r.requireReport() {
-		r.c <- content
 		if newline {
-			r.c <- "\n"
+			r.c <- []string{content, "\n"}
+		} else {
+			r.c <- []string{content}
 		}
 	}
 }
@@ -102,7 +105,7 @@ func makeReporter(rpt *config.Report) (*reporter, error) {
 		fmt.Printf("report will be written to stdout\n")
 	}
 
-	r.c = make(chan string, 1000)
+	r.c = make(chan []string, 1000)
 	if len(rpt.Format) > 0 {
 		r.fmt, err = makeSegments(rpt.Format)
 		if err != nil {
