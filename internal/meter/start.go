@@ -74,6 +74,37 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		return host, nil
 	}
 }
+func createDefaultBackground() (*background, error) {
+	bg := &background{
+		name:    "default",
+		counter: &counter{},
+		local:   makeSimpEnv(),
+		global:  makeSimpEnv(),
+	}
+
+	var err error
+	var path string
+	path, err = filepath.Abs(filepath.Dir("."))
+	if err != nil {
+		return nil, err
+	}
+
+	bg.setGlobalEnv(KeySchedule, "default-schedule")
+	bg.setGlobalEnv(KeyTPath, path)
+	bg.setGlobalEnv(KeyConfig, "default")
+
+	// report
+	rpt := &config.Report{
+		Path:      "",
+		Format:    "",
+		Templates: nil,
+	}
+	bg.rpt, err = makeReporter(rpt)
+	if err != nil {
+		return nil, err
+	}
+	return bg, nil
+}
 func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
 	bg := &background{
 		name:    cfg.Name,

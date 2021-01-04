@@ -26,19 +26,7 @@ type providerSource interface {
 type staticProvider struct {
 	url, method string
 	headers     map[string]string
-	count       uint64
 	body        string
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// as providerSource
-////////////////////////////////////////////////////////////////////////////////
-
-func (s *staticProvider) getProvider(bg *background) (provider, next) {
-	if bg.seq < s.count {
-		return s, nextContinue
-	}
-	return nil, nextFinished
 }
 
 ////////////////////////////////////////////////////////////////////////////////
