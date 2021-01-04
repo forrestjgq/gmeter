@@ -68,18 +68,18 @@ func (s *staticProvider) check() error {
 	return errors.New("invalid provider")
 }
 
-func makeStaticProvider(method, url string, body string, count uint64) (*staticProvider, error) {
-	s := &staticProvider{
-		url:    url,
-		method: method,
-		body:   body,
-		count:  count,
-	}
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
+//func makeStaticProvider(method, url string, body string, count uint64) (*staticProvider, error) {
+//	s := &staticProvider{
+//		url:    url,
+//		method: method,
+//		body:   body,
+//		count:  count,
+//	}
+//	if err := s.check(); err != nil {
+//		return nil, err
+//	}
+//	return s, nil
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Feed Provider as providerSource

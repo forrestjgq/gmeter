@@ -85,7 +85,7 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	bg.setGlobalEnv(KeyTPath, cfg.Options[config.OptionCfgPath])
 	bg.setGlobalEnv(KeyConfig, cfg.Name)
 	if sched.Env != nil {
-		bg.predefine = sched.Env
+		bg.predefineLocalEnv(sched.Env)
 	}
 
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {

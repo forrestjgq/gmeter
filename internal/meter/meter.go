@@ -38,9 +38,6 @@ const (
 
 	KeyFailure = "FAILURE"
 	EOF        = "EOF"
-
-	// Temp
-	KeyTemp = "TEMP"
 )
 
 var (
@@ -52,10 +49,6 @@ func isEof(err error) bool {
 }
 
 type simpEnv map[string]string
-
-func (s simpEnv) pop(bg *background) {
-	panic("implement me")
-}
 
 func (s simpEnv) get(key string) string {
 	return s[key]
@@ -177,26 +170,24 @@ func (bg *background) getJsonEnv(key string) string {
 	}
 	return e.get(key)
 }
-func (bg *background) setJsonEnv(key, value string) {
-	e := bg.topEnv()
-	if e == nil {
-		panic("no json env " + key)
-	}
-	e.put(key, value)
-}
-func (bg *background) deleteJsonEnv(key string) {
-	e := bg.topEnv()
-	if e == nil {
-		panic("no json env")
-	}
-	e.delete(key)
-}
-func (bg *background) getTemp() string {
-	return bg.local.get(KeyTemp)
-}
-func (bg *background) getInput() string {
-	return bg.local.get(KeyInput)
-}
+
+//func (bg *background) setJsonEnv(key, value string) {
+//	e := bg.topEnv()
+//	if e == nil {
+//		panic("no json env " + key)
+//	}
+//	e.put(key, value)
+//}
+//func (bg *background) deleteJsonEnv(key string) {
+//	e := bg.topEnv()
+//	if e == nil {
+//		panic("no json env")
+//	}
+//	e.delete(key)
+//}
+//func (bg *background) getInput() string {
+//	return bg.local.get(KeyInput)
+//}
 func (bg *background) getOutput() string {
 	return bg.local.get(KeyOutput)
 }
@@ -207,9 +198,6 @@ func (bg *background) hasError() bool {
 	return len(bg.local.get(KeyError)) > 0
 }
 
-func (bg *background) setTemp(value string) {
-	bg.local.put(KeyTemp, value)
-}
 func (bg *background) setInput(value string) {
 	bg.local.put(KeyInput, value)
 }

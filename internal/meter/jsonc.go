@@ -274,20 +274,6 @@ type jsonRule interface {
 	compare(bg *background, key string, src interface{}) error
 	getKey() *jsonKey
 }
-type jsonEmptyRule struct {
-	key *jsonKey
-}
-
-func (j *jsonEmptyRule) getKey() *jsonKey {
-	return j.key
-}
-
-func (j *jsonEmptyRule) compare(bg *background, key string, src interface{}) error {
-	return nil
-}
-func makeJsonEmptyValue(key *jsonKey) jsonRule {
-	return &jsonEmptyRule{key: key}
-}
 
 // jsonStaticValue is a value defined by static int/float/bool/string
 type jsonStaticValue struct {
@@ -601,8 +587,6 @@ func makeJsonObject(key *jsonKey, value map[string]interface{}) (*jsonObject, er
 // jsonList:
 //     json list processing
 ////////////////////////////////////////////////////////////////////////////////
-type jsonSearcher struct {
-}
 type jsonList struct {
 	key      *jsonKey
 	rules    map[string]jsonRule // rules applied on the whole object, like `default`
@@ -683,7 +667,6 @@ func (j *jsonList) compare(bg *background, key string, src interface{}) error {
 	if len(value) > 0 {
 		// items not processed by member and searcher should be processed by default if any
 		if r, ok := j.rules["default"]; ok {
-			hasItem = true
 			for i := range value {
 				if err := r.compare(bg, "", value[i]); err != nil {
 					return err

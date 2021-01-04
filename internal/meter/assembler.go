@@ -6,10 +6,6 @@ type assembler struct {
 	runners []runnable
 }
 
-func (a *assembler) addRunner(r runnable) {
-	a.runners = append(a.runners, r)
-}
-
 func (a *assembler) run(bg *background) next {
 	for _, r := range a.runners {
 		if decision := r.run(bg); decision != nextContinue {
