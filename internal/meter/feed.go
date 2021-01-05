@@ -34,7 +34,6 @@ type dynamicFeeder struct {
 	seq        uint64
 	count      uint64
 	end        bool
-	iterable   bool
 	preprocess *group
 }
 
@@ -73,10 +72,15 @@ func (f *dynamicFeeder) run() {
 			continue
 		}
 
+		f.seq++
+
 		if f.preprocess != nil {
 			_, err := f.preprocess.compose(b.bg)
 			if err != nil {
 				b.err = err
+				if isEof(err) {
+					f.end = true
+				}
 				b.wg.Done()
 				continue
 			}
@@ -91,23 +95,16 @@ func (f *dynamicFeeder) run() {
 			}
 
 			str, err = s.compose(b.bg)
-
-			if f.iterable {
-				// for iterable segments, error is not tolerated, include eof or other error
-				if err != nil {
-					// make it full
-					f.seq++
-				}
-			}
-
 			if err != nil {
 				b.err = err
+				if isEof(err) {
+					f.end = true
+				}
 				break
 			}
 
 			b.c[k] = str
 		}
-		f.seq++
 		b.wg.Done()
 	}
 }
@@ -143,7 +140,6 @@ func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string)
 	}
 
 	if iterable {
-		f.iterable = true
 		f.count = math.MaxUint64 - 1
 	}
 
