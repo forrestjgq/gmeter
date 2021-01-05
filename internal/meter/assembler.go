@@ -6,6 +6,7 @@ type assembler struct {
 	runners []runnable
 }
 
+// implements runnable
 func (a *assembler) run(bg *background) next {
 	for _, r := range a.runners {
 		if decision := r.run(bg); decision != nextContinue {
