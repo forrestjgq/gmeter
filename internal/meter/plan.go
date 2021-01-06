@@ -15,7 +15,7 @@ type plan struct {
 	target     runnable
 	bg         *background
 	concurrent int
-	preprocess *group
+	preprocess composable
 	seq        int64
 }
 
@@ -27,7 +27,7 @@ func (p *plan) close() {
 func (p *plan) runOneByOne() next {
 	for {
 		p.bg.next()
-		p.bg.setLocalEnv("ROUTINE", "-1")
+		p.bg.setLocalEnv(KeyRoutine, "-1")
 		seq := atomic.AddInt64(&p.seq, 1)
 		p.bg.setLocalEnv(KeySequence, strconv.Itoa(int(seq)))
 
@@ -55,17 +55,21 @@ func (p *plan) runConcurrent(n int) next {
 	stop := false
 	c := make(chan next)
 	for i := 0; i < n; i++ {
-		go func(n int) {
-			sn := strconv.Itoa(n)
+		go func(idx int) {
+			sn := strconv.Itoa(idx)
 			bg := p.bg.dup()
 			for !stop {
 				bg.next()
-				bg.setLocalEnv("ROUTINE", sn)
+				bg.setLocalEnv(KeyRoutine, sn)
 				seq := atomic.AddInt64(&p.seq, 1)
 				bg.setLocalEnv(KeySequence, strconv.Itoa(int(seq)))
 				if decision := p.target.run(bg); decision != nextContinue {
 					// maybe error, may finished
+					if decision != nextFinished {
+						glog.Errorf("routine %d exit with err %v", idx, bg.getError())
+					}
 					c <- decision
+					return
 				}
 			}
 

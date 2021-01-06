@@ -2,7 +2,6 @@ package meter
 
 import (
 	"io"
-	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -90,18 +89,9 @@ type env interface {
 	has(key string) bool
 	dup() env
 }
-type counter struct {
-	seq uint64
-}
-
-func (c *counter) next() uint64 {
-	return atomic.AddUint64(&c.seq, 1)
-}
 
 type background struct {
 	name          string // global test name
-	counter       *counter
-	seq           uint64
 	local, global env
 	dyn           []env
 	lr            gmi.Marker
@@ -116,21 +106,22 @@ const (
 
 // globalClose should only be called by root background
 func (bg *background) globalClose() {
-	bg.rpt.close()
+	if bg.rpt != nil {
+		bg.rpt.close()
+	}
 }
 func (bg *background) dup() *background {
 	return &background{
-		name:    bg.name,
-		counter: bg.counter,
-		local:   bg.local.dup(),
-		global:  bg.global,
-		lr:      bg.lr,
-		rpt:     bg.rpt,
+		name:      bg.name,
+		local:     bg.local.dup(),
+		global:    bg.global,
+		lr:        bg.lr,
+		rpt:       bg.rpt,
+		predefine: bg.predefine,
 	}
 }
 func (bg *background) next() {
 	bg.cleanup()
-	bg.seq = bg.counter.next()
 }
 func (bg *background) cleanup() {
 	bg.local = make(simpEnv)
@@ -142,13 +133,19 @@ func (bg *background) cleanup() {
 	bg.err = nil
 }
 func (bg *background) reportDefault(newline bool) {
-	bg.rpt.reportDefault(bg, newline)
+	if bg.rpt != nil {
+		bg.rpt.reportDefault(bg, newline)
+	}
 }
 func (bg *background) report(content string, newline bool) {
-	bg.rpt.report(content, newline)
+	if bg.rpt != nil {
+		bg.rpt.report(content, newline)
+	}
 }
 func (bg *background) reportTemplate(template string, newline bool) {
-	bg.rpt.reportTemplate(bg, template, newline)
+	if bg.rpt != nil {
+		bg.rpt.reportTemplate(bg, template, newline)
+	}
 }
 func (bg *background) predefineLocalEnv(m map[string]string) {
 	bg.predefine = m

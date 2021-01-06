@@ -10,7 +10,6 @@ import (
 func TestSegments(t *testing.T) {
 	bg := &background{
 		name:   "",
-		seq:    0,
 		local:  makeSimpEnv(),
 		global: makeSimpEnv(),
 		lr:     nil,

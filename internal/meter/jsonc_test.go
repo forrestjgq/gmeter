@@ -8,8 +8,6 @@ import (
 func makeBg() *background {
 	return &background{
 		name:      "test",
-		counter:   &counter{},
-		seq:       0,
 		local:     makeSimpEnv(),
 		global:    makeSimpEnv(),
 		dyn:       nil,

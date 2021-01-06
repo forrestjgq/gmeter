@@ -76,10 +76,9 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 }
 func createDefaultBackground() (*background, error) {
 	bg := &background{
-		name:    "default",
-		counter: &counter{},
-		local:   makeSimpEnv(),
-		global:  makeSimpEnv(),
+		name:   "default",
+		local:  makeSimpEnv(),
+		global: makeSimpEnv(),
 	}
 
 	var err error
@@ -96,10 +95,9 @@ func createDefaultBackground() (*background, error) {
 }
 func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
 	bg := &background{
-		name:    cfg.Name,
-		counter: &counter{},
-		local:   makeSimpEnv(),
-		global:  makeSimpEnv(),
+		name:   cfg.Name,
+		local:  makeSimpEnv(),
+		global: makeSimpEnv(),
 	}
 
 	bg.setGlobalEnv(KeySchedule, sched.Name)
