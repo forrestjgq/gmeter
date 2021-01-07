@@ -95,6 +95,10 @@ func TestSegments(t *testing.T) {
 		"`json  .list $(JSON) | json [1]. `":                                         "line2",
 		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
 		"`envw -c jgq TEMP | echo I am $(TEMP)`":                                     "I am jgq",
+		"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",
+		"`fail whatever is wrong`":                                                   "ERROR",
+		"`if true then echo jiang`":                                                  "jiang",
+		"`if false then echo jiang else echo guoqing`":                               "guoqing",
 	}
 
 	for k, v := range m {

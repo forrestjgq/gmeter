@@ -7,46 +7,30 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/golang/glog"
-
 	"github.com/forrestjgq/gmeter/config"
 )
 
 var hosts = make(map[string]*http.Client)
 
-func loadFilePath(cfg *config.Config, path string) (string, error) {
+func loadFilePath(root string, path string) (string, error) {
 	cpath := filepath.Clean(path)
 	if len(path) == 0 {
 		return "", errors.New("file path invalid")
 	}
 
 	if cpath[0] != '/' {
-		cpath = cfg.Options[config.OptionCfgPath] + "/" + cpath
+		if len(root) > 0 {
+			cpath = root + "/" + cpath
+		}
 	}
 
 	return cpath, nil
-}
-func loadFile(cfg *config.Config, path string) ([]byte, error) {
-	cpath, err := loadFilePath(cfg, path)
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := os.Open(cpath)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := ioutil.ReadAll(f)
-	_ = f.Close()
-	return b, err
 }
 func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 	key := h.Proxy + "|" + h.Host + "|" + timeout
@@ -55,7 +39,7 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		if len(timeout) != 0 {
 			du, err := time.ParseDuration(timeout)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "parse timeout %s", timeout)
 			}
 			host.Timeout = du
 		}
@@ -114,7 +98,7 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	// report
 	var err error
 	if len(sched.Reporter.Path) > 0 {
-		sched.Reporter.Path, err = loadFilePath(cfg, sched.Reporter.Path)
+		sched.Reporter.Path, err = loadFilePath(cfg.Options[config.OptionCfgPath], sched.Reporter.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -125,27 +109,27 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	}
 	return bg, nil
 }
-func create(cfg *config.Config) []*plan {
+func create(cfg *config.Config) ([]*plan, error) {
 	if len(cfg.Schedules) == 0 {
-		glog.Fatalf("no schedule is defined")
+		return nil, errors.Errorf("no schedule is defined")
 	}
 	var plans []*plan
 
 	for _, s := range cfg.Schedules {
 		bg, err := createBackground(cfg, s)
 		if err != nil {
-			glog.Fatalf("schedule %s create background fail, err: %v", s.Name, err)
+			return nil, errors.Wrapf(err, "schedule %s create background ", s.Name)
 		}
 		tests := strings.Split(s.Tests, "|")
 		if len(tests) == 0 {
-			glog.Fatalf("schedule %s contains no tests", s.Name)
+			return nil, errors.Errorf("schedule %s contains no tests", s.Name)
 		}
 
 		var runners []runnable
 		for _, name := range tests {
 			t, ok := cfg.Tests[name]
 			if !ok {
-				glog.Fatalf("test %s not found", name)
+				return nil, errors.Errorf("test %s not found", name)
 			}
 
 			var h *config.Host
@@ -157,9 +141,9 @@ func create(cfg *config.Config) []*plan {
 			if !ok {
 				urls := strings.Split(t.Host, "|")
 				if len(urls) == 0 || len(urls) > 2 {
-					glog.Fatal("unknown host definition: ", t.Host)
+					return nil, errors.Errorf("unknown host definition: %s", t.Host)
 				}
-				h := &config.Host{}
+				h = &config.Host{}
 
 				if len(urls) == 1 {
 					h.Host = urls[0]
@@ -169,40 +153,30 @@ func create(cfg *config.Config) []*plan {
 				}
 			}
 			if err = h.Check(); err != nil {
-				glog.Fatalf("host %s check fail: %v", t.Host, err)
+				return nil, errors.Wrapf(err, "host %s check", t.Host)
 			}
 			client, err := loadHTTPClient(h, t.Timeout)
 			if err != nil {
-				glog.Fatalf("load http client fail, err: %v", err)
+				return nil, errors.Wrap(err, "load http client")
 			}
 
 			// request
-			str := t.Request
-			if len(str) == 0 {
-				glog.Fatalf("request missing in test %s ", name)
-			}
-			req, ok = cfg.Messages[str]
-			if !ok {
-				if len(str) > 2 && str[0] == '`' && str[len(str)-1] == '`' {
-					b, err := loadFile(cfg, str[1:len(str)-1])
-					if err != nil {
-						glog.Fatalf("test %s has invalid path %s", name, str)
-					} else {
-						str = string(b)
+			req = t.RequestMessage
+			if req == nil {
+				str := t.Request
+				if len(str) > 0 {
+					req, ok = cfg.Messages[str]
+					if !ok {
+						return nil, errors.Errorf("unexpected request %s", str)
 					}
-				} else {
-					glog.Fatalf("unexpected request %s", str)
 				}
-
-				req = &config.Request{}
-				err := json.Unmarshal([]byte(str), req)
-				if err != nil {
-					glog.Fatalf("test %s has invalid request", name)
-				}
+			}
+			if req == nil {
+				return nil, errors.Errorf("test %s misses request", name)
 			}
 
 			if err := req.Check(); err != nil {
-				glog.Fatalf("test %s request check failed: %v", name, err)
+				return nil, errors.Wrapf(err, "test %s request check", name)
 			}
 
 			m := make(map[string]string)
@@ -219,12 +193,12 @@ func create(cfg *config.Config) []*plan {
 
 			feeder, err := makeDynamicFeeder(m, s.Count, t.PreProcess)
 			if err != nil {
-				glog.Fatalf("test %s create feeder fail, err: %v", name, err)
+				return nil, errors.Wrapf(err, "test %s create feeder", name)
 			}
 
 			prv, err := makeFeedProvider(feeder)
 			if err != nil {
-				glog.Fatalf("test %s create provider fail, err: %v", name, err)
+				return nil, errors.Wrapf(err, "test %s create provider", name)
 			}
 
 			var csm consumer
@@ -235,19 +209,19 @@ func create(cfg *config.Config) []*plan {
 			if rsp != nil {
 				csm, err = makeDynamicConsumer(rsp.Check, rsp.Success, rsp.Failure, rsp.Template, decision)
 				if err != nil {
-					glog.Fatalf("make test %s consumer fail, err %+v", name, errors.Cause(err))
+					return nil, errors.Wrapf(err, "make test %s consumer", name)
 				}
 			}
 
 			runner, err := makeRunner(name, prv, client, csm)
 			if err != nil {
-				glog.Fatalf("make test %s runner fail, err %v", name, err)
+				return nil, errors.Wrapf(err, "make test %s runner", name)
 			}
 			runners = append(runners, runner)
 		}
 
 		if len(runners) == 0 {
-			glog.Fatalf("schedule %s does not define any tests", s.Name)
+			return nil, errors.Errorf("schedule %s does not define any tests", s.Name)
 		}
 
 		run := assembleRunners(runners...)
@@ -264,17 +238,20 @@ func create(cfg *config.Config) []*plan {
 		if len(s.PreProcess) > 0 {
 			p.preprocess, err = makeGroup(s.PreProcess, false)
 			if err != nil {
-				glog.Fatalf("schedule %s make preprocesss fail, err: %v", s.Name, err)
+				return nil, errors.Wrapf(err, "schedule %s make preprocesss", s.Name)
 			}
 		}
 		plans = append(plans, p)
 	}
 
-	return plans
+	return plans, nil
 }
 
-func StartConfig(cfg *config.Config) {
-	plans := create(cfg)
+func StartConfig(cfg *config.Config) error {
+	plans, err := create(cfg)
+	if err != nil {
+		return errors.Wrapf(err, "create test")
+	}
 
 	type result struct {
 		name string
@@ -315,44 +292,41 @@ func StartConfig(cfg *config.Config) {
 	fmt.Println("--------------------------------")
 	fmt.Printf("test %s done:\n", cfg.Name)
 	failed := false
+	var cases []string
 	for k, v := range results {
 		str := "success"
 		if v != nextFinished {
 			str = "fail"
 			failed = true
+			cases = append(cases, k)
 		}
 		fmt.Printf("\t%s: %s\n", k, str)
 	}
 
 	if failed {
-		os.Exit(128)
+		return errors.Errorf("failed schedules: %v", cases)
 	}
+	return nil
 }
 
 // Start a test, path is the configure json file path, which must be able to be
 // unmarshal to config.Config
-func Start(path string) {
-	f, err := os.Open(path)
+func Start(path string) error {
+	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		glog.Fatal("config open fail, ", err)
-		panic(err)
-	}
-	b, err := ioutil.ReadAll(f)
-	_ = f.Close()
-	if err != nil {
-		glog.Fatal("read config file fail, ", err)
+		return errors.Wrap(err, "read config file")
 	}
 
 	var cfg config.Config
 	err = json.Unmarshal(b, &cfg)
 	if err != nil {
-		glog.Fatal("unmarshal json fail, ", err)
+		return errors.Wrap(err, "unmarshal json")
 	}
 
 	cfg.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
 	if err != nil {
-		glog.Fatalf("get config path(%s) fail: %v", path, err)
+		return errors.Wrapf(err, "get config path(%s)", path)
 	}
 
-	StartConfig(&cfg)
+	return StartConfig(&cfg)
 }

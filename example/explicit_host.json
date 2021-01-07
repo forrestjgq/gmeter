@@ -1,0 +1,50 @@
+{
+    "Name": "url",
+    "Messages": {
+        "req": {
+            "Method": "POST",
+            "Path": "/debug/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        }
+    },
+    "Tests": {
+        "recognize": {
+            "PreProcess": [
+                "`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
+                "`json .image $(JSON) | envw IMAGE`"
+            ],
+            "Host": "http://127.0.0.1:8009",
+            "Request": "req",
+            "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+        }
+    },
+    "Mode": "",
+    "Schedules": [
+        {
+            "Name": "recog-image",
+            "PreProcess": [],
+            "Tests": "recognize",
+            "Reporter": {
+                "Path1": "report.log",
+                "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Templates": {
+                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`"}
+                }
+            },
+            "Count": 0,
+            "Concurrency": 1,
+            "Env": null
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

@@ -56,7 +56,7 @@ func (t *testRunnerProvider) checkRequest(bg *background) error {
 	}
 
 	var v TestRunnerBody
-	err := json.Unmarshal([]byte(body), v)
+	err := json.Unmarshal([]byte(body), &v)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,9 @@ func (t *testRunnerProvider) startServer(seq int) error {
 	t.s = &http.Server{
 		Handler: t.r,
 	}
-	go t.s.Serve(l)
+	go func() {
+		_ = t.s.Serve(l)
+	}()
 
 	list := strings.Split(l.Addr().String(), ":")
 	port := list[len(list)-1]

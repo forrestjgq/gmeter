@@ -33,7 +33,10 @@ func main() {
 
 	StartPerf(0)
 
-	meter.Start(cfg)
+	err := meter.Start(cfg)
+	if err != nil {
+		glog.Fatalf("test failed: %+v", err)
+	}
 }
 
 var lperf net.Listener

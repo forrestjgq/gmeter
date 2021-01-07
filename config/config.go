@@ -248,11 +248,12 @@ func (h *Host) Check() error {
 //
 // If any failure occurs duration above procedures, Response.Failure will be called.
 type Test struct {
-	PreProcess []string  // [dynamic] processing before each HTTP request
-	Host       string    // `key` to Config.Hosts, or : [<proxy>|]<host>
-	Request    string    // `key` to Config.Messages
-	Response   *Response // Optional entity used to process response or failure
-	Timeout    string    // HTTP request timeout, like "5s", "1m10s", "30ms"..., default "1m"
+	PreProcess     []string  // [dynamic] processing before each HTTP request
+	Host           string    // `key` to Config.Hosts, or : [<proxy>|]<host>
+	Request        string    // `key` to Config.Messages
+	RequestMessage *Request  // request message definition, if both Request and RequestMessage defined, this is preferred
+	Response       *Response // Optional entity used to process response or failure
+	Timeout        string    // HTTP request timeout, like "5s", "1m10s", "30ms"..., default "1m"
 }
 
 // Option defines options gmeter accepts. These options can be used as key in Config.Options.
