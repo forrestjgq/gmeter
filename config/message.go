@@ -19,7 +19,7 @@ type Request struct {
 }
 
 func (m *Request) Check() error {
-	if matched, matchErr := regexp.Match("^(/[^/]+)*$", []byte(m.Path)); matchErr != nil {
+	if matched, matchErr := regexp.Match("^(/[^/]*)*$", []byte(m.Path)); matchErr != nil {
 		panic("message match regexp invalid")
 	} else if !matched {
 		return fmt.Errorf("invalid path: %s", m.Path)

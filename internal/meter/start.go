@@ -273,32 +273,8 @@ func create(cfg *config.Config) []*plan {
 	return plans
 }
 
-// Start a test, path is the configure json file path, which must be able to be
-// unmarshal to config.Config
-func Start(path string) {
-	f, err := os.Open(path)
-	if err != nil {
-		glog.Fatal("config open fail, ", err)
-		panic(err)
-	}
-	b, err := ioutil.ReadAll(f)
-	_ = f.Close()
-	if err != nil {
-		glog.Fatal("read config file fail, ", err)
-	}
-
-	var cfg config.Config
-	err = json.Unmarshal(b, &cfg)
-	if err != nil {
-		glog.Fatal("unmarshal json fail, ", err)
-	}
-
-	cfg.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
-	if err != nil {
-		glog.Fatalf("get config path(%s) fail: %v", path, err)
-	}
-
-	plans := create(&cfg)
+func StartConfig(cfg *config.Config) {
+	plans := create(cfg)
 
 	type result struct {
 		name string
@@ -351,4 +327,32 @@ func Start(path string) {
 	if failed {
 		os.Exit(128)
 	}
+}
+
+// Start a test, path is the configure json file path, which must be able to be
+// unmarshal to config.Config
+func Start(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		glog.Fatal("config open fail, ", err)
+		panic(err)
+	}
+	b, err := ioutil.ReadAll(f)
+	_ = f.Close()
+	if err != nil {
+		glog.Fatal("read config file fail, ", err)
+	}
+
+	var cfg config.Config
+	err = json.Unmarshal(b, &cfg)
+	if err != nil {
+		glog.Fatal("unmarshal json fail, ", err)
+	}
+
+	cfg.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		glog.Fatalf("get config path(%s) fail: %v", path, err)
+	}
+
+	StartConfig(&cfg)
 }

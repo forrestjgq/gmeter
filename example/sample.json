@@ -16,12 +16,6 @@
             "Body": {
                 "image": {
                     "url": "$(IMAGE)"
-                },
-                "roi": {
-                    "X": "`cvt -i $(X)`",
-                    "Y": "`cvt -i $(Y)`",
-                    "W": "`cvt -i $(W)`",
-                    "H": "`cvt -i $(H)`"
                 }
             }
         }
@@ -30,11 +24,7 @@
         "recognize": {
             "PreProcess": [
                 "`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
-                "`json .image $(JSON) | envw IMAGE`",
-                "`json .x $(JSON) | envw X`",
-                "`json .y $(JSON) | envw Y`",
-                "`json .w $(JSON) | envw W`",
-                "`json .h $(JSON) | envw H`"
+                "`json .image $(JSON) | envw IMAGE`"
             ],
             "Host": "vse",
             "Request": "req",
@@ -60,10 +50,10 @@
             "PreProcess": [],
             "Tests": "recognize",
             "Reporter": {
-                "Path": "report.log",
+                "Path1": "report.log",
                 "Format": "{ \"Error\": \"$(FAILURE)\" }",
                 "Templates": {
-                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
+                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`"}
                 }
             },
             "Count": 0,
