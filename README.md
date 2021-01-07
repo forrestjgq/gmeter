@@ -43,3 +43,11 @@ gmeter attempts to provide json configuration guide through go doc system:
 It's recommended that you read this package overview first, and then jump to Config and its members.
 
 # sample
+You may find many samples in [example](example), which are used in [start_test](./internal/meter/start_test.go).
+These samples cover most scenarios gmeter supports.
+
+# TODOs
+1. gomark support
+2. QPS restriction
+3. better logging
+4. better guides

@@ -238,10 +238,12 @@ func (h *Host) Check() error {
 
 // Test defines parameters required to execute an HTTP request.
 //
-// gmeter will first call PreProcess if defined any, then use Host and Request to
-// search HTTP server and request message definitions and combining them to generate
-// a real HTTP request. Request URL will be written to $(URL). Request body, if any,
-// will be written to $(REQUEST).
+// gmeter will first call PreProcess if defined any, then use Host and RequestMessage
+// or Request to search HTTP server and request message definitions and combining them
+// to generate a real HTTP request. Request URL will be written to $(URL). Request body,
+// if any, will be written to $(REQUEST).
+//
+// if both Request and RequestMessage are defined, RequestMessage is preferred.
 //
 // While server responds, status code will be written to $(STATUS), and response body,
 // if any, will be written to $(RESPONSE). Then Response.Success will be called.
@@ -251,7 +253,7 @@ type Test struct {
 	PreProcess     []string  // [dynamic] processing before each HTTP request
 	Host           string    // `key` to Config.Hosts, or : [<proxy>|]<host>
 	Request        string    // `key` to Config.Messages
-	RequestMessage *Request  // request message definition, if both Request and RequestMessage defined, this is preferred
+	RequestMessage *Request  // request message definition, preferred over Request
 	Response       *Response // Optional entity used to process response or failure
 	Timeout        string    // HTTP request timeout, like "5s", "1m10s", "30ms"..., default "1m"
 }
