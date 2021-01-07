@@ -60,7 +60,6 @@ func (r *runner) run(bg *background) next {
 
 	bg.setLocalEnv(KeyURL, url)
 	bg.setLocalEnv(KeyRequest, body)
-	bg.setLocalEnv(KeyURL, url)
 
 	rd := strings.NewReader(body)
 	debug := bg.getGlobalEnv(KeyDebug) == "true"
