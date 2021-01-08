@@ -62,7 +62,7 @@ func TestSegments(t *testing.T) {
 		"LocalEnv: this is something $(LENV)":                                        "LocalEnv: this is something local variable",
 		"GlobalEnv: this is something ${GENV}":                                       "GlobalEnv: this is something global variable",
 		"echo: `echo \"$(FILE)\"` ends":                                              "echo: " + name + " ends",
-		"echo: `echo` ends":                                                          "echo: input ends",
+		"echo: `echo` ends":                                                          "echo:  ends",
 		"echo: `echo \"what oop\"s` ends":                                            "echo: what oops ends",
 		"echo: `echo what oops` ends":                                                "echo: what oops ends",
 		"cat: `cat " + name + "` ends":                                               "cat: " + content + " ends",
@@ -73,9 +73,9 @@ func TestSegments(t *testing.T) {
 		"b64 file: `b64 -f " + name + "` hello world ":                               "b64 file: " + fenc + " hello world ",
 		"pipe: `cat " + name + " | b64` hello world ":                                "pipe: " + fenc + " hello world ",
 		"env: `envw -c \"content\" ENVW |echo $(ENVW)`":                              "env: content",
-		"env: `envw ENVW |echo $(ENVW)`":                                             "env: input",
+		"env: `envw -c input ENVW |echo $(ENVW)`":                                    "env: input",
 		"env: `envw ENVW |envd ENVW | echo $(ENVW)`":                                 "env: ",
-		"`assert 1 != 1 -h jgq $(OUTPUT)`":                                           "ERROR",
+		"`assert 1 != 1 -h jgq`":                                                     "ERROR",
 		"`assert 1 == 1 | assert 1.0 == 1.0 | assert abc == abc | echo $(ERROR)`":    "",
 		"`assert 1 != 2 | assert 1.1 != 1.0 | assert abc != bbc | echo $(ERROR)`":    "",
 		"`assert 2 >= 1 | assert 2 > 1 | assert 2 >= 2 | echo $(ERROR)`":             "",
@@ -86,8 +86,8 @@ func TestSegments(t *testing.T) {
 		"`assert 1 != 1 | echo $(ERROR)`":                                            "ERROR",
 		"`json -e .bool $(JSON) | echo $(ERROR)`":                                    "",
 		"`json  .bool $(JSON)`":                                                      "1",
-		"`json  .int $(JSON) | assert $(OUTPUT) == 3 | echo $(ERROR)`":               "",
-		"`json  .float $(JSON) | assert $(OUTPUT) == 3.0 | echo $(ERROR)`":           "",
+		"`json  .int $(JSON) | assert $$ == 3 | echo $(ERROR)`":                      "",
+		"`json  .float $(JSON) | assert $$ == 3.0 | echo $(ERROR)`":                  "",
 		"`json  .string $(JSON)`":                                                    "string",
 		"`json  .map.k1 $(JSON)`":                                                    "this",
 		"`json  -n .list $(JSON)`":                                                   "2",
@@ -102,7 +102,7 @@ func TestSegments(t *testing.T) {
 	}
 
 	for k, v := range m {
-		bg.setOutput("input") // output will be put into input while pipeline starts
+		//bg.setOutput("input") // output will be put into input while pipeline starts
 		bg.setError(nil)
 
 		t.Log(k)

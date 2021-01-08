@@ -47,8 +47,8 @@
                   "`json -e .PedesAttr.Sex $`"
                 ],
                 "`default`": [
-                  "`json .Img.Cutboard.X $ | envw -c $(OUTPUT) X `",
-                  "`json .Img.Cutboard.Y $ | envw -c $(OUTPUT) Y `",
+                  "`json .Img.Cutboard.X $ | envw -c $$ X `",
+                  "`json .Img.Cutboard.Y $ | envw -c $$ Y `",
                   "`print cutboard(x: $(X), y: $(Y))`"
                 ]
               },
@@ -69,7 +69,7 @@
                     "Confidence": "`assert $ > 0.9`"
                   }
                 },
-                "Features": "`strlen $ | assert $(OUTPUT) > 400`",
+                "Features": "`strlen $ | assert $$ > 400`",
                 "HasFace": false
               }
             ]

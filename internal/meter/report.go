@@ -15,8 +15,11 @@ const (
 )
 
 type reporter struct {
-	c         chan []string
-	f         io.WriteCloser
+	c chan []string
+
+	f        io.WriteCloser
+	closable bool
+
 	fmt       segments
 	templates map[string]segments
 	running   bool
@@ -44,7 +47,7 @@ func (r *reporter) run() {
 			}
 		}
 	}
-	if r.f != nil {
+	if r.f != nil && r.closable {
 		_ = r.f.Close()
 	}
 	r.running = false
@@ -100,8 +103,10 @@ func makeReporter(rpt *config.Report) (*reporter, error) {
 			return nil, err
 		}
 		fmt.Printf("report will be written to %s\n", path)
+		r.closable = true
 	} else {
 		r.f = os.Stdout
+		r.closable = false
 		fmt.Printf("report will be written to stdout\n")
 	}
 

@@ -140,7 +140,7 @@ func TestListDynamic(t *testing.T) {
 	fail(t, src, `[ 2, 2]`)
 }
 func TestListBasic(t *testing.T) {
-	src := "[ { \"`list`\": [ \"`json  -n .[] $ | assert $(OUTPUT) >= 3`\" ], \"`item`\":  \"`assert $ > 0`\"  }, 1, 2 ]"
+	src := "[ { \"`list`\": [ \"`json  -n .[] $ | assert $$ >= 3`\" ], \"`item`\":  \"`assert $ > 0`\"  }, 1, 2 ]"
 	fail(t, src, `[1, 2]`)       // len >= 3
 	fail(t, src, `[1, 2, 3, 0]`) // item > 0
 	fail(t, src, `[1, 3]`)       // must start with 1, 2
@@ -149,14 +149,14 @@ func TestListBasic(t *testing.T) {
 	success(t, src, `[1, 2, 3, 4, 5]`)
 }
 func TestListString(t *testing.T) {
-	src := "[ \"abc\", \"def\", \"`strlen $ | assert $(OUTPUT) > 3`\" ]"
+	src := "[ \"abc\", \"def\", \"`strlen $ | assert $$ > 3`\" ]"
 	s1 := ` [ "abc", "def", "sssss" ]`
 	success(t, src, s1)
 	f1 := ` [ "abc", "def", "s" ]`
 	fail(t, src, f1)
 }
 func TestListStringList(t *testing.T) {
-	src := "[[ \"abc\", \"def\", \"`strlen $ | assert $(OUTPUT) > 3`\" ],[ \"abc\", \"def\", \"`strlen $ | assert $(OUTPUT) > 3`\" ],[ \"abc\", \"def\", \"`strlen $ | assert $(OUTPUT) > 3`\" ]]"
+	src := "[[ \"abc\", \"def\", \"`strlen $ | assert $$ > 3`\" ],[ \"abc\", \"def\", \"`strlen $ | assert $$ > 3`\" ],[ \"abc\", \"def\", \"`strlen $ | assert $$ > 3`\" ]]"
 	s1 := ` [[ "abc", "def", "sssss" ],[ "abc", "def", "sssss" ],[ "abc", "def", "sssss" ]]`
 	success(t, src, s1)
 	f1 := ` [[ "abc", "def", "sssss" ], [ "abc", "def", "sssss" ], [ "abc", "def", "s" ]]`
@@ -219,7 +219,7 @@ func TestListTemplate(t *testing.T) {
 /*
 [
   {
-    "`default`": "`json .b $ | assert $(OUTPUT) < 0`"
+    "`default`": "`json .b $ | assert $$ < 0`"
   },
   {
     "a: index": "`assert $ == 1`",
@@ -233,7 +233,7 @@ func TestListTemplate(t *testing.T) {
 ]
 */
 func TestListSearch(t *testing.T) {
-	src := "[ { \"`default`\": \"`json .b $ | assert $(OUTPUT) < 0`\" }, { \"a: index\": \"`assert $ == 1`\", \"b\": \"`assert $ > 1`\" }, { \"a: index\": \"`assert $ == 2`\", \"b: index\": \"`assert $ == 1`\", \"c\": \"`assert $ > 3`\" } ]"
+	src := "[ { \"`default`\": \"`json .b $ | assert $$ < 0`\" }, { \"a: index\": \"`assert $ == 1`\", \"b\": \"`assert $ > 1`\" }, { \"a: index\": \"`assert $ == 2`\", \"b: index\": \"`assert $ == 1`\", \"c\": \"`assert $ > 3`\" } ]"
 	s1 := `
 [
   {
@@ -360,7 +360,7 @@ func TestListSearchOptional(t *testing.T) {
 	success(t, src, s2)
 }
 func TestListCompareMember(t *testing.T) {
-	src := "[ { \"`default`\": \"`json .b $ | assert $(OUTPUT) < 0`\" }, { \"a\": \"`assert $ >= 1`\", \"b\": \"`assert $ >= 10`\" }, { \"a\": \"`assert $ < 1`\", \"b\": \"`assert $ > 100`\", \"c\": \"`assert $ > 30`\" } ]"
+	src := "[ { \"`default`\": \"`json .b $ | assert $$ < 0`\" }, { \"a\": \"`assert $ >= 1`\", \"b\": \"`assert $ >= 10`\" }, { \"a\": \"`assert $ < 1`\", \"b\": \"`assert $ > 100`\", \"c\": \"`assert $ > 30`\" } ]"
 	s1 := `
 [
   {
@@ -453,7 +453,7 @@ func TestListCompareMember(t *testing.T) {
 	fail(t, src, f5)
 }
 func TestObjectCompare(t *testing.T) {
-	src := "{ \"`default`\": [ \"`strlen $<key> | assert $(OUTPUT) > 4`\", \"`json .mc $<value> | assert $(OUTPUT) > 3`\" ], \"a\": 1, \"b\": \"hello\", \"c\": \"`assert $ > 10`\" }"
+	src := "{ \"`default`\": [ \"`strlen $<key> | assert $$ > 4`\", \"`json .mc $<value> | assert $$ > 3`\" ], \"a\": 1, \"b\": \"hello\", \"c\": \"`assert $ > 10`\" }"
 	s1 := `
   {
     "a": 1,
@@ -505,7 +505,7 @@ func TestObjectChildObject(t *testing.T) {
 	fail(t, src, f1)
 }
 func TestDemo(t *testing.T) {
-	src := "{ \"`default`\": [ \"`print found key $<key>`\" ], \"a: optional\": 1, \"b\": \"`strlen $ | assert $(OUTPUT) > 10`\", \"c\": false, \"d\": [ { \"`list`\": [ \"`assert $<length> > 4`\" ], \"`item`\": [ \"`assert $ > 0`\" ], \"`default`\": [ \"`assert $ > 10`\" ] }, 1, 2, 3 ], \"e\": [ { \"`template`\": { \"name\": \"`strlen $<key> | assert $(OUTPUT) > 3`\", \"qty\": \"`assert $ > 10`\" } }, { \"name: index\": \"apple\", \"qty\": \"`assert $ > 1000`\" } ] }"
+	src := "{ \"`default`\": [ \"`print found key $<key>`\" ], \"a: optional\": 1, \"b\": \"`strlen $ | assert $$ > 10`\", \"c\": false, \"d\": [ { \"`list`\": [ \"`assert $<length> > 4`\" ], \"`item`\": [ \"`assert $ > 0`\" ], \"`default`\": [ \"`assert $ > 10`\" ] }, 1, 2, 3 ], \"e\": [ { \"`template`\": { \"name\": \"`strlen $<key> | assert $$ > 3`\", \"qty\": \"`assert $ > 10`\" } }, { \"name: index\": \"apple\", \"qty\": \"`assert $ > 1000`\" } ] }"
 	s1 := `
   {
     "b": "abcdefg hijklmn opq",

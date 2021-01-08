@@ -38,9 +38,6 @@ Local variables are defined in a single run of test pipeline. When next run star
 | REQUEST  | string | false     | HTTP request body, set before HTTP request sent                                  |
 | STATUS   | int    | false     | HTTP response status code, set after HTTP request being responded                |
 | RESPONSE | string | false     | HTTP response body, set after HTTP request being responded and there is any body |
-| INPUT    | string | false     | Input of command segments, set to $(OUTPUT) before a command is called           |
-| OUTPUT   | string | false     | Output of command segments, set by command to write output                       |
-| ERROR    | string | false     | Error output of command segments, set if command generate an error               |
 | FAILURE  | string | true      | HTTP fail reason, set after HTTP process fails and before fail process is called |
 
 When a new test(or tests group) starts a new round, all local will be cleared.
@@ -81,12 +78,27 @@ In the request body, we defined a json with 3 members: `repo`, `type`, `quantity
 `repo` has a value of static string `"fruit"`, `type` defines an dynamic string which refers to a local variable `$(FRUIT)`, `quantity` defines a command refers to `$(QTY)`. Vairables referred in a string will be replaced with its value, and vairables referred in a command will be treated as an argument even its value contains spaces inside(just like refers variables in shell command line).
 
 # Command
-gmeter command acts just like shell, with a few difference:
-1. instead of stdin/stdout/stderr, `$(INPUT)`/`$(OUTPUT)`/`$(ERROR)` are defined.
-2. command alternatively reads parameter from variable if not explictely present. For example, `cmd <arg>/$(INPUT)` indicates if `<arg>` is not present, use `$(INPUT)` as parameter instead.
-3. output, if any, will be writtern to `$(OUTPUT)`
-4. if any error occurs, error string will be writtern to `$(ERROR)`
-5. gmeter is a case sensitive system.
+gmeter command acts just like shell but is case sensitive. It will write a string as output, if error occurs, error string will be written to `$(ERROR)`. Command may output empty string.
+
+A command is defined inside back quotes like:
+```
+`cmd arg1 arg2`
+```
+If an argument accept a string containing spaces, it may be defined with variable arguments like:
+```
+echo <content...>
+```
+it indicates that `<content>` could be zero or more than 1 arguments and those arguments will be joined with spaces to a string as a whole argument:
+```
+echo hello world
+```
+will produce `hello world`.
+
+If command is embedded inside a string like:
+```
+"hello `cmd arg1 arg2` world"
+```
+the command will be replaced by the output of `cmd arg1 arg2`.
 
 gmeter command process only strings, although some command will treat strings as numbers or booleans, it basicly takes string inputs and generates string output.
 
@@ -99,35 +111,38 @@ Iterable command is usually used in test preprocess to read cases from a list an
 Iterable command alters gmeter's action on controlling test counts. If there is no iterable command, how many times test should runs in a shcedule depends on the `config.Schedule.Count`. But there is is any iterable commands in the preprocessing and request generating, `config.Schedule.Count` is discarded and test will be running until any iterable command generates an `EOF`.
 
 ## Pipeline
-A pipeline is a command queue executed one by one. Each command could write its output content to `$(OUTPUT)` and gmeter will copy that into `$(INPUT)`, and then call next command so that it may(NOT must) use `$(INPUT)` as its parameter.
+A pipeline is a command queue executed one by one. Pipeline will save output of a command, and next command may optionally use `$$` to access that output. The first command will get empty string from `$$` and last command will output a string as the output of pipeline. 
 
 So it works just like shell pipe.
 
 This is how a pipeline is defined:
 `cmd1 | cmd2 | cmd3 | ...`
 
-If any command in a pipeline write `EOF` to `$(ERROR)`, pipeline finishes.
+Some command will use `$$` instead if one of its argument is not present, and the replaceable argument will be defined as `arg/$$`. If a command is defined as:
+```
+cmd arg1 arg2 arg3/$$
+```
+here if `arg3` is not present, `cmd` will read content of previous command output as `arg3`.
 
-If any command in a pipeline write an error other than `EOF` to `$(ERROR)`, pipeline aborts.
+An example: `echo hello world | strlen` will output the string length of `hello world` just like `strlen hello world`.
+
+In the execution of pipeline, any error will abort a pipeline.
 
 ## Group
 Commands and pipelines can be grouped as a list, for example, we define several `Check`s in `config.Response` to check HTTP response:
 ```json
 	"Check": [
 		"`assert $(STATUS) == 200`",
-		"`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
-		"`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
+		"`json .type $(RESPONSE) | assert $$ == $(FRUIT)`",
+		"`json .quantity $(RESPONSE) | assert $$ == $(QTY)`"
 	]
 ```
-Each of these commands or pipelines are called in the sequence they are defined.
-
-In most cases, group behaves as if a long pipeline is splitted into several short pipelines. If error occurs, following pipelines won't be called. But there are exceptions:
-   Any error happened in `config.Response.Success` and `config.Response.Fail` will abort current pipeline, but following pipelines will still be called.
+Each of these commands or pipelines are called in the sequence they are defined. Any item in the list will start with a `$$` of empty string and its output will not be deliver to next command as `$$`. Error from any item will abort the whole group.
 
 ## cvt - strip quotes and convert string to specified type
-`cvt [-b] [-i] [-f] [-r] <content>/$(INPUT)`
+`cvt [-b] [-i] [-f] [-r] <content>/$$
 
-convert `<content>` or `$(INPUT)` to :
+convert `<content>` to :
 - `-b`: bool value
 - `-i`: integer value
 - `-f`: float value
@@ -208,47 +223,52 @@ so we need remove extra `""` surrounding `$(RESPONSE)`, apply `cvt -r`:
 
 nop is a command that does nothing.
 
-## fail - fail case by write string to $(ERROR)
-`fail <content...>/$(INPUT)`
+## fail - abort current execution(pipeline or group)
+`fail <content...>/$$`
 
-write `<content...>` or `$(INPUT)` to `$(ERROR)`
+Throw error with content `<content...>`.
+
 Note that `<content...>` could be a space seperated string without quote like:
 ```
 fail ${SCHEDULE} fails in routine $(ROUTINE) seq $(SEQUENCE)
 ```
 
-## echo - write string to $(OUTPUT)
-`echo <content...>/$(INPUT)`
+## echo - echo string
+`echo <content...>/$$`
 
-write `<content...>` or `$(INPUT)` to `$(OUTPUT)`
+produce a string `<content...>`.
+
 Note that `<content...>` could be a space seperated string without quote like:
 ```
 echo ${SCHEDULE} runs in routine $(ROUTINE) seq $(SEQUENCE)
 ```
 
-## cat - write content of a file as string to $(OUTPUT)
-`cat <path>/$(INPUT)`
+## cat - read content of a file
+`cat <path>/$$`
 
-Read all file content from given `<path>` and write to $(OUTPUT).
+Read all file content from given `<path>`.
 
 ## write - write string to a file
 `write [-c <content>] <path> `
 
-Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$(INPUT)` instead.
+Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$$` instead.
 
 ## print - print string to stdout
-`print <content...>/$(INPUT)`
+`print <content...>/$$`
 
 print string into stdout, an extra new line `\n` is appended.
+
 Note that `<content...>` could be a space seperated string without quote like:
 ```
 print ${SCHEDULE} runs in routine $(ROUTINE) seq $(SEQUENCE)
 ```
 
-## escape - escape quotes
-`escape <content>/$(INPUT)`
+`print` will output nothing.
 
-replace `"` with `\"` in `<content>` or `$(INPUT)` to `$(OUTPUT)`
+## escape - escape quotes
+`escape <content>/$$`
+
+replace `"` with `\"` in `<content>`.
 
 if you want to write a string value might containing `"` into a json, you need escape it to avoid json grammar error.
 
@@ -258,9 +278,9 @@ if you want to write a string value might containing `"` into a json, you need e
 replace substring `<substring>` in string `<content>` with `<newstring>`, if `<newstring>` is absent, all `<substring>` in `<content>` will be deleted.
 
 ## strlen - get string length
-`strlen <content>/$(INPUT)`
+`strlen <content...>/$$`
 
-get the string length by UTF-8 counting and write to `$(OUTPUT)`
+get the string length by UTF-8 counting.
 
 ## env command family
 ```
@@ -277,7 +297,7 @@ envmv <src> <dst>
 
 ## assert - condition checking
 ```
-assert <condition...> [-h <hints...>]
+assert <condition> [-h <hints...>]
 ```
 
 assert will report an error if `<condition>` is evaluated as `false`. If `-h <hints...>` is present, error string will evaluate `<hints...>` and attach to error string for debugging.
@@ -352,25 +372,25 @@ second HTTP request will get request body:
 
 ```sh
 # Encode string:
-b64 <string>/$(INPUT)
+b64 <string>/$$
 
 # Encode file
-b64 -f <file>/$(INPUT)
+b64 -f <file>/$$
 ```
 
 Base64 encode a string or file
 
 ## json - json query
 ```
-json [-e] [-n] <path> <content>/$(INPUT)
+json [-e] [-n] <path> <content>/$$
 ```
 
-`json` will parse `<content>` or `$(INPUT)` as json, and find `<path>`, write its content to `$(OUTPUT)`; if not found, write empty string.
+`json` will parse `<content>` or `$$` as json, and find `<path>`, output its content; if not found, write empty string.
 
-if `-n` is present, expect `<path>` is array and  write length of this array to `$(OUTPUT)`:
+if `-n` is present, expect `<path>` is array and output length of this array:
 1. if `<path>` is not found, output 0
 2. if `<path>` is found, but not an array, report error
-3. do not write content of `<path>` to `$(OUTPUT)`
+3. if `<path>` is found and it's an array, output length of this array.
 
 if `-e` is present, report error if `<path>` not found
 
@@ -445,7 +465,7 @@ lua script can be embedded inside `<<` and `>>`, multiple lines are supported, o
 lua<<  <script>  >>
 
 # read from file
-lua <file>/$(INPUT)
+lua <file>/$$
 ```
 
 

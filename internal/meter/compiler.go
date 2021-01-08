@@ -121,7 +121,7 @@ func (s segments) compose(bg *background) (string, error) {
 // command is an executable entity
 type command interface {
 	iterable() bool
-	execute(bg *background) error
+	execute(bg *background) (string, error)
 	close()
 }
 
@@ -147,42 +147,41 @@ func (c *cmdCvt) close() {
 	c.content = nil
 }
 
-func (c *cmdCvt) execute(bg *background) error {
+func (c *cmdCvt) execute(bg *background) (string, error) {
+	output := ""
 	if content, err := c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose content", c.raw)
+		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
 		if c.toBool {
 			if content == "0" || content == "false" {
-				bg.setOutput("`false`")
+				output = "`false`"
 			} else if content == "1" || content == "true" {
-				bg.setOutput("`true`")
+				output = "`true`"
 			} else {
-				return errors.Errorf("%s convert %s to bool fail", c.raw, content)
+				return "", errors.Errorf("%s convert %s to bool fail", c.raw, content)
 			}
 		} else if c.toFloat {
 			if !c.exp.MatchString(content) {
-				return errors.Errorf("%s convert %s to number fail", c.raw, content)
-			} else {
-				bg.setOutput("`" + content + "`")
+				return "", errors.Errorf("%s convert %s to number fail", c.raw, content)
 			}
+			output = "`" + content + "`"
 		} else if c.toInt {
 			if !c.exp.MatchString(content) {
-				return errors.Errorf("%s convert %s to int fail", c.raw, content)
-			} else {
-				idx := strings.Index(content, ".")
-				if idx >= 0 {
-					content = content[:idx]
-				}
-				bg.setOutput("`" + content + "`")
+				return "", errors.Errorf("%s convert %s to int fail", c.raw, content)
 			}
+			idx := strings.Index(content, ".")
+			if idx >= 0 {
+				content = content[:idx]
+			}
+			output = "`" + content + "`"
 		} else if c.toRaw {
-			bg.setOutput("`" + content + "`")
+			output = "`" + content + "`"
 		} else {
-			bg.setOutput(content)
+			output = content
 		}
 	}
 
-	return nil
+	return output, nil
 }
 
 func makeCvt(v []string) (command, error) {
@@ -255,8 +254,8 @@ func (c *cmdNop) iterable() bool {
 	return false
 }
 
-func (c *cmdNop) execute(_ *background) error {
-	return nil
+func (c *cmdNop) execute(_ *background) (string, error) {
+	return "", nil
 }
 
 func makeNop(v []string) (command, error) {
@@ -280,17 +279,16 @@ func (c *cmdEscape) close() {
 	c.content = nil
 }
 
-func (c *cmdEscape) execute(bg *background) error {
+func (c *cmdEscape) execute(bg *background) (string, error) {
 	content := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "escape %s compose content", c.raw)
+		return "", errors.Wrapf(err, "escape %s compose content", c.raw)
 	}
 	if len(content) > 0 {
 		content = strings.ReplaceAll(content, "\"", "\\\"")
 	}
-	bg.setOutput(content)
-	return nil
+	return content, nil
 }
 
 func makeEscape(v []string) (command, error) {
@@ -329,23 +327,20 @@ func (c *cmdStrLen) close() {
 	c.content = nil
 }
 
-func (c *cmdStrLen) execute(bg *background) error {
+func (c *cmdStrLen) execute(bg *background) (string, error) {
 	if content, err := c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "strlen %s compose content", c.raw)
+		return "", errors.Wrapf(err, "strlen %s compose content", c.raw)
 	} else {
 		len := utf8.RuneCountInString(content)
-		bg.setOutput(strconv.Itoa(len))
+		return strconv.Itoa(len), nil
 	}
-	return nil
 }
 
 func makeStrLen(v []string) (command, error) {
 	raw := strings.Join(v, " ")
 	content := "$(" + KeyInput + ")"
-	if len(v) == 1 {
-		content = v[0]
-	} else if len(v) > 1 {
-		return nil, errors.Errorf("strlen %s invalid args", raw)
+	if len(v) > 0 {
+		content = raw
 	}
 	c := &cmdStrLen{
 		raw: raw,
@@ -378,26 +373,25 @@ func (c *cmdStrRepl) close() {
 	c.newstring = nil
 }
 
-func (c *cmdStrRepl) execute(bg *background) error {
+func (c *cmdStrRepl) execute(bg *background) (string, error) {
 	content := ""
 	newstring := ""
 	substring := ""
 	var err error
 	if content, err = c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose content", c.raw)
+		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	}
 	if substring, err = c.substring.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose substring", c.raw)
+		return "", errors.Wrapf(err, "%s compose substring", c.raw)
 	}
 	if newstring, err = c.newstring.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose new string", c.raw)
+		return "", errors.Wrapf(err, "%s compose new string", c.raw)
 	}
 	if len(content) > 0 && len(substring) > 0 {
 		content = strings.ReplaceAll(content, substring, newstring)
 	}
 
-	bg.setOutput(content)
-	return nil
+	return content, nil
 }
 
 func makeStrRepl(v []string) (command, error) {
@@ -445,11 +439,11 @@ func (c *cmdFail) close() {
 	c.content = nil
 }
 
-func (c *cmdFail) execute(bg *background) error {
+func (c *cmdFail) execute(bg *background) (string, error) {
 	if content, err := c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose ", c.raw)
+		return "", errors.Wrapf(err, "%s compose ", c.raw)
 	} else {
-		return errors.New(content)
+		return "", errors.New(content)
 	}
 }
 
@@ -489,13 +483,12 @@ func (c *cmdEcho) close() {
 	c.content = nil
 }
 
-func (c *cmdEcho) execute(bg *background) error {
+func (c *cmdEcho) execute(bg *background) (string, error) {
 	if content, err := c.content.compose(bg); err != nil {
-		return errors.Wrapf(err, "%s compose content", c.raw)
+		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
-		bg.setOutput(content)
+		return content, nil
 	}
-	return nil
 }
 
 func makeEcho(v []string) (command, error) {
@@ -536,30 +529,20 @@ func (c *cmdCat) close() {
 	c.content = nil
 }
 
-func (c *cmdCat) execute(bg *background) error {
+func (c *cmdCat) execute(bg *background) (string, error) {
 	if len(c.content) == 0 {
 		path, err := c.path.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose path ", c.raw)
+			return "", errors.Wrapf(err, "%s compose path ", c.raw)
 		}
 
-		if f, err := os.Open(filepath.Clean(path)); err != nil {
-			return errors.Wrapf(err, "%s open file", c.raw)
-		} else {
-			if b, err1 := ioutil.ReadAll(f); err1 != nil {
-				return errors.Wrapf(err1, "%s read file %s", c.raw, path)
-			} else {
-				if c.static {
-					c.content = b
-				}
-				bg.setOutput(string(b))
-			}
-			_ = f.Close()
+		b, err := ioutil.ReadFile(filepath.Clean(path))
+		if err != nil {
+			return "", errors.Wrapf(err, "read %s", path)
 		}
-	} else {
-		bg.setOutput(string(c.content))
+		c.content = b
 	}
-	return nil
+	return string(c.content), nil
 }
 
 func makeCat(v []string) (command, error) {
@@ -600,29 +583,25 @@ func (c *cmdWrite) close() {
 	c.path = nil
 }
 
-func (c *cmdWrite) execute(bg *background) error {
+func (c *cmdWrite) execute(bg *background) (string, error) {
 	content, err := c.content.compose(bg)
 	if err != nil {
-		return errors.Wrapf(err, "%s compose content", c.raw)
+		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	}
 	// do not check content here
 	path, err := c.path.compose(bg)
 	if err != nil {
-		return errors.Wrapf(err, "%s compose path", c.raw)
+		return "", errors.Wrapf(err, "%s compose path", c.raw)
 	}
 	if len(path) == 0 {
-		return errors.Errorf("%s compose empty file path", c.raw)
+		return "", errors.Errorf("%s compose empty file path", c.raw)
 	}
 
-	if f, err := os.Create(filepath.Clean(path)); err != nil {
-		return errors.Wrapf(err, "%s create file %s", c.raw, path)
-	} else {
-		if _, err1 := f.WriteString(content); err1 != nil {
-			return errors.Wrapf(err1, "%s write file %s", c.raw, path)
-		}
-		_ = f.Close()
+	err = ioutil.WriteFile(filepath.Clean(path), []byte(content), os.ModePerm)
+	if err != nil {
+		return "", errors.Wrapf(err, "%s write file %s", c.raw, path)
 	}
-	return nil
+	return "", nil
 }
 
 func makeWrite(v []string) (command, error) {
@@ -679,8 +658,8 @@ func (c *cmdIf) close() {
 	}
 }
 
-func (c *cmdIf) execute(bg *background) error {
-	err := c.condition.execute(bg)
+func (c *cmdIf) execute(bg *background) (string, error) {
+	_, err := c.condition.execute(bg)
 	if err == nil {
 		return c.cthen.execute(bg)
 	}
@@ -689,8 +668,9 @@ func (c *cmdIf) execute(bg *background) error {
 		return c.celse.execute(bg)
 	}
 
-	return nil
+	return "", nil
 }
+
 func makeIf(v []string) (command, error) {
 	c := &cmdIf{
 		raw: "if " + strings.Join(v, " "),
@@ -764,15 +744,15 @@ func (c *cmdPrint) close() {
 	c.format = nil
 }
 
-func (c *cmdPrint) execute(bg *background) error {
+func (c *cmdPrint) execute(bg *background) (string, error) {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose content", c.raw)
+			return "", errors.Wrapf(err, "%s compose content", c.raw)
 		}
 		fmt.Print(content, "\n")
 	}
-	return nil
+	return "", nil
 }
 
 func makePrint(v []string) (command, error) {
@@ -812,11 +792,11 @@ func (c *cmdReport) close() {
 	c.format = nil
 }
 
-func (c *cmdReport) execute(bg *background) error {
+func (c *cmdReport) execute(bg *background) (string, error) {
 	if c.format != nil {
 		content, err := c.format.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose content", c.raw)
+			return "", errors.Wrapf(err, "%s compose content", c.raw)
 		}
 		if c.template {
 			bg.reportTemplate(content, c.newline)
@@ -827,7 +807,7 @@ func (c *cmdReport) execute(bg *background) error {
 		bg.reportDefault(c.newline)
 	}
 
-	return nil
+	return "", nil
 }
 
 func makeReport(v []string) (command, error) {
@@ -886,30 +866,30 @@ func (c *cmdEnv) close() {
 	c.value = nil
 }
 
-func (c *cmdEnv) execute(bg *background) error {
+func (c *cmdEnv) execute(bg *background) (string, error) {
 	variable, err := c.variable.compose(bg)
 	if err != nil {
-		return errors.Wrapf(err, "%s compose variable", c.raw)
+		return "", errors.Wrapf(err, "%s compose variable", c.raw)
 	}
 	if c.op == envDelete {
 		bg.delLocalEnv(variable)
 	} else if c.op == envWrite {
 		value, err := c.value.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose value", c.raw)
+			return "", errors.Wrapf(err, "%s compose value", c.raw)
 		}
 		bg.setLocalEnv(variable, value)
 	} else if c.op == envMove {
 		dst, err := c.dstVariable.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose dst value", c.raw)
+			return "", errors.Wrapf(err, "%s compose dst value", c.raw)
 		}
 		bg.setLocalEnv(dst, bg.getLocalEnv(variable))
 		bg.delLocalEnv(variable)
 	} else {
-		return errors.Errorf("%s: unknown operator %d", c.raw, c.op)
+		return "", errors.Errorf("%s: unknown operator %d", c.raw, c.op)
 	}
-	return nil
+	return "", nil
 }
 
 func makeEnvw(v []string) (command, error) {
@@ -987,16 +967,16 @@ func (c *cmdList) close() {
 	}
 }
 
-func (c *cmdList) execute(bg *background) error {
+func (c *cmdList) execute(bg *background) (string, error) {
 	if c.file == nil {
 		var err error
 		path, err := c.path.compose(bg)
 		if err != nil {
-			return errors.Wrapf(err, "%s compose path", c.raw)
+			return "", errors.Wrapf(err, "%s compose path", c.raw)
 		}
 		c.file, err = os.Open(filepath.Clean(path))
 		if err != nil {
-			return errors.Wrapf(err, "%s: open file %s", c.raw, path)
+			return "", errors.Wrapf(err, "%s: open file %s", c.raw, path)
 		}
 		c.scan = bufio.NewScanner(c.file)
 	}
@@ -1004,17 +984,14 @@ func (c *cmdList) execute(bg *background) error {
 	if c.scan.Scan() {
 		t := c.scan.Text()
 		if len(t) > 0 {
-			bg.setOutput(t)
-		} else {
-			c.close()
-			return io.EOF
+			return t, nil
 		}
+		c.close()
+		return "", io.EOF
 	} else {
 		c.close()
-		return io.EOF
+		return "", io.EOF
 	}
-
-	return nil
 }
 
 func makeList(v []string) (command, error) {
@@ -1057,26 +1034,26 @@ func (c *cmdB64) close() {
 	c.path = nil
 }
 
-func (c *cmdB64) execute(bg *background) error {
+func (c *cmdB64) execute(bg *background) (string, error) {
 	var err error
 	if len(c.encoded) == 0 {
 		encoded := ""
 		if c.file {
 			path, err := c.path.compose(bg)
 			if err != nil {
-				return errors.Wrapf(err, "%s compose path", c.raw)
+				return "", errors.Wrapf(err, "%s compose path", c.raw)
 			}
 
 			if len(path) == 0 {
-				return errors.Errorf("%s: file path is empty", c.raw)
+				return "", errors.Errorf("%s: file path is empty", c.raw)
 			}
 
 			if f, err := os.Open(filepath.Clean(path)); err != nil {
-				return errors.Wrapf(err, "%s: open file %s", c.raw, path)
+				return "", errors.Wrapf(err, "%s: open file %s", c.raw, path)
 			} else {
 				if b, err1 := ioutil.ReadAll(f); err1 != nil {
 					_ = f.Close()
-					return errors.Wrapf(err1, "%s read file %s ", c.raw, path)
+					return "", errors.Wrapf(err1, "%s read file %s ", c.raw, path)
 				} else {
 					encoded = string(b)
 				}
@@ -1084,7 +1061,7 @@ func (c *cmdB64) execute(bg *background) error {
 			}
 		} else {
 			if encoded, err = c.content.compose(bg); err != nil {
-				return errors.Wrapf(err, "%s compose content ", c.raw)
+				return "", errors.Wrapf(err, "%s compose content ", c.raw)
 			}
 		}
 
@@ -1092,11 +1069,10 @@ func (c *cmdB64) execute(bg *background) error {
 		if c.static {
 			c.encoded = encoded
 		}
-		bg.setOutput(encoded)
+		return encoded, nil
 	} else {
-		bg.setOutput(c.encoded)
+		return c.encoded, nil
 	}
-	return nil
 }
 
 func makeBase64(v []string) (command, error) {
@@ -1333,18 +1309,18 @@ func (c *cmdAssert) judge(bg *background) error {
 	}
 	return nil
 }
-func (c *cmdAssert) execute(bg *background) error {
+func (c *cmdAssert) execute(bg *background) (string, error) {
 	err := c.judge(bg)
 	if err != nil {
 		if c.hint != nil {
 			if hint, _ := c.hint.compose(bg); len(hint) > 0 {
-				return errors.Wrapf(err, hint)
+				return "", errors.Wrapf(err, hint)
 			}
 		}
-		return errors.Wrapf(err, c.raw)
+		return "", errors.Wrapf(err, c.raw)
 	}
 
-	return nil
+	return "", nil
 }
 
 func makeAssert(v []string) (command, error) {
@@ -1519,18 +1495,18 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	return value, nil
 }
-func (c *cmdJson) execute(bg *background) error {
+func (c *cmdJson) execute(bg *background) (string, error) {
 	content, err := c.content.compose(bg)
 	if err != nil {
-		return errors.Wrapf(err, "%s make content", c.raw)
+		return "", errors.Wrapf(err, "%s make content", c.raw)
 	}
 	// do not check content here
 	path, err := c.path.compose(bg)
 	if err != nil {
-		return errors.Wrapf(err, "%s compose path", c.raw)
+		return "", errors.Wrapf(err, "%s compose path", c.raw)
 	}
 	if len(path) == 0 {
-		return errors.Errorf("%s: empty path", c.raw)
+		return "", errors.Errorf("%s: empty path", c.raw)
 	}
 
 	v, err := c.find(content, path)
@@ -1538,53 +1514,51 @@ func (c *cmdJson) execute(bg *background) error {
 	if c.numer {
 		// not found -> zero value of number -> 0
 		if err != nil {
-			bg.setOutput("0")
-			return nil
+			return "0", nil
 		}
 
 		if cc, ok := v.([]interface{}); !ok {
-			return errors.Errorf("%s: %s is not a list", c.raw, path)
+			return "", errors.Errorf("%s: %s is not a list", c.raw, path)
 		} else {
-			bg.setOutput(strconv.Itoa(len(cc)))
-			return nil
+			return strconv.Itoa(len(cc)), nil
 		}
 	}
 
 	if c.exist {
 		if err != nil {
-			return errors.Wrapf(err, "%s: check exist", c.raw)
+			return "", errors.Wrapf(err, "%s: check exist", c.raw)
 		}
 	} else {
 		// exist flag is not set, so set output to empty string
 		if err != nil {
-			bg.setOutput("")
-			return nil
+			return "", nil
 		}
 	}
 
+	out := ""
 	switch cc := v.(type) {
 	case bool:
 		if cc {
-			bg.setOutput("1")
+			out = "1"
 		} else {
-			bg.setOutput("0")
+			out = "0"
 		}
 	case float64:
-		bg.setOutput(strconv.FormatFloat(cc, 'f', 8, 64))
+		out = strconv.FormatFloat(cc, 'f', 8, 64)
 	case string:
-		bg.setOutput(cc)
+		out = cc
 	case json.Number:
-		bg.setOutput(string(cc))
+		out = string(cc)
 	case []interface{}, map[string]interface{}:
 		if b, err := json.Marshal(cc); err != nil {
-			return errors.Wrapf(err, "%s: marshal %v", c.raw, cc)
+			return "", errors.Wrapf(err, "%s: marshal %v", c.raw, cc)
 		} else {
-			bg.setOutput(string(b))
+			out = string(b)
 		}
 	default:
-		return errors.Errorf("%s: unknown value type %T", c.raw, cc)
+		return "", errors.Errorf("%s: unknown value type %T", c.raw, cc)
 	}
-	return nil
+	return out, nil
 }
 
 func makeJson(v []string) (command, error) {
@@ -1641,15 +1615,17 @@ func (p pipeline) iterable() bool {
 	}
 	return false
 }
-func (p pipeline) execute(bg *background) error {
+func (p pipeline) execute(bg *background) (string, error) {
+	output := ""
+	var err error
 	for i, c := range p {
-		bg.setInput(bg.getOutput())
-		err := c.execute(bg)
+		bg.setInput(output)
+		output, err = c.execute(bg)
 		if err != nil {
-			return errors.Wrapf(err, "pipeline[%d]", i)
+			return "", errors.Wrapf(err, "pipeline[%d]", i)
 		}
 	}
-	return nil
+	return output, nil
 }
 func (p pipeline) close() {
 	for _, c := range p {
@@ -1663,6 +1639,8 @@ func parseCmdArgs(args []string) (command, error) {
 	for i, s := range args {
 		if s == "$" {
 			args[i] = "$<" + jsonEnvValue + ">"
+		} else if s == "$$" {
+			args[i] = "$(" + KeyInput + ")"
 		}
 	}
 	switch name {
@@ -1801,11 +1779,7 @@ func makeSegments(str string) (segments, error) {
 						return nil, errors.Wrapf(err, "parse cmd")
 					}
 					seg := &dynamicSegment{f: func(bg *background) (string, error) {
-						err := cmd.execute(bg)
-						if err != nil {
-							return "", err
-						}
-						return bg.getOutput(), nil
+						return cmd.execute(bg)
 					}}
 
 					seg.isIterable = cmd.iterable()
@@ -1865,20 +1839,17 @@ type group struct {
 }
 
 func (g *group) compose(bg *background) (string, error) {
+	var err error
 	for i, seg := range g.segs {
-		bg.setInput(bg.getOutput())
-		s, err := seg.compose(bg)
+		bg.setInput("")
+		_, err = seg.compose(bg)
 		if err != nil {
-			if g.ignoreError {
-				bg.setOutput("")
-			} else {
+			if !g.ignoreError {
 				return "", errors.Wrapf(err, "group[%d]", i)
 			}
-		} else {
-			bg.setOutput(s)
 		}
 	}
-	return bg.getOutput(), nil
+	return "", nil
 }
 
 func (g *group) iterable() bool {

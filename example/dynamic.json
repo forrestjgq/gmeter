@@ -29,8 +29,8 @@
             "Response": {
                 "Check": [
                     "`assert $(STATUS) == 200`",
-                    "`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
-                    "`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
+                    "`json .type $(RESPONSE) | assert $$ == $(FRUIT)`",
+                    "`json .quantity $(RESPONSE) | assert $$ == $(QTY)`"
                 ]
             }
         },

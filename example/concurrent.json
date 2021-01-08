@@ -30,9 +30,9 @@
             "Response": {
                 "Check": [
                     "`assert $(STATUS) == 200`",
-                    "`json .Context.Status $(RESPONSE) | assert $(OUTPUT) == 200`",
-                    "`json -n .Result.Pedestrian $(RESPONSE) | assert $(OUTPUT) == 8`",
-                    "`json -n .Result.Faces $(RESPONSE) | assert $(OUTPUT) == 1`"
+                    "`json .Context.Status $(RESPONSE) | assert $$ == 200`",
+                    "`json -n .Result.Pedestrian $(RESPONSE) | assert $$ == 8`",
+                    "`json -n .Result.Faces $(RESPONSE) | assert $$ == 1`"
                 ],
                 "Success": [
                     "`report -n -t common`"

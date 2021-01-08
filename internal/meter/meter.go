@@ -33,8 +33,8 @@ const (
 	KeyStatus   = "STATUS"
 	KeyResponse = "RESPONSE"
 	KeyInput    = "INPUT"
-	KeyOutput   = "OUTPUT"
-	KeyError    = "ERROR"
+	//KeyOutput   = "OUTPUT"
+	KeyError = "ERROR"
 
 	KeyFailure = "FAILURE"
 	EOF        = "EOF"
@@ -190,9 +190,9 @@ func (bg *background) getJsonEnv(key string) string {
 //func (bg *background) getInput() string {
 //	return bg.local.get(KeyInput)
 //}
-func (bg *background) getOutput() string {
-	return bg.local.get(KeyOutput)
-}
+//func (bg *background) getOutput() string {
+//	return bg.local.get(KeyOutput)
+//}
 
 //func (bg *background) getErrorString() string {
 //	if bg.err != nil {
@@ -210,9 +210,10 @@ func (bg *background) hasError() bool {
 func (bg *background) setInput(value string) {
 	bg.local.put(KeyInput, value)
 }
-func (bg *background) setOutput(value string) {
-	bg.local.put(KeyOutput, value)
-}
+
+//func (bg *background) setOutput(value string) {
+//	bg.local.put(KeyOutput, value)
+//}
 func (bg *background) setError(err error) {
 	bg.err = err
 }
