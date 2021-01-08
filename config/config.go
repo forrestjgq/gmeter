@@ -399,14 +399,19 @@ const (
 // all schedules are scheduled concurrently. gmeter will be not stopped until all
 // schedules stops.
 type Config struct {
-	Name     string              // Everyone has a name, stored in ${CONFIG}
-	Hosts    map[string]*Host    // predefined hosts map that referred by a key string
+	Name string // Everyone has a name, stored in ${CONFIG}
+
+	// predefined hosts map that referred by a key string.
+	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
+	Hosts map[string]*Host
+
 	Messages map[string]*Request // predefined request map messages that referred by key string
 	Tests    map[string]*Test    // predefined tests
 
 	Mode      RunMode     // how to run schedules, default RunPipe
 	Schedules []*Schedule // all test schedules, each one runs a series of tests
 
+	Env     map[string]string // Env defines predefined global environment variables.
 	Options map[Option]string // options globally
 }
 

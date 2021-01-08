@@ -433,3 +433,30 @@ func TestStartMultiSchedule(t *testing.T) {
 	}
 
 }
+func TestStartEnv(t *testing.T) {
+	m := &mockServer{}
+	err := m.start("")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	defer m.stop()
+
+	b, err := readExample("env.json")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg := &config.Config{}
+	err = json.Unmarshal(b, cfg)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg.Hosts["-"].Host = "http://127.0.0.1:" + m.port
+	err = meter.StartConfig(cfg)
+	if err != nil {
+		t.Fatalf("error occurs: %+v", err)
+	}
+
+}

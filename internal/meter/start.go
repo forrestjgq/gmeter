@@ -94,6 +94,11 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	if debug, ok := cfg.Options[config.OptionDebug]; ok {
 		bg.setGlobalEnv(KeyDebug, debug)
 	}
+	for k, v := range cfg.Env {
+		if k != "" {
+			bg.setGlobalEnv(k, v)
+		}
+	}
 
 	// report
 	var err error
@@ -137,6 +142,9 @@ func create(cfg *config.Config) ([]*plan, error) {
 			rsp := t.Response
 
 			// host
+			if t.Host == "" {
+				t.Host = "-" // "-" is the default host
+			}
 			h, ok = cfg.Hosts[t.Host]
 			if !ok {
 				urls := strings.Split(t.Host, "|")
@@ -173,6 +181,10 @@ func create(cfg *config.Config) ([]*plan, error) {
 			}
 			if req == nil {
 				return nil, errors.Errorf("test %s misses request", name)
+			}
+
+			if req.Method == "" {
+				req.Method = "GET"
 			}
 
 			if err := req.Check(); err != nil {
