@@ -18,7 +18,7 @@ type reporter struct {
 	c chan []string
 
 	f        io.WriteCloser
-	closable bool
+	closable bool // if f is stdout, it can not be closed
 
 	fmt       segments
 	templates map[string]segments
@@ -107,7 +107,6 @@ func makeReporter(rpt *config.Report) (*reporter, error) {
 	} else {
 		r.f = os.Stdout
 		r.closable = false
-		fmt.Printf("report will be written to stdout\n")
 	}
 
 	r.c = make(chan []string, 1000)

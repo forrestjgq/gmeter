@@ -1633,6 +1633,55 @@ func (p pipeline) close() {
 	}
 }
 
+type cmdMaker func(v []string) (command, error)
+
+var cmdMap map[string]cmdMaker
+
+func init() {
+	// we can not init it as global var due to initialize loop error
+	cmdMap = map[string]cmdMaker{
+		"echo":    makeEcho,
+		"fail":    makeFail,
+		"cat":     makeCat,
+		"envw":    makeEnvw,
+		"envmv":   makeEnvMv,
+		"envd":    makeEnvd,
+		"write":   makeWrite,
+		"assert":  makeAssert,
+		"json":    makeJson,
+		"list":    makeList,
+		"b64":     makeBase64,
+		"cvt":     makeCvt,
+		"if":      makeIf,
+		"report":  makeReport,
+		"print":   makePrint,
+		"strrepl": makeStrRepl,
+		"strlen":  makeStrLen,
+		"escape":  makeEscape,
+		"nop":     makeNop,
+	}
+}
+func isCmd(s string) bool {
+	idx := -1
+	s = strings.TrimSpace(s)
+	for i, r := range s {
+		if r == '$' || r == '\t' || r == ' ' {
+			idx = i
+			break
+		}
+	}
+
+	first := s
+	if idx != -1 {
+		first = s[:idx]
+	}
+
+	if _, ok := cmdMap[first]; ok {
+		return true
+	}
+	return false
+}
+
 func parseCmdArgs(args []string) (command, error) {
 	name := args[0]
 	args = args[1:]
@@ -1643,48 +1692,11 @@ func parseCmdArgs(args []string) (command, error) {
 			args[i] = "$(" + KeyInput + ")"
 		}
 	}
-	switch name {
-	case "echo":
-		return makeEcho(args)
-	case "fail":
-		return makeFail(args)
-	case "cat":
-		return makeCat(args)
-	case "envw":
-		return makeEnvw(args)
-	case "envmv":
-		return makeEnvMv(args)
-	case "envd":
-		return makeEnvd(args)
-	case "write":
-		return makeWrite(args)
-	case "assert":
-		return makeAssert(args)
-	case "json":
-		return makeJson(args)
-	case "list":
-		return makeList(args)
-	case "b64":
-		return makeBase64(args)
-	case "cvt":
-		return makeCvt(args)
-	case "if":
-		return makeIf(args)
-	case "report":
-		return makeReport(args)
-	case "print":
-		return makePrint(args)
-	case "strrepl":
-		return makeStrRepl(args)
-	case "strlen":
-		return makeStrLen(args)
-	case "escape":
-		return makeEscape(args)
-	case "nop":
-		return makeNop(args)
-	default:
-		return nil, errors.Errorf("cmd %s not supported", name)
+
+	if f, ok := cmdMap[name]; ok {
+		return f(args)
 	}
+	return nil, errors.Errorf("cmd %s not supported", name)
 }
 func parse(str string) (command, error) {
 	args, err := argv.Argv(str, nil, func(s string) (string, error) {
@@ -1799,12 +1811,27 @@ func makeSegments(str string) (segments, error) {
 			case phaseLocal:
 				if i > start {
 					name := string(r[start:i])
+					name = strings.TrimSpace(name)
 					if len(name) == 0 {
 						return nil, errors.New("local variable name is missing")
 					}
-					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
-						return bg.getLocalEnv(name), nil
-					}})
+					if isCmd(name) {
+						// treat as command instead of variable
+						cmd, err := parse(name)
+						if err != nil {
+							return nil, errors.Wrapf(err, "parse cmd")
+						}
+						seg := &dynamicSegment{f: func(bg *background) (string, error) {
+							return cmd.execute(bg)
+						}}
+
+						seg.isIterable = cmd.iterable()
+						segs = append(segs, seg)
+					} else {
+						segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
+							return bg.getLocalEnv(name), nil
+						}})
+					}
 				}
 			case phaseGlobal:
 				if i > start {

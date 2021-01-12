@@ -99,6 +99,7 @@ func TestSegments(t *testing.T) {
 		"`fail whatever is wrong`":                                                   "ERROR",
 		"`if true then echo jiang`":                                                  "jiang",
 		"`if false then echo jiang else echo guoqing`":                               "guoqing",
+		"`strlen $(echo jiang)`":                                                     "5",
 	}
 
 	for k, v := range m {
