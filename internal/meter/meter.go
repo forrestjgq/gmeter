@@ -2,6 +2,7 @@ package meter
 
 import (
 	"io"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -81,6 +82,46 @@ func makeSimpEnv() env {
 	return make(simpEnv)
 }
 
+type kvdb struct {
+	m   map[string]string
+	mtx sync.Mutex
+}
+
+func (db *kvdb) get(key string) string {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+	return db.m[key]
+}
+
+func (db *kvdb) put(key string, value string) {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+	db.m[key] = value
+}
+
+func (db *kvdb) delete(key string) {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+	delete(db.m, key)
+}
+
+func (db *kvdb) has(key string) bool {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+	_, ok := db.m[key]
+	return ok
+}
+func (db *kvdb) dup() env {
+	return db
+}
+
+func createDB() env {
+	return &kvdb{
+		m:   make(map[string]string),
+		mtx: sync.Mutex{},
+	}
+}
+
 // container to store environment
 type env interface {
 	get(key string) string
@@ -91,13 +132,13 @@ type env interface {
 }
 
 type background struct {
-	name          string // global test name
-	local, global env
-	dyn           []env
-	lr            gmi.Marker
-	err           error
-	rpt           *reporter
-	predefine     map[string]string
+	name              string // global test name
+	db, local, global env
+	dyn               []env
+	lr                gmi.Marker
+	err               error
+	rpt               *reporter
+	predefine         map[string]string
 }
 
 const (
@@ -115,6 +156,7 @@ func (bg *background) dup() *background {
 		name:      bg.name,
 		local:     bg.local.dup(),
 		global:    bg.global,
+		db:        bg.db,
 		lr:        bg.lr,
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
@@ -218,6 +260,15 @@ func (bg *background) setError(err error) {
 	bg.err = err
 }
 
+func (bg *background) dbRead(key string) string {
+	return bg.db.get(key)
+}
+func (bg *background) dbWrite(key string, value string) {
+	bg.db.put(key, value)
+}
+func (bg *background) dbDelete(key string) {
+	bg.db.delete(key)
+}
 func (bg *background) getLocalEnv(key string) string {
 	if key == KeyError {
 		if bg.err == nil {

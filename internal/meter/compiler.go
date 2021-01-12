@@ -948,6 +948,111 @@ func makeEnvd(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                            db                             ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+const (
+	dbWrite = iota
+	dbDelete
+	dbRead
+)
+
+type cmdDB struct {
+	op       int
+	variable segments
+	value    segments
+	raw      string
+}
+
+func (c *cmdDB) iterable() bool {
+	return false
+}
+func (c *cmdDB) close() {
+	c.variable = nil
+	c.value = nil
+}
+
+func (c *cmdDB) execute(bg *background) (string, error) {
+	variable, err := c.variable.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "%s compose variable", c.raw)
+	}
+	if c.op == dbDelete {
+		bg.dbDelete(variable)
+	} else if c.op == dbWrite {
+		value, err := c.value.compose(bg)
+		if err != nil {
+			return "", errors.Wrapf(err, "%s compose value", c.raw)
+		}
+		bg.dbWrite(variable, value)
+	} else if c.op == dbRead {
+		return bg.dbRead(variable), nil
+	} else {
+		return "", errors.Errorf("%s: unknown operator %d", c.raw, c.op)
+	}
+	return "", nil
+}
+
+// db -r key // default
+// db -w key value...
+// db -d key
+func makeDB(v []string) (command, error) {
+	raw := "db " + strings.Join(v, " ")
+	read := false
+	write := false
+	delete := false
+	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
+	fs.BoolVar(&read, "r", false, "read from database")
+	fs.BoolVar(&write, "w", false, "write to database")
+	fs.BoolVar(&delete, "d", false, "delete from database")
+	err := fs.Parse(v)
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s parse argument", raw)
+	}
+	v = fs.Args()
+	if len(v) == 0 {
+		return nil, errors.Errorf("%s variable not provided", raw)
+	}
+	cnt := 0
+	if read {
+		cnt++
+	}
+	if write {
+		cnt++
+	}
+	if delete {
+		cnt++
+	}
+	if cnt == 0 {
+		read = true
+	} else if cnt > 1 {
+		return nil, errors.New("db only accept one of -r/-d/-w")
+	}
+	variable := v[0]
+	c := &cmdDB{
+		raw: raw,
+		op:  dbRead,
+	}
+	if c.variable, err = makeSegments(variable); err != nil {
+		return nil, errors.Wrapf(err, "%s make variable", raw)
+	}
+	if write {
+		c.op = dbWrite
+		content := "$(" + KeyInput + ")"
+		if len(v) > 1 {
+			content = strings.Join(v[1:], " ")
+		}
+
+		if c.value, err = makeSegments(content); err != nil {
+			return nil, errors.Wrapf(err, "%s make content", raw)
+		}
+	} else if delete {
+		c.op = dbDelete
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                            list                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
 type cmdList struct {
@@ -1646,6 +1751,7 @@ func init() {
 		"envw":    makeEnvw,
 		"envmv":   makeEnvMv,
 		"envd":    makeEnvd,
+		"db":      makeDB,
 		"write":   makeWrite,
 		"assert":  makeAssert,
 		"json":    makeJson,
