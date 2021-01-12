@@ -282,6 +282,15 @@ replace substring `<substring>` in string `<content>` with `<newstring>`, if `<n
 
 get the string length by UTF-8 counting.
 
+## db - database accessing
+```
+db -w <variable> <content...>/$(INPUT)
+db -r <variable>
+db -d <variable>
+```
+
+Database is a persistent container to store key-value pairs, unlike local environment, it remains across sessions and unlike global environment, it can be accessed by `-r`(read), `-d`(delete), `-w` write.
+
 ## env command family
 ```
 # write local environment variable
