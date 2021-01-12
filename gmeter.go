@@ -13,30 +13,36 @@ import (
 	"github.com/golang/glog"
 )
 
-type one struct {
-	t *two
-	b []int
-}
-type two struct {
-	t *one
-	b []int
-}
-
 func main() {
 	cfg := ""
+	httpsrv := ""
 	flag.StringVar(&cfg, "config", "", "config file path")
+	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
 	flag.Parse()
 
 	if len(cfg) == 0 {
 		glog.Fatalf("config file not present")
 	}
 
-	StartPerf(0)
+	_, err := StartPerf(0)
+	if err != nil {
+		defer StopPerf()
+	}
 
-	err := meter.Start(cfg)
+	if len(httpsrv) > 0 {
+		err := meter.StartHTTPServer(httpsrv)
+		if err != nil {
+			glog.Fatalf("HTTP server start failed: %+v", err)
+		}
+		defer func() {
+			meter.StopAll()
+		}()
+	}
+	err = meter.Start(cfg)
 	if err != nil {
 		glog.Fatalf("test failed: %+v", err)
 	}
+
 }
 
 var lperf net.Listener

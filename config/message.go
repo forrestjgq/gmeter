@@ -56,7 +56,7 @@ func (m *Request) Check() error {
 //     If any error is reported in Check processing, Check will be aborted.
 //
 // If any error is reported in HTTP and HTTP response processing, Failure will be called.
-// Fail reason is recorded in $(ERROR). Note that $(URL), $(REQUEST), $(STATUS)
+// Fail reason is recorded in $(FAILURE). Note that $(URL), $(REQUEST), $(STATUS)
 // and $(RESPONSE) may be empty. Any other variables generated before HTTP sending
 // (if any) may also be empty.
 //

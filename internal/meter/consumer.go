@@ -42,8 +42,11 @@ type dynamicConsumer struct {
 }
 
 func (d *dynamicConsumer) processResponse(bg *background) next {
+	return d.process(bg, KeyResponse)
+}
+func (d *dynamicConsumer) process(bg *background, key string) next {
 	if d.template != nil {
-		if err := compareTemplate(d.template, bg, bg.getLocalEnv(KeyResponse)); err != nil {
+		if err := compareTemplate(d.template, bg, bg.getLocalEnv(key)); err != nil {
 			return d.processFailure(bg, err)
 		}
 	}
@@ -60,8 +63,7 @@ func (d *dynamicConsumer) processResponse(bg *background) next {
 }
 
 func (d *dynamicConsumer) decideFailure(bg *background, err error) next {
-	glog.Errorf("%s|%s|%s failed: %v",
-		bg.getGlobalEnv(KeyConfig), bg.getGlobalEnv(KeySchedule), bg.getLocalEnv(KeyTest), err)
+	glog.Errorf("failed: %+v", err)
 	switch d.decision {
 	case abortOnFail:
 		return nextAbortPlan

@@ -23,9 +23,10 @@ or directly install:
 # Usage
 make sure you've add $GOPATH into your $PATH, then:
 ```
-gmeter -config <config>
+gmeter -config <config> [-httpsrv <http-server-config>]
 ```
 `<config>` is configure json file path, a sample can be get [here](example/sample.json)
+`<http-server-config>` is configure json file path for creating http server, a sample can be get [here](example/server.json)
 
 Specially, to use a template in `config.Response.Template`, you should read [jsonc](jsonc.md) to construct a json template.
 

@@ -1,0 +1,59 @@
+{
+  "Servers": {
+    "fruit-server": {
+      "Address":  "127.0.0.1:18009",
+      "Routes":  [
+        {
+          "Method":  "POST",
+          "Path":  "/add",
+          "Headers":  {
+            "content-type":  "application/json"
+          },
+          "Request":  {
+            "Template":  {
+              "Fruit":  "`envw -c $ FRUIT`",
+              "Qty":  "`assert $ > 10 | envw -c $ QTY`"
+            },
+            "Check":  [],
+            "Success":  [
+              "`db -w $(FRUIT) $(QTY)`",
+              "`envw -c 200 STATUS`"
+            ],
+            "Fail":  []
+          }
+        },
+        {
+          "Method":  "GET",
+          "Path":  "/query",
+          "Request":  {
+            "Check":  [ "`strlen $(fruit) | assert $$ > 0`" ]
+          },
+          "Response":  {
+            "-" :  {
+              "Fruit":  "$(fruit)",
+              "Qty":  "`db -r $(fruit) | cvt -i`"
+            }
+          }
+        },
+        {
+          "Method":  "DELETE",
+          "Path":  "/delete",
+          "Request":  {
+            "Check":  [
+              "`strlen $(fruit) | assert  $$ > 0`"
+            ],
+            "Success":  [
+              "`db -d $(fruit)`"
+            ],
+            "Fail":  []
+          }
+        }
+      ],
+      "Report":  {
+        "Path":  "",
+        "Format":  "",
+        "Templates":  null
+      }
+    }
+  }
+}
