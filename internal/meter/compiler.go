@@ -1167,9 +1167,10 @@ type cmdB64 struct {
 	raw     string
 	file    bool
 	static  bool
+	decode  bool
 	path    segments
 	content segments
-	encoded string
+	result  string
 }
 
 func (c *cmdB64) iterable() bool {
@@ -1182,8 +1183,8 @@ func (c *cmdB64) close() {
 
 func (c *cmdB64) execute(bg *background) (string, error) {
 	var err error
-	if len(c.encoded) == 0 {
-		encoded := ""
+	if len(c.result) == 0 {
+		result := ""
 		if c.file {
 			path, err := c.path.compose(bg)
 			if err != nil {
@@ -1201,23 +1202,31 @@ func (c *cmdB64) execute(bg *background) (string, error) {
 					_ = f.Close()
 					return "", errors.Wrapf(err1, "%s read file %s ", c.raw, path)
 				} else {
-					encoded = string(b)
+					result = string(b)
 				}
 				_ = f.Close()
 			}
 		} else {
-			if encoded, err = c.content.compose(bg); err != nil {
+			if result, err = c.content.compose(bg); err != nil {
 				return "", errors.Wrapf(err, "%s compose content ", c.raw)
 			}
 		}
 
-		encoded = base64.StdEncoding.EncodeToString([]byte(encoded))
-		if c.static {
-			c.encoded = encoded
+		if c.decode {
+			b, err := base64.StdEncoding.DecodeString(result)
+			if err != nil {
+				return "", errors.Wrap(err, "base64 decode")
+			}
+			result = string(b)
+		} else {
+			result = base64.StdEncoding.EncodeToString([]byte(result))
 		}
-		return encoded, nil
+		if c.static {
+			c.result = result
+		}
+		return result, nil
 	} else {
-		return c.encoded, nil
+		return c.result, nil
 	}
 }
 
@@ -1231,6 +1240,7 @@ func makeBase64(v []string) (command, error) {
 	file := false
 	fs := flag.NewFlagSet("b64", flag.ContinueOnError)
 	fs.BoolVar(&file, "f", false, "encode file content to base64")
+	fs.BoolVar(&c.decode, "d", false, "decode file or content to raw string")
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s parse argument", raw)

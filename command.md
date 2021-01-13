@@ -253,6 +253,13 @@ Read all file content from given `<path>`.
 
 Write `<content>` to given file represented by `<path>`, if `-c <content>` is not specified, write `$$` instead.
 
+## sleep - sleep for a while
+`sleep <duration>`
+
+sleep for a while specified by `<duration>`
+
+`<duration>` is a string represent some time, for example: `1s30ms` for 1 second and 30 milliseconds, `2m30s` for 2 minutes and 30 seconds, `100ms` for 100ms...
+
 ## print - print string to stdout
 `print <content...>/$$`
 
@@ -385,9 +392,15 @@ b64 <string>/$$
 
 # Encode file
 b64 -f <file>/$$
+
+# Decode string:
+b64 -d <string>/$$
+
+# Decode file
+b64 -d -f <file>/$$
 ```
 
-Base64 encode a string or file
+Base64 encode/decode a string or file
 
 ## json - json query
 ```

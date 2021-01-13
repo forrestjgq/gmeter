@@ -10,9 +10,16 @@
             "content-type":  "application/json"
           },
           "Request":  {
-            "Check":  [],
+            "Template": {
+              "KafkaResult": "`envw -c $ KAFKA`"
+            },
+            "Check":  [
+              "`json .ObjType $(KAFKA) |envw -c $$ OBJECT`",
+              "`json .FmtType $(KAFKA) | envw -c $$ FMT`",
+              "`json .BinData $(KAFKA) | b64 -d $$ | envw -c $$ MSG`"
+            ],
             "Success":  [
-              "`report -n`"
+              "`report -n -t common`"
             ],
             "Fail":  []
           }
@@ -20,7 +27,9 @@
       ],
       "Report":  {
         "Path": "deepcloud.log",
-        "Format": "$(REQUEST)"
+        "Templates": {
+          "common": { "ObjType": "`cvt -i $(OBJECT)`", "FmtType": "`cvt -i $(FMT)`", "BinData": "`cvt -r $(MSG)`" }
+        }
       }
     }
   }
