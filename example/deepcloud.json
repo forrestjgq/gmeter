@@ -1,0 +1,27 @@
+{
+  "Servers": {
+    "server": {
+      "Address":  "127.0.0.1:18001",
+      "Routes":  [
+        {
+          "Method":  "POST",
+          "Path":  "/vse",
+          "Headers":  {
+            "content-type":  "application/json"
+          },
+          "Request":  {
+            "Check":  [],
+            "Success":  [
+              "`report -n`"
+            ],
+            "Fail":  []
+          }
+        }
+      ],
+      "Report":  {
+        "Path": "deepcloud.log",
+        "Format": "$(REQUEST)"
+      }
+    }
+  }
+}

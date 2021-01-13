@@ -1,0 +1,66 @@
+{
+  "Name": "video",
+  "Hosts": { "-": { "Host": "http://127.0.0.1:8009"} },
+  "Tests": {
+    "cfg1": {
+      "RequestMessage": { "Method": "PUT", "Path": "/vse/config?k=security.arcee.addr&v=127.0.0.1:18002" },
+      "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+    },
+    "cfg2": {
+      "RequestMessage": { "Method": "PUT", "Path": "/vse/config?k=security.arcee.enable&v=1" },
+      "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+    },
+    "cfg3": {
+      "RequestMessage": { "Method": "PUT", "Path": "/vse/config?k=security.deepcloud.addr&v=http://127.0.0.1:18001/vse" },
+      "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+    },
+    "cfg4": {
+      "RequestMessage": { "Method": "PUT", "Path": "/vse/config?k=security.deepcloud.enable&v=1" },
+      "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+    },
+    "video": {
+      "RequestMessage": {
+        "Method": "POST",
+        "Path": "/vse/task/new",
+        "Body": {
+          "task_type": "file",
+          "video_input": {
+            "uri": "rtsp://172.18.0.76:8554/live/t1027"
+          },
+          "base_time": 0,
+          "start_time": 0,
+          "end_time": -1,
+          "function": {
+            "face_detect": 1
+          },
+          "image_output": {},
+          "extends": {
+            "scenario": "security"
+          }
+        }
+      },
+      "Response": {
+        "Check": [ "`assert $(STATUS) == 200`" ],
+        "Success": [ "`sleep 3m`" ]
+      }
+    },
+    "delete": {
+      "RequestMessage": { "Method": "DELETE", "Path": "/vse/task/rmall" },
+      "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+    }
+  },
+  "Schedules": [
+    {
+      "Name": "vse-video",
+      "PreProcess": [
+        "`sleep 20s`"
+      ],
+      "Tests": "cfg1|cfg2|cfg3|cfg4|video|delete",
+      "Count": 1
+    }
+  ],
+  "Options": {
+    "AbortIfFail": "true",
+    "Debug": "false"
+  }
+}

@@ -45,12 +45,12 @@
         {
             "Name": "fruit",
             "Tests": "add|query|delete",
-            "Count": 1,
+            "Count": 1000,
             "Env": { "FRUIT": "apple" }
         }
     ],
     "Options": {
         "AbortIfFail": "true",
-        "Debug": "true"
+        "Debug": "false"
     }
 }

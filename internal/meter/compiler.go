@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/pkg/errors"
@@ -726,6 +727,46 @@ func makeIf(v []string) (command, error) {
 	}
 
 	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                           sleep                           ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+type cmdSleep struct {
+	raw string
+	du  time.Duration
+}
+
+func (c *cmdSleep) iterable() bool {
+	return false
+}
+func (c *cmdSleep) close() {
+}
+
+func (c *cmdSleep) execute(bg *background) (string, error) {
+	if c.du > 0 {
+		time.Sleep(c.du)
+	}
+	return "", nil
+}
+
+func makeSleep(v []string) (command, error) {
+	raw := "sleep " + strings.Join(v, " ")
+	if len(v) == 1 {
+		s := v[0]
+		du, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "parse duration %s", s)
+		}
+		return &cmdSleep{
+			raw: raw,
+			du:  du,
+		}, nil
+	} else {
+		return nil, errors.New("sleep requires a duration like 3m, 1m20s...")
+	}
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1761,6 +1802,7 @@ func init() {
 		"if":      makeIf,
 		"report":  makeReport,
 		"print":   makePrint,
+		"sleep":   makeSleep,
 		"strrepl": makeStrRepl,
 		"strlen":  makeStrLen,
 		"escape":  makeEscape,

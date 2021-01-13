@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/golang/glog"
@@ -34,6 +35,18 @@ func (s *httpsrv) start(name string, cfg *config.HttpServer) error {
 	}
 	for k, v := range cfg.Env {
 		bg.setGlobalEnv(k, v)
+	}
+	// report
+	var err error
+	if len(cfg.Report.Path) > 0 {
+		cfg.Report.Path, err = loadFilePath(bg.getGlobalEnv(KeyTPath), cfg.Report.Path)
+		if err != nil {
+			return err
+		}
+	}
+	bg.rpt, err = makeReporter(&cfg.Report)
+	if err != nil {
+		return err
 	}
 
 	for i, rc := range cfg.Routes {
@@ -82,6 +95,18 @@ func StartHTTPServer(path string) error {
 		return errors.Wrap(err, "unmarshal json")
 	}
 
+	path, err = filepath.Abs(path)
+	if err != nil {
+		return errors.Wrapf(err, "absolute path of %s", path)
+	}
+	tpath := filepath.Dir(path)
+	for _, srv := range s.Servers {
+		if srv.Env == nil {
+			srv.Env = make(map[string]string)
+		}
+		srv.Env[KeyConfig] = path
+		srv.Env[KeyTPath] = tpath
+	}
 	return StartHTTPServerConfig(&s)
 }
 
