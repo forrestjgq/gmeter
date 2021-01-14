@@ -1,5 +1,5 @@
 {
-  "Name": "video",
+  "Name": "video-concurrent",
   "Hosts": { "-": { "Host": "http://127.0.0.1:8009"} },
   "Tests": {
     "video": {
@@ -24,16 +24,22 @@
         }
       },
       "Response": {
+        "Template": {
+          "task_id": "`env -w TASK $`"
+        },
         "Check": [ "`assert $(STATUS) == 200`" ],
-        "Success": [ "`sleep 30s`" ]
+        "Success": [
+          "`print  run $(TASK) in routine $(ROUTINE) 30s`",
+          "`sleep 30s`"
+        ]
       }
     },
     "delete": {
-      "RequestMessage": { "Method": "DELETE", "Path": "/vse/task/rmall" },
+      "RequestMessage": { "Method": "DELETE", "Path": "/vse/task/rm?task_id=$(TASK)" },
       "Response": {
         "Check": [ "`assert $(STATUS) == 200`" ],
         "Success": [
-          "`print test done, sleep 5s`",
+          "`print task $(TASK) stops in routine $(ROUTINE), sleep 5s`",
           "`sleep 5s`"
         ]
       }
@@ -48,7 +54,8 @@
         "`print now start`"
       ],
       "Tests": "video|delete",
-      "Count": 1000
+      "Count": 1000,
+      "Concurrency": 2
     }
   ],
   "Options": {
