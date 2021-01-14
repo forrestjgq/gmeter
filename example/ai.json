@@ -31,7 +31,7 @@
           "`report -n -t common`"
         ],
         "Failure": [
-          "`envmv ERROR FAILURE |escape $(FAILURE)| report -n`"
+          "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
         ],
         "Template": {
           "Context": {
@@ -47,8 +47,8 @@
                   "`json -e .PedesAttr.Sex $`"
                 ],
                 "`default`": [
-                  "`json .Img.Cutboard.X $ | envw -c $$ X `",
-                  "`json .Img.Cutboard.Y $ | envw -c $$ Y `",
+                  "`json .Img.Cutboard.X $ | env -w X`",
+                  "`json .Img.Cutboard.Y $ | env -w Y`",
                   "`print cutboard(x: $(X), y: $(Y))`"
                 ]
               },

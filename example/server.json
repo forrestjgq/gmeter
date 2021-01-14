@@ -11,13 +11,13 @@
           },
           "Request":  {
             "Template":  {
-              "Fruit":  "`envw -c $ FRUIT`",
-              "Qty":  "`assert $ > 10 | envw -c $ QTY`"
+              "Fruit":  "`env -w FRUIT $`",
+              "Qty":  "`assert $ > 10 | env -w QTY $`"
             },
             "Check":  [],
             "Success":  [
               "`db -w $(FRUIT) $(QTY)`",
-              "`envw -c 200 STATUS`"
+              "`env -w STATUS 200 `"
             ],
             "Fail":  []
           }

@@ -298,18 +298,21 @@ db -d <variable>
 
 Database is a persistent container to store key-value pairs, unlike local environment, it remains across sessions and unlike global environment, it can be accessed by `-r`(read), `-d`(delete), `-w` write.
 
-## env command family
-```
-# write local environment variable
-envw [-c <content>] <variable>
-envd <variable>
-envmv <src> <dst>
-```
+## env - local variable operations
 
-`env` command family includes:
-- `envw`: Write `<content>` to local variable named by `<variable>`
-- `envd` deletes local variable named by `<variable>`
-- `envmv` move local variable `$(src)` value to `$(dst)`, `$(src)` will be cleared
+```shell
+// move content of variable <src> to variable <dst>, and <src> variable will be deleted
+env -m <src> <dst>
+
+// write local environment variable
+env -w <variable> <content...>/$(INPUT)
+
+// read from local <variable>	
+env -r <variable>
+
+// delete <variable> from local environment
+env -d <variable>
+```
 
 ## assert - condition checking
 ```

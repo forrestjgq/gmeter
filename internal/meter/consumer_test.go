@@ -22,13 +22,13 @@ func TestDynamicConsumerSuccess(t *testing.T) {
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
-			"`envw -c check RESULT`",
+			"`env -w RESULT check`",
 		},
 		[]string{ // success
-			"`echo $(RESULT) success | envw RESULT`",
+			"`echo $(RESULT) success | env -w RESULT`",
 		},
 		[]string{ // fail
-			"`echo $(RESULT) fail | envw RESULT`",
+			"`echo $(RESULT) fail | env -w RESULT`",
 		},
 		[]byte(""), // template
 		abortOnFail,
@@ -52,14 +52,14 @@ func TestDynamicConsumerCheckFail(t *testing.T) {
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
-			"`envw -c check RESULT`",
+			"`env -w RESULT check`",
 			"`assert 0 != 0`",
 		},
 		[]string{ // success
-			"`echo $(RESULT) success | envw RESULT`",
+			"`echo $(RESULT) success | env -w RESULT`",
 		},
 		[]string{ // fail
-			"`echo $(RESULT) fail | envw RESULT`",
+			"`echo $(RESULT) fail | env -w RESULT`",
 		},
 		[]byte(""), // template
 		abortOnFail,
@@ -83,14 +83,14 @@ func TestDynamicConsumerFail(t *testing.T) {
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
-			"`envw -c check RESULT`",
+			"`env -w RESULT check`",
 			"`assert 0 != 0`",
 		},
 		[]string{ // success
-			"`echo $(RESULT) success | envw RESULT`",
+			"`echo $(RESULT) success | env -w RESULT`",
 		},
 		[]string{ // fail
-			"`envw -c fail RESULT`",
+			"`env -w RESULT fail`",
 		},
 		[]byte(""), // template
 		abortOnFail,
@@ -114,13 +114,13 @@ func TestDynamicConsumerTemplate(t *testing.T) {
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
-			"`echo $(RESULT) check | envw RESULT`",
+			"`echo $(RESULT) check | env -w RESULT`",
 		},
 		[]string{ // success
-			"`echo $(RESULT) success | envw RESULT`",
+			"`echo $(RESULT) success | env -w RESULT`",
 		},
 		[]string{ // fail
-			"`echo $(RESULT) fail | envw RESULT`",
+			"`echo $(RESULT) fail | env -w RESULT`",
 		},
 		[]byte("{ \"seq\": \"`assert $ > 1`\" }"), // template
 		ignoreOnFail,
@@ -146,14 +146,14 @@ func TestDynamicConsumerTemplateNull(t *testing.T) {
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
-			"`echo $(RESULT) check | envw RESULT`",
+			"`echo $(RESULT) check | env -w RESULT`",
 			"`assert 0 != 0`",
 		},
 		[]string{ // success
-			"`echo $(RESULT) success | envw RESULT`",
+			"`echo $(RESULT) success | env -w RESULT`",
 		},
 		[]string{ // fail
-			"`echo $(RESULT) fail | envw RESULT`",
+			"`echo $(RESULT) fail | env -w RESULT`",
 		},
 		[]byte("null"), // template
 		ignoreOnFail,

@@ -73,7 +73,7 @@ func TestPlanSequence(t *testing.T) {
 	/*
 		pp := []string {
 			"`strlen $(WHAT) | assert $(OUTPUT) == 0`",
-			"`envw -C what WHAT",
+			"`env -w WHAT what",
 		}
 
 		p.preprocess, err = makeGroup(pp, false)
@@ -123,7 +123,7 @@ func TestPlanSequenceFail(t *testing.T) {
 	/*
 		pp := []string {
 			"`strlen $(WHAT) | assert $(OUTPUT) == 0`",
-			"`envw -C what WHAT",
+			"`env -w WHAT what",
 		}
 
 		p.preprocess, err = makeGroup(pp, false)

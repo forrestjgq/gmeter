@@ -11,12 +11,12 @@
           },
           "Request":  {
             "Template": {
-              "KafkaResult": "`envw -c $ KAFKA`"
+              "KafkaResult": "`env -w KAFKA $`"
             },
             "Check":  [
-              "`json .ObjType $(KAFKA) |envw -c $$ OBJECT`",
-              "`json .FmtType $(KAFKA) | envw -c $$ FMT`",
-              "`json .BinData $(KAFKA) | b64 -d $$ | envw -c $$ MSG`"
+              "`json .ObjType $(KAFKA) |env -w OBJECT`",
+              "`json .FmtType $(KAFKA) | env -w FMT`",
+              "`json .BinData $(KAFKA) | b64 -d | env -w MSG`"
             ],
             "Success":  [
               "`report -n -t common`"

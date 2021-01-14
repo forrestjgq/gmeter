@@ -23,8 +23,8 @@
     "Tests": {
         "recognize": {
             "PreProcess": [
-                "`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
-                "`json .image $(JSON) | envw IMAGE`"
+                "`list /home/gqjiang/project/vsec/depends/res/img.list | env -w JSON`",
+                "`json .image $(JSON) | env -w IMAGE`"
             ],
             "Host": "vse",
             "Request": "req",
@@ -36,7 +36,7 @@
                     "`report -n -t common`"
                 ],
                 "Failure": [
-                    "`envmv ERROR FAILURE |escape $(FAILURE)| report -n`"
+                    "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
                 ],
                 "Template": null
             },

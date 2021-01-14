@@ -419,7 +419,7 @@ func (jdv *jsonDynamicValue) compare(bg *background, key string, src interface{}
 // like: "a": "`assert $ > 1 && assert $ < 3`"
 // like: "a": [
 //           "`assert $ > 1 && assert $ < 3`",
-//           "`envw -c $ VAR`"
+//           "`env -w VAR`"
 //        ]
 //
 func makeJsonDynamicValue(key *jsonKey, v interface{}) (jsonRule, error) {

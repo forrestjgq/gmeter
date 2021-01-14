@@ -32,12 +32,12 @@ func main() {
 		Tests: map[string]*config.Test{
 			"recognize": &config.Test{
 				PreProcess: []string{
-					"`list /home/gqjiang/project/vsec/depends/res/img.list | envw JSON`",
-					"`json .image $(JSON) | envw IMAGE`",
-					"`json .x $(JSON) | envw X`",
-					"`json .y $(JSON) | envw Y`",
-					"`json .w $(JSON) | envw W`",
-					"`json .h $(JSON) | envw H`",
+					"`list /home/gqjiang/project/vsec/depends/res/img.list | env -w JSON`",
+					"`json .image $(JSON) | env -w IMAGE`",
+					"`json .x $(JSON) | env -w X`",
+					"`json .y $(JSON) | env -w Y`",
+					"`json .w $(JSON) | env -w W`",
+					"`json .h $(JSON) | env -w H`",
 				},
 				Host:    "vse",
 				Request: "req",

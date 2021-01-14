@@ -41,7 +41,7 @@ type staticSegment string
 func (ss staticSegment) iterable() bool {
 	return false
 }
-func (ss staticSegment) produce(bg *background) (string, error) {
+func (ss staticSegment) produce(_ *background) (string, error) {
 	return string(ss), nil
 }
 
@@ -259,7 +259,7 @@ func (c *cmdNop) execute(_ *background) (string, error) {
 	return "", nil
 }
 
-func makeNop(v []string) (command, error) {
+func makeNop(_ []string) (command, error) {
 	return &cmdNop{}, nil
 }
 
@@ -332,8 +332,8 @@ func (c *cmdStrLen) execute(bg *background) (string, error) {
 	if content, err := c.content.compose(bg); err != nil {
 		return "", errors.Wrapf(err, "strlen %s compose content", c.raw)
 	} else {
-		len := utf8.RuneCountInString(content)
-		return strconv.Itoa(len), nil
+		length := utf8.RuneCountInString(content)
+		return strconv.Itoa(length), nil
 	}
 }
 
@@ -744,7 +744,7 @@ func (c *cmdSleep) iterable() bool {
 func (c *cmdSleep) close() {
 }
 
-func (c *cmdSleep) execute(bg *background) (string, error) {
+func (c *cmdSleep) execute(_ *background) (string, error) {
 	if c.du > 0 {
 		time.Sleep(c.du)
 	}
@@ -888,15 +888,15 @@ func makeReport(v []string) (command, error) {
 const (
 	envWrite = iota
 	envDelete
+	envRead
 	envMove
 )
 
 type cmdEnv struct {
-	op          int
-	variable    segments
-	dstVariable segments
-	value       segments
-	raw         string
+	op       int
+	variable segments
+	value    segments
+	raw      string
 }
 
 func (c *cmdEnv) iterable() bool {
@@ -912,7 +912,9 @@ func (c *cmdEnv) execute(bg *background) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "%s compose variable", c.raw)
 	}
-	if c.op == envDelete {
+	if c.op == envRead {
+		return bg.getLocalEnv(variable), nil
+	} else if c.op == envDelete {
 		bg.delLocalEnv(variable)
 	} else if c.op == envWrite {
 		value, err := c.value.compose(bg)
@@ -921,7 +923,7 @@ func (c *cmdEnv) execute(bg *background) (string, error) {
 		}
 		bg.setLocalEnv(variable, value)
 	} else if c.op == envMove {
-		dst, err := c.dstVariable.compose(bg)
+		dst, err := c.value.compose(bg)
 		if err != nil {
 			return "", errors.Wrapf(err, "%s compose dst value", c.raw)
 		}
@@ -933,58 +935,76 @@ func (c *cmdEnv) execute(bg *background) (string, error) {
 	return "", nil
 }
 
-func makeEnvw(v []string) (command, error) {
-	raw := "envw " + strings.Join(v, " ")
-	content := ""
-	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
-	fs.StringVar(&content, "c", "$(INPUT)", "content to write to local environment, default using local input")
+/*
+	env -r/-d var
+    env -w var [content/$$]
+	env -m src dst
+*/
+func makeEnv(v []string) (command, error) {
+	raw := "env " + strings.Join(v, " ")
+	read, write, del, mv := false, false, false, false
+	fs := flag.NewFlagSet("env", flag.ContinueOnError)
+	fs.BoolVar(&read, "r", false, "read from local variable")
+	fs.BoolVar(&write, "w", false, "write to local variable")
+	fs.BoolVar(&del, "d", false, "delete from local variable")
+	fs.BoolVar(&mv, "m", false, "move local variable to another")
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s parse argument", raw)
 	}
 	v = fs.Args()
-	if len(v) != 1 {
-		return nil, errors.Errorf("%s variable not provided", raw)
-	}
-	variable := v[0]
-	c := &cmdEnv{
-		raw: raw,
-		op:  envWrite,
-	}
-	if c.variable, err = makeSegments(variable); err != nil {
-		return nil, errors.Wrapf(err, "%s make variable", raw)
-	}
-	if c.value, err = makeSegments(content); err != nil {
-		return nil, errors.Wrapf(err, "%s make content", raw)
-	}
-	return c, nil
-}
-func makeEnvMv(v []string) (command, error) {
-	raw := "envmv " + strings.Join(v, " ")
-	if len(v) != 2 {
+	if len(v) == 0 {
 		return nil, errors.Errorf("%s variable not provided", raw)
 	}
 	c := &cmdEnv{
 		raw: raw,
-		op:  envMove,
+		op:  envRead,
 	}
-	var err error
 	if c.variable, err = makeSegments(v[0]); err != nil {
 		return nil, errors.Wrapf(err, "%s make variable", raw)
 	}
-	if c.dstVariable, err = makeSegments(v[1]); err != nil {
-		return nil, errors.Wrapf(err, "%s make dst variable", raw)
+	v = v[1:]
+
+	cnt := 0
+	if read {
+		cnt++
+		if len(v) > 0 {
+			return nil, errors.New("env: too much argument")
+		}
 	}
-	return c, nil
-}
-func makeEnvd(v []string) (command, error) {
-	raw := "envd " + strings.Join(v, " ")
-	variable := v[0]
-	c := &cmdEnv{op: envDelete, raw: raw}
-	var err error
-	if c.variable, err = makeSegments(variable); err != nil {
-		return nil, errors.Wrapf(err, "%s delete variable", raw)
+	if write {
+		cnt++
+		c.op = envWrite
+		content := "$(" + KeyInput + ")"
+		if len(v) > 0 {
+			content = strings.Join(v, " ")
+		}
+		if c.value, err = makeSegments(content); err != nil {
+			return nil, errors.Wrapf(err, "%s make content", raw)
+		}
 	}
+	if del {
+		cnt++
+		c.op = envDelete
+		if len(v) > 0 {
+			return nil, errors.New("env: too much argument")
+		}
+	}
+	if mv {
+		cnt++
+		c.op = envMove
+		if len(v) != 1 {
+			return nil, errors.New("env -m <src> <dst>")
+		}
+		if c.value, err = makeSegments(v[0]); err != nil {
+			return nil, errors.Wrapf(err, "%s make content", raw)
+		}
+	}
+
+	if cnt > 1 {
+		return nil, errors.New("db only accept one of -r/-d/-w")
+	}
+
 	return c, nil
 }
 
@@ -1041,11 +1061,11 @@ func makeDB(v []string) (command, error) {
 	raw := "db " + strings.Join(v, " ")
 	read := false
 	write := false
-	delete := false
-	fs := flag.NewFlagSet("envw", flag.ContinueOnError)
+	del := false
+	fs := flag.NewFlagSet("env", flag.ContinueOnError)
 	fs.BoolVar(&read, "r", false, "read from database")
 	fs.BoolVar(&write, "w", false, "write to database")
-	fs.BoolVar(&delete, "d", false, "delete from database")
+	fs.BoolVar(&del, "d", false, "delete from database")
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s parse argument", raw)
@@ -1061,7 +1081,7 @@ func makeDB(v []string) (command, error) {
 	if write {
 		cnt++
 	}
-	if delete {
+	if del {
 		cnt++
 	}
 	if cnt == 0 {
@@ -1087,7 +1107,7 @@ func makeDB(v []string) (command, error) {
 		if c.value, err = makeSegments(content); err != nil {
 			return nil, errors.Wrapf(err, "%s make content", raw)
 		}
-	} else if delete {
+	} else if del {
 		c.op = dbDelete
 	}
 	return c, nil
@@ -1327,7 +1347,7 @@ const (
 	eps = 0.00000001
 )
 
-func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) error {
+func (c *cmdAssert) doFloat(lhs, rhs string, _ *background) error {
 	var (
 		a, b float64
 		err  error
@@ -1370,7 +1390,7 @@ func (c *cmdAssert) doFloat(lhs, rhs string, bg *background) error {
 	}
 	return nil
 }
-func (c *cmdAssert) doNum(lhs, rhs string, bg *background) error {
+func (c *cmdAssert) doNum(lhs, rhs string, _ *background) error {
 	var (
 		a, b int
 		err  error
@@ -1413,7 +1433,7 @@ func (c *cmdAssert) doNum(lhs, rhs string, bg *background) error {
 	}
 	return nil
 }
-func (c *cmdAssert) doStr(lhs, rhs string, bg *background) error {
+func (c *cmdAssert) doStr(lhs, rhs string, _ *background) error {
 	if c.op == opEqual {
 		if lhs != rhs {
 			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
@@ -1799,9 +1819,7 @@ func init() {
 		"echo":    makeEcho,
 		"fail":    makeFail,
 		"cat":     makeCat,
-		"envw":    makeEnvw,
-		"envmv":   makeEnvMv,
-		"envd":    makeEnvd,
+		"env":     makeEnv,
 		"db":      makeDB,
 		"write":   makeWrite,
 		"assert":  makeAssert,

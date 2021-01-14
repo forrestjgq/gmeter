@@ -216,7 +216,7 @@ func TestConfigFile(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | envw JSON`"
+	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfgContent, err := json.Marshal(cfg)
@@ -267,7 +267,7 @@ func TestStartIterable(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | envw JSON`"
+	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()
@@ -313,7 +313,7 @@ func TestStartTimeout(t *testing.T) {
 	cfg.Tests["recognize"].Timeout = "3s"
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | envw JSON`"
+	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()
@@ -384,7 +384,7 @@ func TestStartURLExplicit(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Tests["recognize"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | envw JSON`"
+	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()

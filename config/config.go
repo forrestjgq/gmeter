@@ -163,9 +163,9 @@
 //		    "Tests": {
 //		        "test-write": {
 //		            "PreProcess": [
-//		                "`list /path/to/fruit/list | envw JSON`",
-//		                "`json .fruit | envw FRUIT`",
-//		                "`json .quantity | envw QTY`"
+//		                "`list /path/to/fruit/list | env -w JSON`",
+//		                "`json .fruit | env -w FRUIT`",
+//		                "`json .quantity | env -w QTY`"
 //		            ],
 //		            "Host": "localhost",
 //		            "Request": "write",
