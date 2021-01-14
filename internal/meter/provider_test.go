@@ -11,6 +11,9 @@ type tfeed struct {
 	c   content
 }
 
+func (f *tfeed) close() {
+}
+
 func (f *tfeed) feed(_ *background) (content, error) {
 	if f.err != nil {
 		return nil, f.err

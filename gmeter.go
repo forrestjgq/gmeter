@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -89,7 +90,7 @@ func startSubProcess(name string, cmdline string) {
 	glog.Info(name, " exits")
 }
 
-func main() {
+func run() {
 	cfg := ""
 	httpsrv := ""
 	arceeCfg := ""
@@ -136,7 +137,16 @@ func main() {
 	if err != nil {
 		glog.Fatalf("test failed: %+v", err)
 	}
+}
+func main() {
+	run()
 
+	if false {
+		buf := make([]byte, 500*1024)
+		n := runtime.Stack(buf, true)
+		buf = buf[0:n]
+		fmt.Print(string(buf))
+	}
 }
 
 var lperf net.Listener

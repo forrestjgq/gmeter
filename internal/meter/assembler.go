@@ -6,6 +6,12 @@ type assembler struct {
 	runners []runnable
 }
 
+func (a *assembler) close() {
+	for _, r := range a.runners {
+		r.close()
+	}
+}
+
 // implements runnable
 func (a *assembler) run(bg *background) next {
 	for _, r := range a.runners {
@@ -17,7 +23,7 @@ func (a *assembler) run(bg *background) next {
 	return nextContinue
 }
 
-func assembleRunners(runners ...runnable) *assembler {
+func assembleRunners(runners ...runnable) runnable {
 	a := &assembler{}
 	for _, r := range runners {
 		if r != nil {

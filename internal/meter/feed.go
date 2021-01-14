@@ -20,6 +20,7 @@ const (
 // feeder provide all possible elements http request requires
 type feeder interface {
 	feed(bg *background) (content, error)
+	close()
 }
 
 type baby struct {
@@ -35,6 +36,10 @@ type dynamicFeeder struct {
 	count      uint64
 	end        bool
 	preprocess *group
+}
+
+func (f *dynamicFeeder) close() {
+	close(f.c)
 }
 
 func (f *dynamicFeeder) feed(bg *background) (content, error) {
@@ -109,7 +114,7 @@ func (f *dynamicFeeder) run() {
 	}
 }
 
-func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string) (*dynamicFeeder, error) {
+func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string) (feeder, error) {
 	f := &dynamicFeeder{
 		source: make(map[string]segments),
 		c:      make(chan *baby),

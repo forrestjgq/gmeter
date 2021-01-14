@@ -9,6 +9,9 @@ type trun struct {
 	seq int
 }
 
+func (t *trun) close() {
+}
+
 func (t *trun) run(_ *background) next {
 	t.seq++
 	return t.n

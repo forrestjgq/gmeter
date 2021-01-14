@@ -294,4 +294,5 @@ func (bg *background) setGlobalEnv(key string, value string) {
 
 type runnable interface {
 	run(bg *background) next
+	close()
 }

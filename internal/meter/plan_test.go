@@ -14,6 +14,9 @@ type testPlanSeqRunner struct {
 	n   next
 }
 
+func (t *testPlanSeqRunner) close() {
+}
+
 func (t *testPlanSeqRunner) run(bg *background) next {
 	t.seq++
 
@@ -160,6 +163,9 @@ type testPlanConcurrentRunner struct {
 	seq        map[string]int
 	mutex      sync.Mutex
 	n          next
+}
+
+func (t *testPlanConcurrentRunner) close() {
 }
 
 func (t *testPlanConcurrentRunner) check() bool {

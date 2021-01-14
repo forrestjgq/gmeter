@@ -75,6 +75,7 @@ func (s *httpsrv) start(name string, cfg *config.HttpServer) error {
 	}
 	go func() {
 		_ = s.s.Serve(l)
+		bg.globalClose()
 	}()
 	return nil
 }

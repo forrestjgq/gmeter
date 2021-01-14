@@ -22,6 +22,11 @@ type runner struct {
 	name    string
 }
 
+func (r *runner) close() {
+	r.provSrc.close()
+	r.h.CloseIdleConnections()
+}
+
 func (r *runner) run(bg *background) next {
 	var (
 		url      string

@@ -26,6 +26,9 @@ type testRunnerProvider struct {
 	expectFail bool
 }
 
+func (t *testRunnerProvider) close() {
+}
+
 func (t *testRunnerProvider) processResponse(bg *background) next {
 	if t.checkRequest(bg) != nil {
 		return nextAbortAll

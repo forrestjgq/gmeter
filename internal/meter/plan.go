@@ -23,6 +23,7 @@ func (p *plan) close() {
 	if p.bg != nil {
 		p.bg.globalClose()
 	}
+	p.target.close()
 }
 func (p *plan) runOneByOne() next {
 	for {

@@ -16,6 +16,7 @@ type provider interface {
 // This makes concurrent generating of provider possible.
 type providerSource interface {
 	getProvider(bg *background) (provider, next)
+	close()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,6 +77,10 @@ func (s *staticProvider) check() error {
 // feedProvider
 type feedProvider struct {
 	feeder feeder
+}
+
+func (f *feedProvider) close() {
+	f.feeder.close()
 }
 
 func (f *feedProvider) getProvider(bg *background) (provider, next) {
