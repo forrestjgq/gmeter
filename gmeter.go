@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -90,12 +94,28 @@ func startSubProcess(name string, cmdline string) {
 	glog.Info(name, " exits")
 }
 
+func walk(path string, exec func(s string)) {
+	rd, err := ioutil.ReadDir(path)
+	if err != nil {
+		glog.Fatalf("readdir %s: %v", path, err)
+	}
+
+	for _, fi := range rd {
+		pi := filepath.Join(path, fi.Name())
+		if fi.IsDir() {
+			walk(pi, exec)
+		} else if strings.HasSuffix(fi.Name(), ".json") {
+			exec(pi)
+		}
+	}
+
+}
 func run() {
 	cfg := ""
 	httpsrv := ""
 	arceeCfg := ""
 	call := ""
-	flag.StringVar(&cfg, "config", "", "config file path")
+	flag.StringVar(&cfg, "config", "", "config file path, could be a .json, or .list, or a directory")
 	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
 	flag.StringVar(&arceeCfg, "arcee", "", "arcee configuration file path")
 	flag.StringVar(&call, "call", "", "extra program command line")
@@ -133,9 +153,60 @@ func run() {
 		}()
 	}
 
-	err = meter.Start(cfg)
-	if err != nil {
-		glog.Fatalf("test failed: %+v", err)
+	exec := func(path string) {
+		fmt.Println("gmeter starts ", path)
+		err := meter.Start(path)
+		if err != nil {
+			glog.Fatalf("test failed: %+v", err)
+		}
+
+	}
+	if strings.HasSuffix(cfg, ".list") {
+		f, err := os.Open(filepath.Clean(cfg))
+		if err != nil {
+			glog.Fatalf("open %s fail, err: %v", cfg, err)
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+
+		dir, err := filepath.Abs(filepath.Dir(cfg))
+		if err != nil {
+			glog.Fatalf("abs of file path %s fail, err: %v", cfg, err)
+		}
+		scan := bufio.NewScanner(f)
+
+		for scan.Scan() {
+			t := scan.Text()
+			fmt.Println("read a line: ", t)
+			n := strings.Index(t, "#")
+			if n >= 0 {
+				t = t[0:n]
+			}
+			t = strings.TrimSpace(t)
+			if len(t) == 0 {
+				continue
+			}
+			if !strings.HasSuffix(t, ".json") {
+				continue
+			}
+
+			if !filepath.IsAbs(t) {
+				t = filepath.Clean(filepath.Join(dir, t))
+			}
+			exec(t)
+		}
+	} else if strings.HasSuffix(cfg, ".json") {
+		exec(cfg)
+	} else {
+		fi, err := os.Stat(cfg)
+		if err != nil {
+			glog.Fatalf("Stat file %s: %v", cfg, err)
+		}
+		if !fi.IsDir() {
+			glog.Fatalf("%s is not a directory", cfg)
+		}
+		walk(cfg, exec)
 	}
 }
 func main() {

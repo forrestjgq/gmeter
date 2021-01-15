@@ -14,22 +14,27 @@ gmeter is a dynamic HTTP request tool with benchmark and monitor support. It's j
 
 # Install
 
-`go get github.com/forrestjgq/gmeter`
+```sh
+go get github.com/forrestjgq/gmeter
+```
+It will be installed into $GOBIN(if it's empty, get from `go env $GOBIN`). It requires you've got a GO environment.
 
-or directly install:
-
-`curl -sf https://gobinaries.com/forrestjgq/gmeter | sh`
+Or you may directly install to /usr/local/bin:
+```sh
+curl -sf https://gobinaries.com/forrestjgq/gmeter | sh
+```
+root permission may be required to install.
 
 # Usage
-make sure you've add $GOPATH into your $PATH, then:
 ```
 gmeter -config <config> [-httpsrv <http-server-config>] [-arcee <arcee-server-config>]
 ```
-`<config>` is configure json file path, a sample can be get [here](example/sample.json)
-`<http-server-config>` is configure json file path for creating http server, a sample can be get [here](example/server.json)
-`<arcee-server-config>` is configure json file path for creating arcee server, a sample can be get [here](example/arcee.json)
-
-Specially, to use a template in `config.Response.Template`, you should read [jsonc](jsonc.md) to construct a json template.
+- `<config>` is a file path, it could be
+    - A json file path(end with .json), a sample can be get [here](example/sample.json), see [Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Config), or
+    - A list file, each line contains a file path ends with .json will be treated as a gmeter configuration and will be called. If it is an relative path, it's related to `<config>`'s directory. In a line, `#` is considered to be start of comment, any thing after (and include) `#` will be ignored. Empty line is allowed.
+    - A directory, any .json file in this directory and sub-directories of this directory will be treated as a test configuration and will be called.
+- `<http-server-config>` is configure json file path for creating http server, a sample can be get [here](example/server.json), see [HTTP Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#HttpServers) for more information.
+- `<arcee-server-config>` is configure json file path for creating arcee server, a sample can be get [here](example/arcee.json), see [Arcee Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Arcee) for more information.
 
 # configuration
 All gmeter need is a configuration file. 
@@ -40,7 +45,7 @@ To create a dynamic and powerful test configuration, you need be familiar with g
 
 gmeter attempts to provide json configuration guide through go doc system:
 
-[Config](https://godoc.org/github.com/forrestjgq/gmeter/config)
+[Configurations](https://godoc.org/github.com/forrestjgq/gmeter/config)
 
 It's recommended that you read this package overview first, and then jump to Config and its members.
 
