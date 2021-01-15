@@ -294,12 +294,15 @@ type Report struct {
 	// to config file path. For example, config file path is: "/home/user/test/gmeter.json",
 	// Path will be converted to "/home/user/test/a/b/c".
 	//
-	// If Path already exists, it will be truncated.
+	// If Path already exists, it will be truncated if Append is false.
 	//
 	// Any necessary parents in path will be created.
 	//
 	// [dynamic]
 	Path string
+	// if Append is true, instead of truncating exist file, report content will be appended in
+	// that file.
+	Append bool
 
 	// Format defines a default format of report content. it's implicitly quoted as argument
 	// if command `report` is used without given an argument `-f <format>`.

@@ -98,7 +98,14 @@ func makeReporter(rpt *config.Report) (*reporter, error) {
 		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
 			return nil, err
 		}
-		r.f, err = os.Create(path)
+		flag := os.O_RDWR | os.O_CREATE
+		if rpt.Append {
+			flag |= os.O_APPEND
+		} else {
+			flag |= os.O_TRUNC
+		}
+
+		r.f, err = os.OpenFile(path, flag, 0666)
 		if err != nil {
 			return nil, err
 		}

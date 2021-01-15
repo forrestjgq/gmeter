@@ -9,7 +9,7 @@
     "Messages": {
         "req": {
             "Method": "POST",
-            "Path": "/debug/detect/all",
+            "Path": "/ai/detect/all",
             "Headers": {
                 "content-type": "application/json"
             },
@@ -50,10 +50,11 @@
             "PreProcess": [],
             "Tests": "recognize",
             "Reporter": {
-                "Path1": "report.log",
+                "Path": "sample.log",
                 "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Append": true,
                 "Templates": {
-                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`"}
+                    "common" : { "Image": "$(IMAGE)", "Status": "`cvt -i $(STATUS)`"}
                 }
             },
             "Count": 0,
