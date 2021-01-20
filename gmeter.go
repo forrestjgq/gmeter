@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"errors"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -17,6 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/forrestjgq/gmeter/config"
+	"github.com/pkg/errors"
 
 	"github.com/forrestjgq/gmeter/internal/arcee"
 	"github.com/forrestjgq/gmeter/internal/meter"
@@ -111,11 +114,95 @@ func walk(path string, executor func(s string)) {
 	}
 
 }
+func loadCfg(path string) (*config.Config, error) {
+
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "read config file")
+	}
+
+	var cfg config.Config
+	err = json.Unmarshal(b, &cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshal json")
+	}
+
+	return &cfg, nil
+}
+
+func override(template, cfg *config.Config) {
+	if template == nil {
+		return
+	}
+
+	for k, v := range template.Hosts {
+		if cfg.Hosts != nil {
+			if _, ok := cfg.Hosts[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Hosts = make(map[string]*config.Host)
+		}
+
+		cfg.Hosts[k] = v
+	}
+	for k, v := range template.Messages {
+		if cfg.Messages != nil {
+			if _, ok := cfg.Messages[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Messages = make(map[string]*config.Request)
+		}
+
+		cfg.Messages[k] = v
+	}
+	for k, v := range template.Tests {
+		if cfg.Tests != nil {
+			if _, ok := cfg.Tests[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Tests = make(map[string]*config.Test)
+		}
+
+		cfg.Tests[k] = v
+	}
+	for k, v := range template.Env {
+		if cfg.Env != nil {
+			if _, ok := cfg.Env[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Env = make(map[string]string)
+		}
+
+		cfg.Env[k] = v
+	}
+	for k, v := range template.Options {
+		if cfg.Options != nil {
+			if _, ok := cfg.Options[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Options = make(map[config.Option]string)
+		}
+
+		cfg.Options[k] = v
+	}
+}
 func run() {
 	cfg := ""
 	httpsrv := ""
 	arceeCfg := ""
 	call := ""
+	template := ""
+	flag.StringVar(&template, "template", "", "template config file path")
 	flag.StringVar(&cfg, "config", "", "config file path, could be a .json, or .list, or a directory")
 	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
 	flag.StringVar(&arceeCfg, "arcee", "", "arcee configuration file path")
@@ -155,9 +242,31 @@ func run() {
 		}()
 	}
 
+	var baseCfg *config.Config
+	if len(template) > 0 {
+		baseCfg, err = loadCfg(template)
+		if err != nil {
+			glog.Fatalf("load template config %s fail, err: %+v", template, err)
+		}
+	}
+
 	executor := func(path string) {
 		fmt.Println("gmeter starts ", path)
-		err := meter.Start(path)
+		c, err := loadCfg(path)
+		if err != nil {
+			glog.Fatalf("load config %s fail, err: %+v", path, err)
+		}
+		if baseCfg != nil {
+			override(baseCfg, c)
+		}
+		if c.Options == nil {
+			c.Options = make(map[config.Option]string)
+		}
+		c.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
+		if err != nil {
+			glog.Fatalf("get abs config path %s fail, err %+v", path, err)
+		}
+		err = meter.StartConfig(c)
 		if err != nil {
 			glog.Fatalf("test failed: %+v", err)
 		}

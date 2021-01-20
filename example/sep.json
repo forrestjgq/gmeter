@@ -1,0 +1,23 @@
+{
+    "Name": "partial",
+    "Schedules": [
+        {
+            "Name": "recog-image",
+            "PreProcess": [],
+            "Tests": "recognize",
+            "Reporter": {
+                "Path": "sample.log",
+                "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Append": true,
+                "Templates": {
+                    "common" : { "Image": "$(IMAGE)", "Status": "`cvt -i $(STATUS)`"}
+                }
+            },
+            "Count": 1,
+            "Concurrency": 1,
+            "Env": {
+                "IMAGE": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg"
+            }
+        }
+    ]
+}

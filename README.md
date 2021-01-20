@@ -27,12 +27,13 @@ root permission may be required to install.
 
 # Usage
 ```
-gmeter [-httpsrv <http-server-config>] [-arcee <arcee-server-config>] [<config>, <config>, ...]
+gmeter [-template <template-config>][-httpsrv <http-server-config>] [-arcee <arcee-server-config>] [<config>, <config>, ...]
 ```
 - `<config>` is a file path, it could be
     - A json file path(end with .json), a sample can be get [here](example/sample.json), see [Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Config), or
     - A list file, each line contains a file path ends with .json will be treated as a gmeter configuration and will be called. If it is an relative path, it's related to `<config>`'s directory. In a line, `#` is considered to be start of comment, any thing after (and include) `#` will be ignored. Empty line is allowed.
     - A directory, any .json file in this directory and sub-directories of this directory will be treated as a test configuration and will be called.
+- `<template-config>` is a configure json file used as a base configuration. If this argument is present, the Hosts/Messages/Tests/Env/Options will be copied to all `<config>` if target configuration does not define those items identified by the key of map. An example could be find in [template](example/base.json) and [configuration](example/sep.json), and the command line would be `gmeter -template example/base.json example/sep.json`.
 - `<http-server-config>` is configure json file path for creating http server, a sample can be get [here](example/server.json), see [HTTP Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#HttpServers) for more information.
 - `<arcee-server-config>` is configure json file path for creating arcee server, a sample can be get [here](example/arcee.json), see [Arcee Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Arcee) for more information.
 

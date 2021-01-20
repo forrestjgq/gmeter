@@ -1,0 +1,44 @@
+{
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009"
+        }
+    },
+    "Tests": {
+        "recognize": {
+            "Host": "vse",
+            "Request": "req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ],
+                "Success": [
+                    "`report -n -t common`"
+                ],
+                "Failure": [
+                    "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
+                ],
+                "Template": null
+            },
+            "Timeout": "10s"
+        }
+    },
+    "Messages": {
+        "req": {
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        }
+    },
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}
