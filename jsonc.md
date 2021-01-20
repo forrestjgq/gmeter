@@ -235,7 +235,7 @@ it will fail unless you define a common segments including "`default`" rule to c
 ```
 Here `4, 5` will be applied to `default` rule.
 
-There are two other list rules:
+There are three other list rules:
 - `item`: all list item will be applied on this rule
 - `list`: list itself will be applied on this rule
 - `template`: define a sub jsonc template compare to all items

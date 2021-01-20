@@ -27,7 +27,7 @@ root permission may be required to install.
 
 # Usage
 ```
-gmeter -config <config> [-httpsrv <http-server-config>] [-arcee <arcee-server-config>]
+gmeter [-httpsrv <http-server-config>] [-arcee <arcee-server-config>] [<config>, <config>, ...]
 ```
 - `<config>` is a file path, it could be
     - A json file path(end with .json), a sample can be get [here](example/sample.json), see [Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Config), or

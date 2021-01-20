@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/forrestjgq/gmeter/internal/arcee"
 	"github.com/forrestjgq/gmeter/internal/meter"
@@ -94,7 +95,7 @@ func startSubProcess(name string, cmdline string) {
 	glog.Info(name, " exits")
 }
 
-func walk(path string, exec func(s string)) {
+func walk(path string, executor func(s string)) {
 	rd, err := ioutil.ReadDir(path)
 	if err != nil {
 		glog.Fatalf("readdir %s: %v", path, err)
@@ -103,9 +104,9 @@ func walk(path string, exec func(s string)) {
 	for _, fi := range rd {
 		pi := filepath.Join(path, fi.Name())
 		if fi.IsDir() {
-			walk(pi, exec)
+			walk(pi, executor)
 		} else if strings.HasSuffix(fi.Name(), ".json") {
-			exec(pi)
+			executor(pi)
 		}
 	}
 
@@ -121,19 +122,18 @@ func run() {
 	flag.StringVar(&call, "call", "", "extra program command line")
 	flag.Parse()
 
-	if len(cfg) == 0 {
-		glog.Fatalf("config file not present")
-	}
-
 	_, err := StartPerf(0)
 	if err != nil {
 		defer StopPerf()
 	}
 
+	hasServer := false
 	if len(httpsrv) > 0 {
 		err := meter.StartHTTPServer(httpsrv)
 		if err != nil {
 			glog.Fatalf("HTTP server start failed: %+v", err)
+		} else {
+			hasServer = true
 		}
 		defer func() {
 			meter.StopAll()
@@ -144,6 +144,8 @@ func run() {
 		_, err = arcee.StartArcee(arceeCfg)
 		if err != nil {
 			glog.Fatalf("start arcee fail: %+v", err)
+		} else {
+			hasServer = true
 		}
 	}
 
@@ -153,7 +155,7 @@ func run() {
 		}()
 	}
 
-	exec := func(path string) {
+	executor := func(path string) {
 		fmt.Println("gmeter starts ", path)
 		err := meter.Start(path)
 		if err != nil {
@@ -161,52 +163,65 @@ func run() {
 		}
 
 	}
-	if strings.HasSuffix(cfg, ".list") {
-		f, err := os.Open(filepath.Clean(cfg))
-		if err != nil {
-			glog.Fatalf("open %s fail, err: %v", cfg, err)
-		}
-		defer func() {
-			_ = f.Close()
-		}()
+	if len(cfg) > 0 {
+		if strings.HasSuffix(cfg, ".list") {
+			f, err := os.Open(filepath.Clean(cfg))
+			if err != nil {
+				glog.Fatalf("open %s fail, err: %v", cfg, err)
+			}
+			defer func() {
+				_ = f.Close()
+			}()
 
-		dir, err := filepath.Abs(filepath.Dir(cfg))
-		if err != nil {
-			glog.Fatalf("abs of file path %s fail, err: %v", cfg, err)
-		}
-		scan := bufio.NewScanner(f)
+			dir, err := filepath.Abs(filepath.Dir(cfg))
+			if err != nil {
+				glog.Fatalf("abs of file path %s fail, err: %v", cfg, err)
+			}
+			scan := bufio.NewScanner(f)
 
-		for scan.Scan() {
-			t := scan.Text()
-			fmt.Println("read a line: ", t)
-			n := strings.Index(t, "#")
-			if n >= 0 {
-				t = t[0:n]
-			}
-			t = strings.TrimSpace(t)
-			if len(t) == 0 {
-				continue
-			}
-			if !strings.HasSuffix(t, ".json") {
-				continue
-			}
+			for scan.Scan() {
+				t := scan.Text()
+				fmt.Println("read a line: ", t)
+				n := strings.Index(t, "#")
+				if n >= 0 {
+					t = t[0:n]
+				}
+				t = strings.TrimSpace(t)
+				if len(t) == 0 {
+					continue
+				}
+				if !strings.HasSuffix(t, ".json") {
+					continue
+				}
 
-			if !filepath.IsAbs(t) {
-				t = filepath.Clean(filepath.Join(dir, t))
+				if !filepath.IsAbs(t) {
+					t = filepath.Clean(filepath.Join(dir, t))
+				}
+				executor(t)
 			}
-			exec(t)
+		} else if strings.HasSuffix(cfg, ".json") {
+			executor(cfg)
+		} else {
+			fi, err := os.Stat(cfg)
+			if err != nil {
+				glog.Fatalf("Stat file %s: %v", cfg, err)
+			}
+			if !fi.IsDir() {
+				glog.Fatalf("%s is not a directory", cfg)
+			}
+			walk(cfg, executor)
 		}
-	} else if strings.HasSuffix(cfg, ".json") {
-		exec(cfg)
 	} else {
-		fi, err := os.Stat(cfg)
-		if err != nil {
-			glog.Fatalf("Stat file %s: %v", cfg, err)
+		left := flag.Args()
+		if len(left) > 0 {
+			for _, c := range left {
+				executor(c)
+			}
+		} else if hasServer {
+			w := sync.WaitGroup{}
+			w.Add(1)
+			w.Wait()
 		}
-		if !fi.IsDir() {
-			glog.Fatalf("%s is not a directory", cfg)
-		}
-		walk(cfg, exec)
 	}
 }
 func main() {
