@@ -116,6 +116,43 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	}
 	return bg, nil
 }
+func constructTest(t, base *config.Test) {
+	if len(t.Host) == 0 && len(base.Host) > 0 {
+		t.Host = base.Host
+	}
+	if len(t.Request) == 0 && t.RequestMessage == nil {
+		if base.RequestMessage != nil {
+			t.RequestMessage = base.RequestMessage
+		} else if len(base.Request) > 0 {
+			t.Request = base.Request
+		}
+	}
+	if len(t.PreProcess) == 0 && len(base.PreProcess) > 0 {
+		t.PreProcess = base.PreProcess
+	}
+	if len(t.Timeout) == 0 && len(base.Timeout) > 0 {
+		t.Timeout = base.Timeout
+	}
+	if t.Response == nil {
+		if base.Response != nil {
+			t.Response = base.Response
+		}
+	} else if base.Response != nil {
+		src, dst := t.Response, base.Response
+		if len(src.Template) == 0 && len(dst.Template) > 0 {
+			src.Template = dst.Template
+		}
+		if len(dst.Success) > 0 {
+			src.Success = append(dst.Success, src.Success...)
+		}
+		if len(dst.Check) > 0 {
+			src.Check = append(dst.Check, src.Check...)
+		}
+		if len(dst.Failure) > 0 {
+			src.Failure = append(dst.Failure, src.Failure...)
+		}
+	}
+}
 func create(cfg *config.Config) ([]*plan, error) {
 	if len(cfg.Schedules) == 0 {
 		return nil, errors.Errorf("no schedule is defined")
@@ -132,11 +169,24 @@ func create(cfg *config.Config) ([]*plan, error) {
 			return nil, errors.Errorf("schedule %s contains no tests", s.Name)
 		}
 
+		var baseTest *config.Test
+		if len(s.TestBase) > 0 {
+			t, ok := cfg.Tests[s.TestBase]
+			if !ok && t != nil {
+				return nil, errors.Errorf("test base %s not found", s.TestBase)
+			}
+			baseTest = t
+		}
+
 		var runners []runnable
 		for _, name := range tests {
 			t, ok := cfg.Tests[name]
-			if !ok {
+			if !ok || t == nil {
 				return nil, errors.Errorf("test %s not found", name)
+			}
+
+			if baseTest != nil {
+				constructTest(t, baseTest)
 			}
 
 			var h *config.Host
@@ -145,7 +195,14 @@ func create(cfg *config.Config) ([]*plan, error) {
 
 			// host
 			if t.Host == "" {
-				t.Host = "-" // "-" is the default host
+				if len(cfg.Hosts) == 1 {
+					for k := range cfg.Hosts {
+						t.Host = k
+						break
+					}
+				} else {
+					t.Host = "-" // "-" is the default host
+				}
 			}
 			h, ok = cfg.Hosts[t.Host]
 			if !ok {
@@ -165,6 +222,16 @@ func create(cfg *config.Config) ([]*plan, error) {
 			if err = h.Check(); err != nil {
 				return nil, errors.Wrapf(err, "host %s check", t.Host)
 			}
+
+			if len(t.Timeout) == 0 {
+				if du, ok := s.Env["TIMEOUT"]; ok {
+					t.Timeout = du
+				}
+			}
+			if len(t.Timeout) == 0 {
+				t.Timeout = "1m"
+			}
+
 			client, err := loadHTTPClient(h, t.Timeout)
 			if err != nil {
 				return nil, errors.Wrap(err, "load http client")

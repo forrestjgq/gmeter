@@ -1,0 +1,52 @@
+{
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009"
+        }
+    },
+    "Messages": {
+        "vehicle-ai-detect": {
+            "Requires": "$(IMAGE) for image path",
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        },
+        "all-ai-detect": {
+            "Requires": "$(IMAGE) for image path",
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        },
+        "face-ai-detect": {
+            "Requires": "$(IMAGE) for image path",
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        }
+    },
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

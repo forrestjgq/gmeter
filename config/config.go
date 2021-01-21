@@ -250,12 +250,19 @@ func (h *Host) Check() error {
 //
 // If any failure occurs duration above procedures, Response.Failure will be called.
 type Test struct {
-	PreProcess     []string  // [dynamic] processing before each HTTP request
-	Host           string    // `key` to Config.Hosts, or : [<proxy>|]<host>
+	PreProcess []string // [dynamic] processing before each HTTP request
+	// `key` to Config.Hosts, or : [<proxy>|]<host>
+	// If Host is empty, gmeter will set it automatically following rules:
+	//   - if only 1 hosts exist, set to name of that host
+	//   - if more than 1 hosts exist, set to default, anonymous host name "-"
+	Host           string
 	Request        string    // `key` to Config.Messages
 	RequestMessage *Request  // request message definition, preferred over Request
 	Response       *Response // Optional entity used to process response or failure
-	Timeout        string    // HTTP request timeout, like "5s", "1m10s", "30ms"..., default "1m"
+	// HTTP request timeout, like "5s", "1m10s", "30ms"...
+	// If Timeout is empty, try use  Schedule.Env["TIMEOUT"] as default value;
+	// if it's still empty, it'll be set to "1m" as default value
+	Timeout string
 }
 
 // Option defines options gmeter accepts. These options can be used as key in Config.Options.
@@ -353,6 +360,19 @@ type Schedule struct {
 	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...
 	// are defined in Config.Tests.
 	Tests string
+
+	// TestBase is a special test that behavior like a super class of Tests, this is how
+	// it works:
+	// While any test defined in Tests is called, if any field of Test is NOT defined, and
+	// TestBase has a definition, it will use TestBase's definition.
+	//
+	// Specially, if both test defines a Response, Every field of Response in TestBase will
+	// be called before that in Tests except:
+	//     If both Response define a Template, TestBase's Template will be ignored.
+	//
+	// This is used so that while massive cases sharing same test field, and saves developer
+	// a lot to edit same content of Test.
+	TestBase string
 
 	// Reporter defines a template to write test report to a file.
 	// Note that Reporter only defines how to write, not when to write. You need call

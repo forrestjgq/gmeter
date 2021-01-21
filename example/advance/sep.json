@@ -1,0 +1,51 @@
+{
+    "Name": "vehicle",
+    "Tests": {
+        "base": {
+            "PreProcess": ["`print >> start $(TEST)`"],
+            "Timeout": "3s",
+            "Response": {
+                "Check": [ "`assert $(STATUS) == 200`" ],
+                "Success": [ "`report -n -t common`" ]
+            }
+        },
+        "vehicle-num": {
+            "Comment": "detected vehicle number test, require a json contains image and number for image file path and expected vehicle number",
+            "PreProcess": [
+                "`list a.list | env -w JSON`",
+                "`json .image $(JSON) | env -w IMAGE`",
+                "`json .number $(JSON) | env -w NUMBER`"
+            ],
+            "Request": "vehicle-ai-detect",
+            "Response": {
+                "Check": [ "`json -n .Result.Vehicles $(RESPONSE) | assert $$ == $(NUMBER)`" ]
+            }
+        },
+        "vehicle-color": {
+            "PreProcess": [
+                "`list b.list | env -w JSON`",
+                "`json .image $(JSON) | env -w IMAGE`",
+                "`json .color $(JSON) | env -w COLOR`"
+            ],
+            "Request": "vehicle-ai-detect",
+            "Response": {
+                "Check": [ "`json .Result.Vehicles.[0].Color.ColorId $(RESPONSE) | assert $$ == $(COLOR)`" ]
+            }
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "vehicle",
+            "Tests": "vehicle-num|vehicle-color",
+            "TestBase": "base",
+            "Reporter": {
+                "Path": "vehicle.log",
+                "Append": true,
+                "Templates": {
+                    "common" : {"Image": "$(IMAGE)", "Test": "$(TEST)"}
+                }
+            },
+            "Count": 1
+        }
+    ]
+}

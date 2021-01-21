@@ -55,6 +55,8 @@ func (m *Request) Check() error {
 //     If Template succeeds or it's not defined , Check will be called.
 //     If any error is reported in Check processing, Check will be aborted.
 //
+// see https://github.com/forrestjgq/gmeter/blob/main/jsonc.md for json compare manual.
+//
 // If any error is reported in HTTP and HTTP response processing, Failure will be called.
 // Fail reason is recorded in $(FAILURE). Note that $(URL), $(REQUEST), $(STATUS)
 // and $(RESPONSE) may be empty. Any other variables generated before HTTP sending
