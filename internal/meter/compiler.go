@@ -1592,6 +1592,7 @@ type cmdJson struct {
 	content segments
 	exist   bool
 	numer   bool
+	mapping bool
 }
 
 func (c *cmdJson) iterable() bool {
@@ -1675,6 +1676,39 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	return value, nil
 }
+
+func (c *cmdJson) mapJsonMap(bg *background, m map[string]interface{}, base string) {
+	for k, v := range m {
+		s := ""
+		if len(base) > 0 {
+			k = base + "." + k
+		}
+		switch t := v.(type) {
+		case float64:
+			s = strconv.FormatFloat(t, 'f', 8, 64)
+		case string:
+			s = t
+		case map[string]interface{}:
+			c.mapJsonMap(bg, t, k)
+			continue
+		default:
+			continue
+		}
+		bg.setLocalEnv(k, s)
+	}
+}
+func (c *cmdJson) mapJson(bg *background, v interface{}) (string, error) {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return "", errors.Errorf("invalid json mapping type %T", v)
+	}
+	if m != nil {
+		c.mapJsonMap(bg, m, "")
+	}
+
+	return bg.getLocalEnv(KeyInput), nil
+
+}
 func (c *cmdJson) execute(bg *background) (string, error) {
 	content, err := c.content.compose(bg)
 	if err != nil {
@@ -1690,6 +1724,10 @@ func (c *cmdJson) execute(bg *background) (string, error) {
 	}
 
 	v, err := c.find(content, path)
+
+	if c.mapping {
+		return c.mapJson(bg, v)
+	}
 
 	if c.numer {
 		// not found -> zero value of number -> 0
@@ -1749,6 +1787,7 @@ func makeJson(v []string) (command, error) {
 	fs := flag.NewFlagSet("json", flag.ContinueOnError)
 	fs.BoolVar(&c.exist, "e", false, "check if path exists")
 	fs.BoolVar(&c.numer, "n", false, "get number of list item")
+	fs.BoolVar(&c.mapping, "m", false, "map json key value to local environment")
 	err := fs.Parse(v)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s parse argument", raw)

@@ -54,7 +54,13 @@ func TestSegments(t *testing.T) {
        },
        "list": [
            "line1", "line2"
-       ]
+       ],
+		"deep": {
+		   "map": {
+			   "k1": "this",
+			   "k2": 2
+		   }
+		}
     }
 `
 	bg.setLocalEnv("JSON", json)
@@ -94,6 +100,9 @@ func TestSegments(t *testing.T) {
 		"`json  -n .list $(JSON)`":                                                   "2",
 		"`json  .list.[1] $(JSON)`":                                                  "line2",
 		"`json  .list $(JSON) | json [1]. `":                                         "line2",
+		"`json  -m .map $(JSON) | echo $(k1)`":                                       "this",
+		"`json  -m .map $(JSON) | assert $(k2) == 2`":                                "",
+		"`json  -m . $(JSON) | assert $(deep.map.k2) == 2`":                          "",
 		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
 		"`env -w TEMP jgq | echo I am $(TEMP)`":                                      "I am jgq",
 		"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",

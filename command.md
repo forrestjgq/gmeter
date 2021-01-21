@@ -407,7 +407,7 @@ Base64 encode/decode a string or file
 
 ## json - json query
 ```
-json [-e] [-n] <path> <content>/$$
+json [-m] [-e] [-n] <path> <content>/$$
 ```
 
 `json` will parse `<content>` or `$$` as json, and find `<path>`, output its content; if not found, write empty string.
@@ -418,6 +418,21 @@ if `-n` is present, expect `<path>` is array and output length of this array:
 3. if `<path>` is found and it's an array, output length of this array.
 
 if `-e` is present, report error if `<path>` not found
+
+if `-m` is present, the segment `<path>` indicates must be a map and the json key value will be stored in local environment. For example:
+```json
+{
+	"a": 1,
+	"b": {
+		"c": "hello",
+		"e": true
+	}
+}
+```
+`json -m .` will create 3 local variables:
+- "a": 1.00000000, here integer will be stored as float
+- "b.c": "hello"
+- "b.e": "true"
 
 `<path>` follows these rules:
 1. divided by '.', each part is called a segment
