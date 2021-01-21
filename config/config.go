@@ -363,12 +363,10 @@ type Schedule struct {
 
 	// TestBase is a special test that behavior like a super class of Tests, this is how
 	// it works:
-	// While any test defined in Tests is called, if any field of Test is NOT defined, and
-	// TestBase has a definition, it will use TestBase's definition.
 	//
-	// Specially, if both test defines a Response, Every field of Response in TestBase will
-	// be called before that in Tests except:
-	//     If both Response define a Template, TestBase's Template will be ignored.
+	// for all fields in TestBase and all it's sub fields:
+	//    if it is a list, it will be inserted into Test's corresponding field in the head,
+	//    otherwise if Test does not define this field, use TestBase's definition.
 	//
 	// This is used so that while massive cases sharing same test field, and saves developer
 	// a lot to edit same content of Test.
