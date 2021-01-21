@@ -127,8 +127,8 @@ func constructTest(t, base *config.Test) {
 			t.Request = base.Request
 		}
 	}
-	if len(t.PreProcess) == 0 && len(base.PreProcess) > 0 {
-		t.PreProcess = base.PreProcess
+	if len(base.PreProcess) > 0 {
+		t.PreProcess = append(base.PreProcess, t.PreProcess...)
 	}
 	if len(t.Timeout) == 0 && len(base.Timeout) > 0 {
 		t.Timeout = base.Timeout
