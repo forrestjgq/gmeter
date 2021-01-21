@@ -1140,7 +1140,11 @@ func (c *cmdList) execute(bg *background) (string, error) {
 		if err != nil {
 			return "", errors.Wrapf(err, "%s compose path", c.raw)
 		}
-		c.file, err = os.Open(filepath.Clean(path))
+		path, err = loadFilePath(bg.getGlobalEnv(KeyTPath), path)
+		if err != nil {
+			return "", errors.Wrapf(err, "%s load path %s", path, c.raw)
+		}
+		c.file, err = os.Open(path)
 		if err != nil {
 			return "", errors.Wrapf(err, "%s: open file %s", c.raw, path)
 		}

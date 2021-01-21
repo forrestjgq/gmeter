@@ -355,7 +355,7 @@ specially, `!$(var)` while `$(var)` is empty will be treat as true.
 ## list - read line by line from a file
 `list <file>`
 
-Read lines one by one from `<file>`, ignore empty lines.
+Read lines one by one from `<file>`, ignore empty lines. If `<file>` is a related file path, it's related to configuration file's directory(`$(TPATH)`);
 
 When it reach end of file, returns empty string and write `"EOF"` into `$(ERROR)`.
 
