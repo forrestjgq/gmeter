@@ -196,12 +196,30 @@ func override(template, cfg *config.Config) {
 		cfg.Options[k] = v
 	}
 }
+func parseGlobalVariables(s string) error {
+	if len(s) == 0 {
+		return nil
+	}
+	envs := strings.Split(s, " ")
+	for _, c := range envs {
+		kvs := strings.Split(c, "=")
+		if len(kvs) != 2 {
+			return errors.Errorf("invalid variable definition: %s", c)
+		}
+
+		meter.AddGlobalVariable(kvs[0], kvs[1])
+	}
+	return nil
+}
 func run() {
 	cfg := ""
 	httpsrv := ""
 	arceeCfg := ""
 	call := ""
 	template := ""
+	variables := ""
+	flag.StringVar(&variables, "e", "", "predefined global variables k=v, seperated by space if define multiple variables")
+	flag.StringVar(&template, "t", "", "template config file path")
 	flag.StringVar(&template, "template", "", "template config file path")
 	flag.StringVar(&cfg, "config", "", "config file path, could be a .json, or .list, or a directory")
 	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
@@ -212,6 +230,13 @@ func run() {
 	_, err := StartPerf(0)
 	if err != nil {
 		defer StopPerf()
+	}
+
+	if len(variables) > 0 {
+		err = parseGlobalVariables(variables)
+		if err != nil {
+			glog.Fatalf("parse global variables fail: %v", err)
+		}
 	}
 
 	hasServer := false

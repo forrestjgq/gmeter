@@ -286,7 +286,11 @@ func (bg *background) delLocalEnv(key string) {
 }
 
 func (bg *background) getGlobalEnv(key string) string {
-	return bg.global.get(key)
+	r := bg.global.get(key)
+	if len(r) == 0 {
+		r = GetGlobalVariable(key)
+	}
+	return r
 }
 func (bg *background) setGlobalEnv(key string, value string) {
 	bg.global.put(key, value)
