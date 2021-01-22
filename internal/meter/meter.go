@@ -292,6 +292,10 @@ func (bg *background) setGlobalEnv(key string, value string) {
 	bg.global.put(key, value)
 }
 
+func (bg *background) inDebug() bool {
+	return bg.getGlobalEnv(KeyDebug) == "true"
+}
+
 type runnable interface {
 	run(bg *background) next
 	close()

@@ -35,7 +35,11 @@ func (p *plan) runOneByOne() next {
 		decision := p.target.run(p.bg)
 		if decision != nextContinue {
 			if decision != nextFinished {
-				fmt.Printf("plan %s failed, error: %+v\n", p.name, p.bg.getError())
+				if p.bg.inDebug() {
+					fmt.Printf("plan %s failed, error: %+v\n", p.name, p.bg.getError())
+				} else {
+					fmt.Printf("plan %s failed, error: %v\n", p.name, p.bg.getError())
+				}
 				fmt.Printf("HTTP request: \n")
 				fmt.Printf("\tURL: %s\n\tBody: %s\n",
 					p.bg.getLocalEnv(KeyURL), p.bg.getLocalEnv(KeyRequest))

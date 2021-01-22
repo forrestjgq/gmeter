@@ -2,8 +2,6 @@ package meter
 
 import (
 	"encoding/json"
-
-	"github.com/golang/glog"
 )
 
 // consumer should be a component that process response and failure
@@ -63,7 +61,11 @@ func (d *dynamicConsumer) process(bg *background, key string) next {
 }
 
 func (d *dynamicConsumer) decideFailure(bg *background, err error) next {
-	glog.Errorf("failed: %+v", err)
+	//if bg.inDebug() {
+	//	glog.Errorf("failed: %+v", err)
+	//} else {
+	//	glog.Errorf("failed: %v", err)
+	//}
 	switch d.decision {
 	case abortOnFail:
 		return nextAbortPlan
@@ -86,7 +88,9 @@ func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 		_, _ = d.fail.compose(bg)
 	}
 
-	return d.decideFailure(bg, err)
+	n := d.decideFailure(bg, err)
+	bg.setError(err)
+	return n
 }
 
 func makeDynamicConsumer(check, success, fail []string, template json.RawMessage, failAction failDecision) (*dynamicConsumer, error) {

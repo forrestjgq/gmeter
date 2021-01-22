@@ -268,7 +268,7 @@ func run() {
 		}
 		err = meter.StartConfig(c)
 		if err != nil {
-			glog.Fatalf("test failed: %+v", err)
+			glog.Fatalf("test failed: %v", err)
 		}
 
 	}
