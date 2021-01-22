@@ -1151,16 +1151,18 @@ func (c *cmdList) execute(bg *background) (string, error) {
 		c.scan = bufio.NewScanner(c.file)
 	}
 
-	if c.scan.Scan() {
-		t := c.scan.Text()
-		if len(t) > 0 {
-			return t, nil
+	for {
+		if c.scan.Scan() {
+			t := c.scan.Text()
+			t = strings.TrimSpace(t)
+			if len(t) > 0 && t[0] != '#' {
+				return t, nil
+			}
+		} else {
+			c.close()
+			return "", io.EOF
 		}
-		c.close()
-		return "", io.EOF
-	} else {
-		c.close()
-		return "", io.EOF
+
 	}
 }
 

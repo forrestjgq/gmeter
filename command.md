@@ -355,7 +355,7 @@ specially, `!$(var)` while `$(var)` is empty will be treat as true.
 ## list - read line by line from a file
 `list <file>`
 
-Read lines one by one from `<file>`, ignore empty lines. If `<file>` is a related file path, it's related to configuration file's directory(`$(TPATH)`);
+Read lines one by one from `<file>`, ignore empty lines or any line starts with`#`, and the perfix and suffix spaces will be removed. If `<file>` is a related file path, it's related to configuration file's directory(`$(TPATH)`);
 
 When it reach end of file, returns empty string and write `"EOF"` into `$(ERROR)`.
 
@@ -367,7 +367,9 @@ Unlike `cat`, it will only output one non-empty line once be called, so if you d
 ```
 and `list.txt` contains:
 ```
+# this is a comment
 /path/to/file1.txt
+
 /path/to/file2.txt
 /path/to/file3.txt
 ```
