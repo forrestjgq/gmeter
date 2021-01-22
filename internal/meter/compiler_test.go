@@ -103,14 +103,22 @@ func TestSegments(t *testing.T) {
 		"`json  -m .map $(JSON) | echo $(k1)`":                                       "this",
 		"`json  -m .map $(JSON) | assert $(k2) == 2`":                                "",
 		"`json  -m . $(JSON) | assert $(deep.map.k2) == 2`":                          "",
+		"`assert $(@echo 3) == 3`":                                                   "",
 		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
 		"`env -w TEMP jgq | echo I am $(TEMP)`":                                      "I am jgq",
 		"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",
 		"`fail whatever is wrong`":                                                   "ERROR",
 		"`if true then echo jiang`":                                                  "jiang",
 		"`if false then echo jiang else echo guoqing`":                               "guoqing",
-		"`strlen $(echo jiang)`":                                                     "5",
+		"`strlen $(@echo jiang)`":                                                    "5",
+		"`assert $(@json .int $(JSON)) == 3`":                                        "",
+		"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`":                        "",
+		"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
 	}
+	//m := map[string]string{
+	//	"`assert $(@json .int $(JSON)) == 3`":                 "",
+	//	"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`": "",
+	//}
 
 	for k, v := range m {
 		//bg.setOutput("input") // output will be put into input while pipeline starts

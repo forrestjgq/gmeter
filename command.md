@@ -128,6 +128,28 @@ An example: `echo hello world | strlen` will output the string length of `hello 
 
 In the execution of pipeline, any error will abort a pipeline.
 
+## Embedded command
+Command could be embedded inside another command and its output will be used as an argument. The definition is:
+```
+$(@cmd arguments...)
+$(@cmd1 | cmd2 | cmd3 | ...)
+```
+`@` must be the first character inside `()` to distinguish with local variable reading.
+
+For example:
+```
+print $(@echo 3 | env -w HELLO | env -r HELLO)
+```
+Here `$(@echo 3 | env -w HELLO | env -r HELLO)` is an embedded command, it's output, which is `3` will be used as argument of `print` command, making it equals to;
+```
+print 3
+```
+
+Multiple level embedded is supported, such as:
+```
+assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)
+```
+
 ## Group
 Commands and pipelines can be grouped as a list, for example, we define several `Check`s in `config.Response` to check HTTP response:
 ```json

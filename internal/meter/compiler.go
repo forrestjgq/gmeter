@@ -1883,24 +1883,7 @@ func init() {
 	}
 }
 func isCmd(s string) bool {
-	idx := -1
-	s = strings.TrimSpace(s)
-	for i, r := range s {
-		if r == '$' || r == '\t' || r == ' ' {
-			idx = i
-			break
-		}
-	}
-
-	first := s
-	if idx != -1 {
-		first = s[:idx]
-	}
-
-	if _, ok := cmdMap[first]; ok {
-		return true
-	}
-	return false
+	return len(s) > 1 && s[0] == '@'
 }
 
 func parseCmdArgs(args []string) (command, error) {
@@ -1960,6 +1943,7 @@ func makeSegments(str string) (segments, error) {
 	r := []rune(str)
 	start := 0
 	phase := phaseString
+	depth := 0
 	var segs segments
 
 	for i, c := range r {
@@ -1986,16 +1970,28 @@ func makeSegments(str string) (segments, error) {
 				return nil, errors.Errorf("[%d]: expect '(' or '{' after '$'", i)
 			}
 		case phaseLocal:
-			if c == ')' {
-				phase = phaseString
+			if c == '(' {
+				depth++
+			} else if c == ')' {
+				if depth > 0 {
+					depth--
+				} else {
+					phase = phaseString
+				}
 			}
 		case phaseJsonEnv:
 			if c == '>' {
 				phase = phaseString
 			}
 		case phaseGlobal:
-			if c == '}' {
-				phase = phaseString
+			if c == '{' {
+				depth++
+			} else if c == '}' {
+				if depth > 0 {
+					depth--
+				} else {
+					phase = phaseString
+				}
 			}
 		}
 
@@ -2038,6 +2034,7 @@ func makeSegments(str string) (segments, error) {
 					}
 					if isCmd(name) {
 						// treat as command instead of variable
+						name = name[1:]
 						cmd, err := parse(name)
 						if err != nil {
 							return nil, errors.Wrapf(err, "parse cmd")

@@ -96,12 +96,16 @@ func (s *Scanner) Next() (Token, error) {
 		String
 		StringSingleQuote
 		StringDoubleQuote
+		Variable
+		GlobalVariable
+		LocalVariable
 	)
 
 	var (
 		tok Token
 
 		state uint8 = Initial
+		depth       = 0
 	)
 	for {
 		r := s.nextRune()
@@ -123,9 +127,57 @@ func (s *Scanner) Next() (Token, error) {
 				state = StringSingleQuote
 			case r == '"':
 				state = StringDoubleQuote
+			case r == '$':
+				state = Variable
+				tok.Value = append(tok.Value, r)
 			default:
 				state = String
 				s.unreadRune(r)
+			}
+		case Variable:
+			switch r {
+			case '(':
+				state = LocalVariable
+				tok.Value = append(tok.Value, r)
+			case '{':
+				state = GlobalVariable
+				tok.Value = append(tok.Value, r)
+			default:
+				s.unreadRune(r)
+				state = String
+			}
+		case GlobalVariable:
+			if r == _RuneEOF {
+				return tok, ErrInvalidSyntax
+			}
+			tok.Value = append(tok.Value, r)
+			if r == '{' {
+				depth++
+			}
+			if r == '}' {
+				if depth > 0 {
+					depth--
+				} else {
+					tok.Type = TokString
+					return tok, nil
+				}
+			}
+
+		case LocalVariable:
+			if r == _RuneEOF {
+				return tok, ErrInvalidSyntax
+			}
+			tok.Value = append(tok.Value, r)
+			if r == '(' {
+				depth++
+			}
+			if r == ')' {
+				if depth > 0 {
+					depth--
+				} else {
+					tok.Type = TokString
+					return tok, nil
+				}
 			}
 		case Space:
 			if r == _RuneEOF || !unicode.IsSpace(r) {
