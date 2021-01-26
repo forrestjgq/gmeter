@@ -88,7 +88,7 @@ func startSubProcess(name string, cmdline string) {
 	cmd.Stderr = cmd.Stdout
 
 	if err = cmd.Start(); err != nil {
-		panic("start sub process fail: " + cmdline)
+		glog.Fatalf("start sub process fail: %s, err: %v", cmdline, err)
 	}
 
 	log := &logger{}
