@@ -113,6 +113,14 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 
 	// report
 	if len(sched.Reporter.Path) > 0 {
+		s, err := makeSegments(sched.Reporter.Path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "make report path")
+		}
+		sched.Reporter.Path, err = s.compose(bg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "compose report path")
+		}
 		sched.Reporter.Path, err = loadFilePath(cfg.Options[config.OptionCfgPath], sched.Reporter.Path)
 		if err != nil {
 			return nil, err
