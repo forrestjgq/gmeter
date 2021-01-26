@@ -1,5 +1,6 @@
 {
     "Name": "vehicle",
+    "Imports": ["base.json"],
     "Tests": {
         "base": {
             "PreProcess": ["`print >> start $(TEST)`"],

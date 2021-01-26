@@ -422,6 +422,14 @@ const (
 type Config struct {
 	Name string // Everyone has a name, stored in ${CONFIG}
 
+	// Imports defines configuration files to be loaded as template.
+	// All the Hosts/Messages/Tests/Env/Options defined inside those template configurations
+	// will be copied to this config except the same key already defined.
+	//
+	// If global template is specified by `-template <path>`, template will be imported before
+	// this.
+	Imports []string
+
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
 	Hosts map[string]*Host

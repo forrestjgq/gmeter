@@ -328,7 +328,108 @@ func create(cfg *config.Config) ([]*plan, error) {
 	return plans, nil
 }
 
+func loadCfg(root, path string) (*config.Config, error) {
+	p, err := loadFilePath(root, path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "load path %s from %s", path, root)
+	}
+
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return nil, errors.Wrap(err, "read config file")
+	}
+
+	var cfg config.Config
+	err = json.Unmarshal(b, &cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshal json")
+	}
+
+	return &cfg, nil
+}
+
+func override(template, cfg *config.Config) {
+	if template == nil {
+		return
+	}
+
+	for k, v := range template.Hosts {
+		if cfg.Hosts != nil {
+			if _, ok := cfg.Hosts[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Hosts = make(map[string]*config.Host)
+		}
+
+		cfg.Hosts[k] = v
+	}
+	for k, v := range template.Messages {
+		if cfg.Messages != nil {
+			if _, ok := cfg.Messages[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Messages = make(map[string]*config.Request)
+		}
+
+		cfg.Messages[k] = v
+	}
+	for k, v := range template.Tests {
+		if cfg.Tests != nil {
+			if _, ok := cfg.Tests[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Tests = make(map[string]*config.Test)
+		}
+
+		cfg.Tests[k] = v
+	}
+	for k, v := range template.Env {
+		if cfg.Env != nil {
+			if _, ok := cfg.Env[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Env = make(map[string]string)
+		}
+
+		cfg.Env[k] = v
+	}
+	for k, v := range template.Options {
+		if cfg.Options != nil {
+			if _, ok := cfg.Options[k]; ok {
+				// already defined, skip
+				continue
+			}
+		} else {
+			cfg.Options = make(map[config.Option]string)
+		}
+
+		cfg.Options[k] = v
+	}
+}
 func StartConfig(cfg *config.Config) error {
+	for _, base := range cfg.Imports {
+		if len(base) == 0 {
+			continue
+		}
+		root := ""
+		if r, ok := cfg.Options[config.OptionCfgPath]; ok {
+			root = r
+		}
+		baseCfg, err := loadCfg(root, base)
+		if err != nil {
+			return errors.Wrapf(err, "load config %s from %s", base, root)
+		}
+		override(baseCfg, cfg)
+	}
+
 	plans, err := create(cfg)
 	if err != nil {
 		return errors.Wrapf(err, "create test")

@@ -130,72 +130,6 @@ func loadCfg(path string) (*config.Config, error) {
 	return &cfg, nil
 }
 
-func override(template, cfg *config.Config) {
-	if template == nil {
-		return
-	}
-
-	for k, v := range template.Hosts {
-		if cfg.Hosts != nil {
-			if _, ok := cfg.Hosts[k]; ok {
-				// already defined, skip
-				continue
-			}
-		} else {
-			cfg.Hosts = make(map[string]*config.Host)
-		}
-
-		cfg.Hosts[k] = v
-	}
-	for k, v := range template.Messages {
-		if cfg.Messages != nil {
-			if _, ok := cfg.Messages[k]; ok {
-				// already defined, skip
-				continue
-			}
-		} else {
-			cfg.Messages = make(map[string]*config.Request)
-		}
-
-		cfg.Messages[k] = v
-	}
-	for k, v := range template.Tests {
-		if cfg.Tests != nil {
-			if _, ok := cfg.Tests[k]; ok {
-				// already defined, skip
-				continue
-			}
-		} else {
-			cfg.Tests = make(map[string]*config.Test)
-		}
-
-		cfg.Tests[k] = v
-	}
-	for k, v := range template.Env {
-		if cfg.Env != nil {
-			if _, ok := cfg.Env[k]; ok {
-				// already defined, skip
-				continue
-			}
-		} else {
-			cfg.Env = make(map[string]string)
-		}
-
-		cfg.Env[k] = v
-	}
-	for k, v := range template.Options {
-		if cfg.Options != nil {
-			if _, ok := cfg.Options[k]; ok {
-				// already defined, skip
-				continue
-			}
-		} else {
-			cfg.Options = make(map[config.Option]string)
-		}
-
-		cfg.Options[k] = v
-	}
-}
 func parseGlobalVariables(s string) error {
 	if len(s) == 0 {
 		return nil
@@ -267,22 +201,19 @@ func run() {
 		}()
 	}
 
-	var baseCfg *config.Config
-	if len(template) > 0 {
-		baseCfg, err = loadCfg(template)
-		if err != nil {
-			glog.Fatalf("load template config %s fail, err: %+v", template, err)
-		}
-	}
-
 	executor := func(path string) {
 		fmt.Println("gmeter starts ", path)
 		c, err := loadCfg(path)
 		if err != nil {
 			glog.Fatalf("load config %s fail, err: %+v", path, err)
 		}
-		if baseCfg != nil {
-			override(baseCfg, c)
+		// load base config from command line first
+		if len(template) > 0 {
+			template, err = filepath.Abs(template)
+			if err != nil {
+				glog.Fatalf("get abs path %s fail", template)
+			}
+			c.Imports = append([]string{template}, c.Imports...)
 		}
 		if c.Options == nil {
 			c.Options = make(map[config.Option]string)
