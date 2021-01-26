@@ -25,6 +25,7 @@ It is persisted across the whole lifetime of schedule.
 | CONFIG   | string | true      | name of current config             |
 | SCHEDULE | string | true      | name of current schedule           |
 | TPATH    | string | true      | Path of test config file directory |
+| CWD      | string | true      | Path of current working directory  |
 
 ## Local Variables
 Local variables are defined in a single run of test pipeline. When next run starts, all previous variables will be obsolete.

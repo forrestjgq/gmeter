@@ -24,6 +24,7 @@ const (
 	KeyConfig   = "CONFIG"
 	KeySchedule = "SCHEDULE"
 	KeyTPath    = "TPATH"
+	KeyCWD      = "CWD"
 
 	// Local
 	KeyTest     = "TEST"

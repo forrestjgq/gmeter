@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -76,6 +77,10 @@ func createDefaultBackground() (*background, error) {
 	bg.setGlobalEnv(KeySchedule, "default-schedule")
 	bg.setGlobalEnv(KeyTPath, path)
 	bg.setGlobalEnv(KeyConfig, "default")
+	str, err := os.Getwd()
+	if err == nil {
+		bg.setGlobalEnv(KeyCWD, str)
+	}
 	return bg, nil
 }
 func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
@@ -89,6 +94,10 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	bg.setGlobalEnv(KeySchedule, sched.Name)
 	bg.setGlobalEnv(KeyTPath, cfg.Options[config.OptionCfgPath])
 	bg.setGlobalEnv(KeyConfig, cfg.Name)
+	str, err := os.Getwd()
+	if err == nil {
+		bg.setGlobalEnv(KeyCWD, str)
+	}
 	if sched.Env != nil {
 		bg.predefineLocalEnv(sched.Env)
 	}
@@ -103,7 +112,6 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	}
 
 	// report
-	var err error
 	if len(sched.Reporter.Path) > 0 {
 		sched.Reporter.Path, err = loadFilePath(cfg.Options[config.OptionCfgPath], sched.Reporter.Path)
 		if err != nil {
