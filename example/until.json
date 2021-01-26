@@ -1,0 +1,33 @@
+{
+    "Name": "until",
+    "Tests": {
+        "ping": {
+            "PreProcess": [ "`until $(@db -r PONG) == 1 | print Waiting for VSE ready...`" ],
+            "Host": "http://127.0.0.1:8009",
+            "RequestMessage": { "Path": "/vse/ping" },
+            "Response": {
+                "Check": [ 
+                    "`assert $(STATUS) == 200`" 
+                ],
+                "Success": [ 
+                    "`print VSE OK`" ,
+                    "`db -w PONG 1`" 
+                ],
+                "Failure": [ 
+                    "`print Still waiting`" ,
+                    "`sleep 5s`" 
+                ]
+            },
+            "Timeout": "3s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "wait-vse",
+            "Tests": "ping"
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "false"
+    }
+}

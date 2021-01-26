@@ -630,6 +630,52 @@ func makeWrite(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                            until                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+// if <condition> then <cmd> [else <cmd>]
+type cmdUntil struct {
+	raw       string
+	condition command
+}
+
+func (c *cmdUntil) iterable() bool {
+	return true
+}
+func (c *cmdUntil) close() {
+	if c.condition != nil {
+		c.condition.close()
+	}
+}
+
+func (c *cmdUntil) execute(bg *background) (string, error) {
+	_, err := c.condition.execute(bg)
+	if err != nil {
+		return "", nil
+	}
+
+	return "", io.EOF
+}
+
+func makeUntil(v []string) (command, error) {
+	c := &cmdUntil{
+		raw: "until " + strings.Join(v, " "),
+	}
+
+	if len(v) == 0 {
+		return nil, errors.Errorf("%s: invalid until condition: ", strings.Join(v, " "))
+	}
+
+	var err error
+	c.condition, err = makeAssert(v)
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s make condition", c.raw)
+	}
+
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                             if                            ///////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1873,6 +1919,7 @@ func init() {
 		"b64":     makeBase64,
 		"cvt":     makeCvt,
 		"if":      makeIf,
+		"until":   makeUntil,
 		"report":  makeReport,
 		"print":   makePrint,
 		"sleep":   makeSleep,

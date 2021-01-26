@@ -487,6 +487,16 @@ Here gives some examples of path:
 - `.list` is `["line1", "line2"]`
 - `.list.[1]` is `line1`
 
+## until - do test until condition satisfied
+```
+until <condition>
+```
+`until` command is an iterate command.
+
+If `<condition>` evaluates as `true`, an `EOF` is generated.
+
+This is offen used to do prefix HTTP testing until success. For example, send `PING` HTTP request to HTTP server to make sure it pongs to indicate the HTTP server is ready.
+
 ## if-then-else - if condition
 ```
 if <condition> then <command1> [else <command2>]
