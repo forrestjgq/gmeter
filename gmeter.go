@@ -228,19 +228,21 @@ func run() {
 		}
 
 	}
-	if len(cfg) > 0 {
-		if strings.HasSuffix(cfg, ".list") {
-			f, err := os.Open(filepath.Clean(cfg))
+
+	doSingle := func(path string) {
+
+		if strings.HasSuffix(path, ".list") {
+			f, err := os.Open(filepath.Clean(path))
 			if err != nil {
-				glog.Fatalf("open %s fail, err: %v", cfg, err)
+				glog.Fatalf("open %s fail, err: %v", path, err)
 			}
 			defer func() {
 				_ = f.Close()
 			}()
 
-			dir, err := filepath.Abs(filepath.Dir(cfg))
+			dir, err := filepath.Abs(filepath.Dir(path))
 			if err != nil {
-				glog.Fatalf("abs of file path %s fail, err: %v", cfg, err)
+				glog.Fatalf("abs of file path %s fail, err: %v", path, err)
 			}
 			scan := bufio.NewScanner(f)
 
@@ -264,23 +266,26 @@ func run() {
 				}
 				executor(t)
 			}
-		} else if strings.HasSuffix(cfg, ".json") {
-			executor(cfg)
+		} else if strings.HasSuffix(path, ".json") {
+			executor(path)
 		} else {
-			fi, err := os.Stat(cfg)
+			fi, err := os.Stat(path)
 			if err != nil {
-				glog.Fatalf("Stat file %s: %v", cfg, err)
+				glog.Fatalf("Stat file %s: %v", path, err)
 			}
 			if !fi.IsDir() {
-				glog.Fatalf("%s is not a directory", cfg)
+				glog.Fatalf("%s is not a directory", path)
 			}
-			walk(cfg, executor)
+			walk(path, executor)
 		}
+	}
+	if len(cfg) > 0 {
+		doSingle(cfg)
 	} else {
 		left := flag.Args()
 		if len(left) > 0 {
 			for _, c := range left {
-				executor(c)
+				doSingle(c)
 			}
 		} else if hasServer {
 			w := sync.WaitGroup{}
