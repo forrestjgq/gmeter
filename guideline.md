@@ -618,11 +618,11 @@ Each `Host` is defined with a name as key of `Hosts` map, and you need only refe
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": {
-	        "Host": "http://127.0.0.1:8008"
+    "Hosts": {
+        "library": {
+            "Host": "http://127.0.0.1:8008"
         }
-	},
+    },
     "Tests": {
         "new-book": {
             "Host": "library",
@@ -645,11 +645,11 @@ If you are sure there is only one host is defined and never more, you can even i
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": {
-	        "Host": "http://127.0.0.1:8008"
+    "Hosts": {
+        "library": {
+            "Host": "http://127.0.0.1:8008"
         }
-	},
+    },
     "Tests": {
         "new-book": {
             "RequestMessage": { },
@@ -672,11 +672,11 @@ If you use gmeter in automatically testing, the `Host` may be dynamic and is not
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": {
-	        "Host": "http://${IP}:${PORT}"
+    "Hosts": {
+        "library": {
+            "Host": "http://${IP}:${PORT}"
         }
-	},
+    },
     "Tests": { },
     "Mode": "Pipe",
     "Schedules": [ ],
@@ -698,9 +698,9 @@ You may define your config like this:
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Tests": {
         "new-book": {
             "RequestMessage": {
@@ -755,9 +755,9 @@ The biggest issue here is that `RequestMessage` are written twice with completel
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Messages": {
         "new-book-req": {
             "Method": "POST",
@@ -834,9 +834,9 @@ First we create a template config that requires several variables to run:
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Tests": {
         "new-book": {
             "RequestMessage": {
@@ -884,7 +884,7 @@ and we need a `list` command to read each line and treat it as json to write to 
 
 {
     "Name": "Library",
-	"Hosts": { },
+    "Hosts": { },
     "Tests": {
         "new-book": {
             "PreProcess": [
@@ -910,9 +910,9 @@ tips:
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Tests": {
         "new-book": {
             "PreProcess": [
@@ -1423,5 +1423,152 @@ This Config will imports `base.json` for Test `new-book-ok`, which requires seve
 `TestBase` is not used as often as Imports configs, but it will be useful if you want to do some common thing like checking status code for all tests in a single schedule.
 
 ### Json compare
+
+Json compare is a mechanism provided by gmeter to compare a json data from a json template.
+
+Json template defines a json embedded with variables and commands for concerned fields. It has the same structure with target json data. gmeter walks each fields of json template and corresponding json data, writes json data of this field to a special variable `$<value>`, then call json template of this field. If json template defines a string without any command or is basic types like boolean or number, just compare `$<value>` with data defined inside json template.
+
+Give an simple example for demo. A json template is defined as:
+```json
+{
+    "author": "Forrest Jiang",
+    "price": "`assert $(PRICE) > 0`"
+}
+```
+and a json data is:
+```json
+{
+    "author": "Forrest Jiang",
+    "publisher": "DeepGlint",
+    "price": 122.4
+}
+```
+
+gmeter will walk json template as:
+1. visit `author`, get a string `"Forrest Jiang"`, and corresponding json data is `Forrest Jiang`. Write `Forrest Jiang` to `$<value>`, then compare `$<value>` with string `"Forrest Jiang"`. These are same string, continue walking.
+2. visit `price`, get a command `assert $(PRICE) > 0`, and corresponding json data is `122.4`. Write `"122.4"` to `$<value>` and call `assert $(PRICE) > 0`. Command passes, continue walking.
+3. template walking ends, and `publisher` in json data is ignored.
+
+Json compare can process any fields, including compound field. For example, a template is defined as:
+```json
+{
+    "book": "`json .author $<value> | assert $$ == $(AUTHOR)`",
+}
+```
+and a json data is:
+```json
+{
+    "book": {
+        "author": "Forrest Jiang",
+        "publisher": "DeepGlint",
+        "price": 122.4
+    }
+}
+```
+
+When this template process `book`, its value a compound json object, gmeter will save the json data to `$<value>`. Template will read `author` field of this json value and make sure it's same as `$(AUTHOR)`.
+
+Json compare in HTTP client could be deployed in `Response.Template`. It helps user to process json field in a nature way without extracting value manually by `json` command. With json compare, user could process HTTP response body inside this template, and check other parameters like status code inside `Response.Check`.
+
+Json compare actually is far more powerful than we discussed here. For more information, refer to [jsonc](./jsonc.md).
+
 # HTTP RESTful server
+gmeter allows user create several HTTP RESTful servers from a config file.
+```json
+type HttpServer struct {
+	Address string            // ":0" or ":port" or "ip:port"
+	Routes  []*Route          // HTTP server routers
+	Report  Report            // Optional reporter, may used in router processing
+	Env     map[string]string // predefined global variables
+}
+
+
+type HttpServers struct {
+	// Servers represented by a name
+	Servers map[string]*HttpServer
+}
+
+```
+`HttpServer` defines a single server which listen to `Address`, and dispatch requests to `Routes` by route matching.
+```json
+type Route struct {
+	// HTTP request method this route will process, default for "GET"
+	Method string
+
+	// [dynamic] router path definition, it could take path variables like:
+	//     "/var/js/{script}
+	// and by accessing `$(script)` you'll get the path segment value, for example,
+	// if request path is:
+	//     "/var/js/query"
+	// now `$(script)` will get value `query`
+	//
+	// And you can also specify request parameters taking by request path, for example:
+	//     "/var/js/{script}?name=hello
+	// and by accessing `$(name)` you'll get `hello`. Multiple parameter with same name will
+	// be joined together separated by a space:
+	//     "/var/js/{script}?name=hello&name=world
+	// and by accessing `$(name)` you'll get `hello world`.
+	Path string
+
+	// [dynamic] required headers definition, if its value is a raw string like "application/json", it
+	// requires request takes this header with value of "application/json"; or if it is a dynamic
+	// segment(with embedded commands) like "`assert $$ == hello`", instead of string comparing, it
+	// will be called.
+	Headers  map[string]string
+
+	Request  *RequestProcess            // HTTP request processing
+	Response map[string]json.RawMessage // [dynamic] multiple responses template identified by key of map
+	Env      map[string]string          // predefined local variables
+}
+```
+A route matches HTTP request by `Method` and `Path`. If `Headers` is defined, a header match is also required.
+Route path matching follows [gorilla mux](https://github.com/gorilla/mux), and path variables and request parameters in URL are written into local variables automatically by gmeter.
+
+`Request` is the HTTP request processing entity, defined and processed exactly like `Response` in HTTP client. We discuss no more here.
+
+`Response` is a map of json template to be composed as response body. Each one has a name as key of map. `Request` should write name of response body template into `$(RESPONSE)` if response body is required.
+
+If you're familiar with HTTP RESTful client, it's really easy for you to understand HTTP RESTful server. So we just gives an example to show you how to start a server:
+```json
+{
+	"Servers": {
+		"fruit-server": {
+			"Address":  "127.0.0.1:8009",
+			"Routes":  [
+				{
+					"Method":  "POST",
+                    "Path":  "/add/{supplier}",
+                    "Headers":  { "content-type":  "application/json" },
+                    "Request":  {
+                        "Template":  {
+                            "Fruit":  "`env -w FRUIT $`",
+                            "Qty":  "`assert $ > 10 | env -w QTY $`"
+                        },
+                        "Success":  [
+                            "`env -w RESPONSE default`",
+                            "`env -w STATUS 200`",
+                            "`report -n -t add`"
+                        ]
+                    },
+                    "Response": {
+                        "default": {
+                            "Fruit": "$(FRUIT)"
+                        }
+                    }
+				}
+			],
+			"Report":  {
+				"Path":  "./server.log",
+				"Templates":  {
+					"add" :{ "supplier": $(supplier), "fruit": "$(FRUIT)", "qty": $(QTY) }
+				}
+			}
+		}
+	}
+}
+```
+This config defines an HTTP server `fruit-server` listening on `127.0.0.1:8009`. It defines only one route accepting a POST on `/add/{supplier}` that takes json body. URL matching will get `{supplier}` content and write to `$(supplier)` and quoted by `Report` template. See field comment on `Path` for detailed path parsing.
+
+When a request is received, "Fruit" value will be written to `$(FRUIT)`, "Qty" will be checked and written to `$(QTY)` by `Template`. After that `Success` will set response to `default` defined in `Response`, and set HTTP response status code to 200. Then record request data to `server.log` by `report` command with a template `add`.
+
 

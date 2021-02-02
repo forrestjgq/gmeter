@@ -108,17 +108,23 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	rsp := bg.getLocalEnv(KeyResponse)
 	if len(rsp) == 0 {
-		rsp = "-"
-	}
-	crsp := rt.responses[rsp]
-	if crsp != nil {
-		s, err := crsp.compose(bg)
-		if err != nil {
-			w.WriteHeader(500)
-			_, _ = w.Write([]byte(fmt.Sprintf("response compose fail: %+v", err)))
-			return
+		if len(rt.responses) == 1 {
+			for k := range rt.responses {
+				rsp = k
+			}
 		}
-		_, _ = w.Write([]byte(s))
+	}
+	if len(rsp) > 0 {
+		crsp := rt.responses[rsp]
+		if crsp != nil {
+			s, err := crsp.compose(bg)
+			if err != nil {
+				w.WriteHeader(500)
+				_, _ = w.Write([]byte(fmt.Sprintf("response compose fail: %+v", err)))
+				return
+			}
+			_, _ = w.Write([]byte(s))
+		}
 	}
 }
 func makeRoute(src *background, cfg *config.Route) (http.Handler, error) {
