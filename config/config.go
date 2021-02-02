@@ -265,6 +265,35 @@ type Test struct {
 	Timeout string
 }
 
+func cpList(src []string) []string {
+	if len(src) == 0 {
+		return nil
+	}
+	dst := make([]string, len(src))
+	copy(dst, src)
+	return dst
+}
+func (t *Test) Dup() *Test {
+	ret := &Test{
+		PreProcess:     cpList(t.PreProcess),
+		Host:           t.Host,
+		Request:        t.Request,
+		RequestMessage: t.RequestMessage,
+		Response:       nil,
+		Timeout:        t.Timeout,
+	}
+
+	if t.Response != nil {
+		t.Response = &Response{
+			Check:    cpList(t.Response.Check),
+			Success:  cpList(t.Response.Success),
+			Failure:  cpList(t.Response.Failure),
+			Template: t.Response.Template,
+		}
+	}
+	return ret
+}
+
 // Option defines options gmeter accepts. These options can be used as key in Config.Options.
 type Option string
 

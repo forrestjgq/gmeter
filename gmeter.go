@@ -98,21 +98,28 @@ func startSubProcess(name string, cmdline string) {
 	glog.Info(name, " exits")
 }
 
-func walk(path string, executor func(s string)) {
+func walk(path string, executor func(s string) error) error {
 	rd, err := ioutil.ReadDir(path)
 	if err != nil {
-		glog.Fatalf("readdir %s: %v", path, err)
+		return errors.Wrapf(err, "readdir %s", path)
 	}
 
 	for _, fi := range rd {
 		pi := filepath.Join(path, fi.Name())
 		if fi.IsDir() {
-			walk(pi, executor)
+			err = walk(pi, executor)
+			if err != nil {
+				return err
+			}
 		} else if strings.HasSuffix(fi.Name(), ".json") {
-			executor(pi)
+			err = executor(pi)
+			if err != nil {
+				return errors.Wrapf(err, "walk to %s", fi.Name())
+			}
 		}
 	}
 
+	return nil
 }
 func loadCfg(path string) (*config.Config, error) {
 
@@ -145,13 +152,14 @@ func parseGlobalVariables(s string) error {
 	}
 	return nil
 }
-func run() {
+func run() error {
 	cfg := ""
 	httpsrv := ""
 	arceeCfg := ""
 	call := ""
 	template := ""
 	variables := ""
+	final := ""
 	flag.StringVar(&variables, "e", "", "predefined global variables k=v, seperated by space if define multiple variables")
 	flag.StringVar(&template, "t", "", "template config file path")
 	flag.StringVar(&template, "template", "", "template config file path")
@@ -159,6 +167,7 @@ func run() {
 	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
 	flag.StringVar(&arceeCfg, "arcee", "", "arcee configuration file path")
 	flag.StringVar(&call, "call", "", "extra program command line")
+	flag.StringVar(&final, "f", "", "final execute config")
 	flag.Parse()
 
 	_, err := StartPerf(0)
@@ -169,7 +178,7 @@ func run() {
 	if len(variables) > 0 {
 		err = parseGlobalVariables(variables)
 		if err != nil {
-			glog.Fatalf("parse global variables fail: %v", err)
+			return errors.Wrapf(err, "parse global variables")
 		}
 	}
 
@@ -177,7 +186,7 @@ func run() {
 	if len(httpsrv) > 0 {
 		err := meter.StartHTTPServer(httpsrv)
 		if err != nil {
-			glog.Fatalf("HTTP server start failed: %+v", err)
+			return errors.Wrapf(err, "HTTP server start")
 		} else {
 			hasServer = true
 		}
@@ -189,7 +198,7 @@ func run() {
 	if len(arceeCfg) > 0 {
 		_, err = arcee.StartArcee(arceeCfg)
 		if err != nil {
-			glog.Fatalf("start arcee fail: %+v", err)
+			return errors.Wrap(err, "start arcee")
 		} else {
 			hasServer = true
 		}
@@ -201,17 +210,17 @@ func run() {
 		}()
 	}
 
-	executor := func(path string) {
+	executor := func(path string) error {
 		fmt.Println("gmeter starts ", path)
 		c, err := loadCfg(path)
 		if err != nil {
-			glog.Fatalf("load config %s fail, err: %+v", path, err)
+			return errors.Wrapf(err, "load config %s", path)
 		}
 		// load base config from command line first
 		if len(template) > 0 {
 			template, err = filepath.Abs(template)
 			if err != nil {
-				glog.Fatalf("get abs path %s fail", template)
+				return errors.Wrapf(err, "get abs path %s", template)
 			}
 			c.Imports = append([]string{template}, c.Imports...)
 		}
@@ -220,21 +229,22 @@ func run() {
 		}
 		c.Options[config.OptionCfgPath], err = filepath.Abs(filepath.Dir(path))
 		if err != nil {
-			glog.Fatalf("get abs config path %s fail, err %+v", path, err)
+			return errors.Wrapf(err, "get abs config path %s", path)
 		}
 		err = meter.StartConfig(c)
 		if err != nil {
-			glog.Fatalf("test failed: %v", err)
+			return errors.Wrap(err, "test "+path)
 		}
 
+		return nil
 	}
 
-	doSingle := func(path string) {
+	doSingle := func(path string) error {
 
 		if strings.HasSuffix(path, ".list") {
 			f, err := os.Open(filepath.Clean(path))
 			if err != nil {
-				glog.Fatalf("open %s fail, err: %v", path, err)
+				return errors.Wrapf(err, "open %s", path)
 			}
 			defer func() {
 				_ = f.Close()
@@ -242,7 +252,7 @@ func run() {
 
 			dir, err := filepath.Abs(filepath.Dir(path))
 			if err != nil {
-				glog.Fatalf("abs of file path %s fail, err: %v", path, err)
+				return errors.Wrapf(err, "abs of file path %s", path)
 			}
 			scan := bufio.NewScanner(f)
 
@@ -264,38 +274,57 @@ func run() {
 				if !filepath.IsAbs(t) {
 					t = filepath.Clean(filepath.Join(dir, t))
 				}
-				executor(t)
+				err = executor(t)
+				if err != nil {
+					return errors.Wrapf(err, "list %s file(%s) execute", path, t)
+				}
 			}
+			return nil
 		} else if strings.HasSuffix(path, ".json") {
-			executor(path)
+			return executor(path)
 		} else {
 			fi, err := os.Stat(path)
 			if err != nil {
-				glog.Fatalf("Stat file %s: %v", path, err)
+				return errors.Wrapf(err, "Stat file %s", path)
 			}
 			if !fi.IsDir() {
-				glog.Fatalf("%s is not a directory", path)
+				return errors.Errorf("%s is not a directory", path)
 			}
-			walk(path, executor)
+			return walk(path, executor)
 		}
 	}
+
+	if len(final) > 0 {
+		defer func() {
+			_ = doSingle(final)
+		}()
+	}
+
 	if len(cfg) > 0 {
-		doSingle(cfg)
-	} else {
-		left := flag.Args()
-		if len(left) > 0 {
-			for _, c := range left {
-				doSingle(c)
-			}
-		} else if hasServer {
-			w := sync.WaitGroup{}
-			w.Add(1)
-			w.Wait()
-		}
+		return doSingle(cfg)
 	}
+
+	left := flag.Args()
+	if len(left) > 0 {
+		for _, c := range left {
+			err = doSingle(c)
+			if err != nil {
+				return errors.Wrapf(err, "do %s", c)
+			}
+		}
+	} else if hasServer {
+		w := sync.WaitGroup{}
+		w.Add(1)
+		w.Wait()
+	}
+	return nil
 }
 func main() {
-	run()
+	err := run()
+	if err != nil {
+		glog.Errorf("run failure, error: %+v", err)
+		os.Exit(1)
+	}
 
 	if false {
 		buf := make([]byte, 500*1024)

@@ -132,7 +132,8 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	}
 	return bg, nil
 }
-func constructTest(t, base *config.Test) {
+func constructTest(t, base *config.Test) *config.Test {
+	t = t.Dup()
 	if len(t.Host) == 0 && len(base.Host) > 0 {
 		t.Host = base.Host
 	}
@@ -168,6 +169,7 @@ func constructTest(t, base *config.Test) {
 			src.Failure = append(dst.Failure, src.Failure...)
 		}
 	}
+	return t
 }
 func create(cfg *config.Config) ([]*plan, error) {
 	if len(cfg.Schedules) == 0 {
@@ -202,7 +204,7 @@ func create(cfg *config.Config) ([]*plan, error) {
 			}
 
 			if baseTest != nil {
-				constructTest(t, baseTest)
+				t = constructTest(t, baseTest)
 			}
 
 			var h *config.Host
