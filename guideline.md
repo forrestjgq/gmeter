@@ -1474,7 +1474,7 @@ Json compare actually is far more powerful than we discussed here. For more info
 
 # HTTP RESTful server
 gmeter allows user create several HTTP RESTful servers from a config file.
-```json
+```go
 type HttpServer struct {
 	Address string            // ":0" or ":port" or "ip:port"
 	Routes  []*Route          // HTTP server routers
@@ -1490,7 +1490,7 @@ type HttpServers struct {
 
 ```
 `HttpServer` defines a single server which listen to `Address`, and dispatch requests to `Routes` by route matching.
-```json
+```go
 type Route struct {
 	// HTTP request method this route will process, default for "GET"
 	Method string
@@ -1560,7 +1560,7 @@ If you're familiar with HTTP RESTful client, it's really easy for you to underst
 			"Report":  {
 				"Path":  "./server.log",
 				"Templates":  {
-					"add" :{ "supplier": $(supplier), "fruit": "$(FRUIT)", "qty": $(QTY) }
+					"add" :{ "supplier": "$(supplier)", "fruit": "$(FRUIT)", "qty": "$(QTY)" }
 				}
 			}
 		}
