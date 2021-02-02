@@ -584,7 +584,7 @@ Now let's fill previous defined Tests and Schedule in `Config`:
             }
         }
     ],
-    Options: {
+    "Options": {
         "AbortIfFail": "true"
     }
 }
@@ -637,7 +637,7 @@ Each `Host` is defined with a name as key of `Hosts` map, and you need only refe
     },
     "Mode": "Pipe",
     "Schedules": [ ],
-    Options: { }
+    "Options": { }
 }
 ```
 
@@ -662,7 +662,7 @@ If you are sure there is only one host is defined and never more, you can even i
     },
     "Mode": "Pipe",
     "Schedules": [ ],
-    Options: { }
+    "Options": { }
 }
 ```
 
@@ -680,7 +680,7 @@ If you use gmeter in automatically testing, the `Host` may be dynamic and is not
     "Tests": { },
     "Mode": "Pipe",
     "Schedules": [ ],
-    Options: { }
+    "Options": { }
 }
 ```
 and gmeter command line:
@@ -746,7 +746,7 @@ You may define your config like this:
     },
     "Mode": "Pipe",
     "Schedules": [ ],
-    Options: {
+    "Options": {
     }
 }
 ```
@@ -795,7 +795,7 @@ The biggest issue here is that `RequestMessage` are written twice with completel
     },
     "Mode": "Pipe",
     "Schedules": [ ],
-    Options: {
+    "Options": {
     }
 }
 ```
@@ -867,7 +867,7 @@ First we create a template config that requires several variables to run:
             "Tests": "new-book"
         }
     ],
-    Options: {
+    "Options": {
         "AbortIfFail": "true"
     }
 }
@@ -898,7 +898,7 @@ and we need a `list` command to read each line and treat it as json to write to 
         }
     },
     "Schedules": [ ],
-    Options: { }
+    "Options": { }
 }
 ```
 
@@ -949,7 +949,7 @@ tips:
             "Concurrency": 100
         }
     ],
-    Options: {
+    "Options": {
         "AbortIfFail": "true"
     }
 }
@@ -983,9 +983,9 @@ How this can be done? `until` command is used for this kind of situation.
 ```json
 {
     "Name": "Library",
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Tests": {
         "ping": {
             "PreProcess": [ "`until $(@db -r PONG) == 1 | print Waiting for server ready...`" ],
@@ -1013,7 +1013,7 @@ How this can be done? `until` command is used for this kind of situation.
             "Tests": "new-book"
         }
     ],
-    Options: { "AbortIfFail": "true" }
+    "Options": { "AbortIfFail": "true" }
 }
 ```
 
@@ -1151,7 +1151,7 @@ Format string is a line of string, which makes complex composing difficult, even
                             "author": "$(AUTHOR)"
                         },
                         "failure": {
-                            "error": "$(FAILURE)"
+                            "error": "$(FAILURE)",
                             "status" : "`cvt -i $(STATUS)`"
                         }
                     }
@@ -1206,9 +1206,9 @@ Let's show you how to use it by an simple example:
 First let's define some messages and tests in a component config `base.json`:
 ```json
 {
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": { "Host": "http://${IP}:${PORT}" }
+    },
     "Messages":{
         "new-book-req": {
             "Method": "POST", "Path": "/book/$(ISBN)",
@@ -1260,7 +1260,7 @@ First let's define some messages and tests in a component config `base.json`:
             "Timeout": "10s"
         }
     },
-    Options: {
+    "Options": {
         "AbortIfFail": "true"
     }
 }
@@ -1319,9 +1319,11 @@ gmeter book-edit.json book-concurrent.json
 `Imports` is not the only way to import configs. gmeter provide argument `-template=xxxx` to import a Config for all. For example, we need to execute lots of Configs, which imports lots of base Configs for one single HTTP server, we may create a base Config `template.json` for all other to define only `Hosts` and `Messages` because they do not change:
 ```json
 {
-	"Hosts": {
-		"library": { "Host": "http://${IP}:${PORT}" }
-	},
+    "Hosts": {
+        "library": {
+            "Host": "http://${IP}:${PORT}" 
+        }
+    },
     "Messages":{
         "new-book-req": {
             "Method": "POST", "Path": "/book/$(ISBN)",
@@ -1334,14 +1336,14 @@ gmeter book-edit.json book-concurrent.json
                         "price": "`cvt -f $(PRICE)`"
                 }
         },
-        "query-book-req": {
-            "Method": "GET", "Path": "/book/$(ISBN)"
-        },
-        "del-book-req": {
-            "Method": "DELETE", "Path": "/book/$(ISBN)"
-        }
-    }
-    Options: {
+            "query-book-req": {
+                "Method": "GET", "Path": "/book/$(ISBN)"
+            },
+            "del-book-req": {
+                "Method": "DELETE", "Path": "/book/$(ISBN)"
+            }
+    },
+    "Options": {
         "AbortIfFail": "true"
     }
 }
