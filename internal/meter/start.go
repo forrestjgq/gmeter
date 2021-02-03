@@ -332,6 +332,17 @@ func create(cfg *config.Config) ([]*plan, error) {
 		}
 		if s.Concurrency > 1 {
 			p.concurrent = s.Concurrency
+			if s.Parallel > s.Concurrency {
+				s.Parallel = s.Concurrency
+			} else if s.Parallel < 2 {
+				s.Parallel = 0
+			}
+		} else {
+			s.Parallel = 0
+		}
+		if s.QPS > 1 || s.Parallel > 1 {
+			p.fc = makeFlowControl(s.QPS, s.Parallel)
+			p.bg.fc = p.fc
 		}
 
 		if len(s.PreProcess) > 0 {

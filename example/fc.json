@@ -1,0 +1,51 @@
+{
+    "Name": "sample",
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009",
+            "Proxy": ""
+        }
+    },
+    "Messages": {
+        "req": {
+            "Method": "POST",
+            "Path": "/ai/detect/vehicle",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "/mnt/cephfs/vsec/vsecTestData/upload/sence.jpg"
+                }
+            }
+        }
+    },
+    "Tests": {
+        "recognize": {
+            "Host": "vse",
+            "Request": "req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            },
+            "Timeout": "1m"
+        }
+    },
+    "Mode": "",
+    "Schedules": [
+        {
+            "Name": "recog-image",
+            "PreProcess": [],
+            "Tests": "recognize",
+            "Count": 0,
+            "Concurrency": 200,
+            "QPS": 50,
+            "Parallel": 100
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

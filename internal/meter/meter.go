@@ -140,6 +140,7 @@ type background struct {
 	err               error
 	rpt               *reporter
 	predefine         map[string]string
+	fc                *flowControl
 }
 
 const (
@@ -161,6 +162,7 @@ func (bg *background) dup() *background {
 		lr:        bg.lr,
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
+		fc:        bg.fc,
 	}
 }
 func (bg *background) next() {

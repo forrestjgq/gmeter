@@ -17,6 +17,7 @@ type plan struct {
 	concurrent int
 	preprocess composable
 	seq        int64
+	fc         *flowControl
 }
 
 func (p *plan) close() {

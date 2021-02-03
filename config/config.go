@@ -415,6 +415,14 @@ type Schedule struct {
 	// 0 or 1 for one routine, or specified routines, default: 1 routine
 	Concurrency int
 
+	// QPS specifies max request at a single second.
+	// Set to a value greater than 1 to enable it.
+	QPS int
+
+	// Max executing HTTP request. Effective only if Concurrency greater than 1.
+	// Set to a value greater than Concurrency to enable it.
+	Parallel int
+
 	// Env defines predefined local environment variables.
 	Env map[string]string
 }

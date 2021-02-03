@@ -27,6 +27,12 @@ func (r *runner) close() {
 	r.h.CloseIdleConnections()
 }
 
+func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
+	if bg.fc != nil {
+		defer bg.fc.wait().cancel()
+	}
+	return r.h.Do(req)
+}
 func (r *runner) run(bg *background) next {
 	var (
 		url      string
@@ -95,7 +101,7 @@ Body: %s
 		latency = gomark.NewLatency(bg.lr)
 	}
 
-	if rsp, err = r.h.Do(req); err != nil {
+	if rsp, err = r.do(bg, req); err != nil {
 		return c.processFailure(bg, err)
 	} else {
 		if latency != nil {

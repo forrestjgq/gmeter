@@ -1472,6 +1472,15 @@ Json compare in HTTP client could be deployed in `Response.Template`. It helps u
 
 Json compare actually is far more powerful than we discussed here. For more information, refer to [jsonc](./jsonc.md).
 
+### Flow control
+First let's define QPS and Parallel.
+
+QPS indicates in recent 1 second, how many request has been sent but not responded. Parallel indicates how many request has been sent but not responded. It is sure that `QPS <= Parallel`. Due to concurrent requests number is defined by `Schedule.Concurrency`, we know that `Parallel <= Schedule.Concurrency`.
+
+To make a flow control, you may define `Schedule.QPS` and `Schedule.Parallel` to make sure gmeter send request under control and as precise as possible.
+
+User should know that `Schedule.Concurrency` can not be used as parallel control, because it decides how many gmeter threads should be started for HTTP request, which includes request composing, client request execution, and response processing. With a given concurrency number, the parallel requests number is always less because some of them are composing requests and some of them are processing response. The parallel number is decided by concurrency number and the proportion one client request takes in one full execution. Less the proportion, less the parallel number.
+
 # HTTP RESTful server
 gmeter allows user create several HTTP RESTful servers from a config file.
 ```go
