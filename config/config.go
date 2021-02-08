@@ -284,7 +284,7 @@ func (t *Test) Dup() *Test {
 	}
 
 	if t.Response != nil {
-		t.Response = &Response{
+		ret.Response = &Response{
 			Check:    cpList(t.Response.Check),
 			Success:  cpList(t.Response.Success),
 			Failure:  cpList(t.Response.Failure),

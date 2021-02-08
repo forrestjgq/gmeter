@@ -35,8 +35,8 @@ const (
 	KeyStatus   = "STATUS"
 	KeyResponse = "RESPONSE"
 	KeyInput    = "INPUT"
-	//KeyOutput   = "OUTPUT"
-	KeyError = "ERROR"
+	KeyOutput   = "OUTPUT"
+	KeyError    = "ERROR"
 
 	KeyFailure = "FAILURE"
 	EOF        = "EOF"

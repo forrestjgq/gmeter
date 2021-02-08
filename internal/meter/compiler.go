@@ -1949,7 +1949,7 @@ func parseCmdArgs(args []string) (command, error) {
 	}
 	return nil, errors.Errorf("cmd %s not supported", name)
 }
-func parse(str string) (command, error) {
+func parseCmd(str string) (command, error) {
 	args, err := argv.Argv(str, nil, func(s string) (string, error) {
 		return s, nil
 	})
@@ -2050,7 +2050,7 @@ func makeSegments(str string) (segments, error) {
 				}
 			case phaseCmd:
 				if i > start {
-					cmd, err := parse(string(r[start:i]))
+					cmd, err := parseCmd(string(r[start:i]))
 					if err != nil {
 						return nil, errors.Wrapf(err, "parse cmd")
 					}
@@ -2082,7 +2082,7 @@ func makeSegments(str string) (segments, error) {
 					if isCmd(name) {
 						// treat as command instead of variable
 						name = name[1:]
-						cmd, err := parse(name)
+						cmd, err := parseCmd(name)
 						if err != nil {
 							return nil, errors.Wrapf(err, "parse cmd")
 						}
