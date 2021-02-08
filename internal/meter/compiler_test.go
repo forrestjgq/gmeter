@@ -116,6 +116,8 @@ func TestSegments(t *testing.T) {
 		"`assert $(@json .int $(JSON)) == 3`":                                        "",
 		"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`":                        "",
 		"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
+		"`eval 3+1|cvt -i`":                                                          "`4`",
+		"`eval 3+1==4`":                                                              "TRUE",
 	}
 	//m := map[string]string{
 	//	"`assert $(@json .int $(JSON)) == 3`":                 "",

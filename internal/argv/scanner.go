@@ -205,7 +205,7 @@ func (s *Scanner) Next() (Token, error) {
 			}
 		case String:
 			switch {
-			case r == _RuneEOF, r == '`', r == '\'', r == '"', unicode.IsSpace(r):
+			case r == _RuneEOF, r == '`', r == '|', r == '\'', r == '"', unicode.IsSpace(r):
 				tok.Type = TokString
 				s.unreadRune(r)
 				return tok, nil
