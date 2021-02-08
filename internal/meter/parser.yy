@@ -51,9 +51,9 @@ assign:
     ;
 primary:
 	LITERAL {
-	    if yyDebug > 5 {
-	        fmt.Println(" RULE: primary -> LITERAL")
-	    }
+	    $$ = makeStaticReader($1)
+	}
+	| IDENTITY {
 	    $$ = makeStaticReader($1)
 	}
     | V_LOCAL {

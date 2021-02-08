@@ -77,59 +77,61 @@ var yyExca = [...]int{
 
 const yyPrivate = 57344
 
-const yyLast = 66
+const yyLast = 58
 
 var yyAct = [...]int{
-	12, 10, 8, 9, 49, 11, 29, 30, 5, 17,
-	14, 23, 24, 7, 25, 35, 36, 18, 19, 20,
-	21, 4, 22, 26, 15, 2, 31, 32, 33, 41,
-	43, 42, 46, 47, 48, 44, 45, 17, 14, 40,
-	6, 27, 28, 34, 37, 18, 19, 20, 21, 38,
-	22, 1, 15, 3, 13, 16, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 39,
+	12, 10, 8, 9, 2, 11, 29, 30, 36, 17,
+	14, 31, 32, 33, 7, 35, 37, 18, 19, 20,
+	21, 4, 22, 23, 15, 6, 50, 24, 39, 42,
+	44, 43, 47, 48, 49, 45, 46, 5, 17, 14,
+	41, 25, 26, 27, 38, 28, 18, 19, 20, 21,
+	40, 22, 34, 15, 1, 3, 13, 16,
 }
 
 var yyPact = [...]int{
-	4, -6, -1000, -1000, -1000, 0, 3, 13, 33, 35,
-	-18, 5, -1000, 37, 32, 32, -1000, -1000, -1000, -1000,
-	-1000, -1000, 32, 4, 32, 32, 32, 32, 32, 32,
-	32, 32, 32, 32, -1000, -1000, -1000, -15, -1000, 3,
-	13, 33, 35, -18, 5, 5, -1000, -1000, -1000, -1000,
+	33, 6, -1000, -1000, -1000, 15, 30, 32, 35, 38,
+	-18, -10, -1000, 46, 4, 4, -1000, -1000, -1000, -1000,
+	-1000, -1000, 4, 33, 4, 4, 4, 4, 4, 4,
+	4, 4, 4, 4, -1000, -1000, -1000, -1000, 7, -1000,
+	30, 32, 35, 38, -18, -10, -10, -1000, -1000, -1000,
+	-1000,
 }
 
 var yyPgo = [...]int{
-	0, 55, 54, 0, 5, 1, 3, 2, 13, 40,
-	21, 53, 51, 25,
+	0, 57, 56, 0, 5, 1, 3, 2, 14, 25,
+	21, 55, 54, 4,
 }
 
 var yyR1 = [...]int{
 	0, 12, 12, 13, 13, 10, 11, 1, 1, 1,
-	1, 1, 1, 2, 2, 3, 3, 3, 4, 4,
-	4, 4, 5, 5, 5, 6, 6, 7, 7, 8,
-	8, 9, 9,
+	1, 1, 1, 1, 2, 2, 3, 3, 3, 4,
+	4, 4, 4, 5, 5, 5, 6, 6, 7, 7,
+	8, 8, 9, 9,
 }
 
 var yyR2 = [...]int{
 	0, 1, 3, 1, 1, 1, 3, 1, 1, 1,
-	1, 1, 3, 1, 2, 1, 2, 2, 1, 3,
-	3, 3, 1, 3, 3, 1, 3, 1, 3, 1,
-	3, 1, 3,
+	1, 1, 1, 3, 1, 2, 1, 2, 2, 1,
+	3, 3, 3, 1, 3, 3, 1, 3, 1, 3,
+	1, 3, 1, 3,
 }
 
 var yyChk = [...]int{
 	-1000, -12, -13, -11, -10, 4, -9, -8, -7, -6,
 	-5, -4, -3, -2, 6, 20, -1, 5, 13, 14,
 	15, 16, 18, 17, 12, 11, 10, 8, 7, 24,
-	25, 21, 22, 23, 6, -3, -3, -10, -13, -9,
-	-8, -7, -6, -5, -4, -4, -3, -3, -3, 19,
+	25, 21, 22, 23, 6, -3, 4, -3, -10, -13,
+	-9, -8, -7, -6, -5, -4, -4, -3, -3, -3,
+	19,
 }
 
 var yyDef = [...]int{
-	0, -2, 1, 3, 4, 0, 5, 31, 29, 27,
-	25, 22, 18, 15, 0, 0, 13, 7, 8, 9,
-	10, 11, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 14, 16, 17, 0, 2, 6,
-	32, 30, 28, 26, 23, 24, 19, 20, 21, 12,
+	0, -2, 1, 3, 4, 8, 5, 32, 30, 28,
+	26, 23, 19, 16, 0, 0, 14, 7, 9, 10,
+	11, 12, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 15, 17, 8, 18, 0, 2,
+	6, 33, 31, 29, 27, 24, 25, 20, 21, 22,
+	13,
 }
 
 var yyTok1 = [...]int{
@@ -532,42 +534,45 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:53
 		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: primary -> LITERAL")
-			}
 			yyVAL.comp = makeStaticReader(yyDollar[1].str)
 		}
 	case 8:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:56
+		{
+			yyVAL.comp = makeStaticReader(yyDollar[1].str)
+		}
+	case 9:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:59
 		{
 			yyVAL.comp = makeVarReader(varLocal, yyDollar[1].str)
 		}
-	case 9:
+	case 10:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:62
 		{
 			yyVAL.comp = makeVarReader(varGlobal, yyDollar[1].str)
 		}
-	case 10:
+	case 11:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:65
 		{
 			yyVAL.comp = makeVarReader(varJson, yyDollar[1].str)
 		}
-	case 11:
+	case 12:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:68
 		{
 			yyVAL.comp = makeCommand(yyDollar[1].str)
 		}
-	case 12:
+	case 13:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:71
 		{
 			yyVAL.comp = yyDollar[2].comp
 		}
-	case 13:
+	case 14:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:77
 		{
@@ -576,13 +581,13 @@ yydefault:
 			}
 			yyVAL.comp = yyDollar[1].comp
 		}
-	case 14:
+	case 15:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line parser.yy:83
 		{
 			yyVAL.comp = makePostUnary(yyDollar[1].comp, yyDollar[2].str)
 		}
-	case 15:
+	case 16:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:89
 		{
@@ -591,19 +596,19 @@ yydefault:
 			}
 			yyVAL.comp = yyDollar[1].comp
 		}
-	case 16:
+	case 17:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line parser.yy:95
 		{
 			yyVAL.comp = makePreUnary(yyDollar[2].comp, yyDollar[1].str)
 		}
-	case 17:
+	case 18:
 		yyDollar = yyS[yypt-2 : yypt+1]
 //line parser.yy:98
 		{
 			yyVAL.comp = makeNotUnary(yyDollar[2].comp)
 		}
-	case 18:
+	case 19:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:105
 		{
@@ -612,25 +617,25 @@ yydefault:
 			}
 			yyVAL.comp = yyDollar[1].comp
 		}
-	case 19:
+	case 20:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:111
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "*", yyDollar[3].comp)
 		}
-	case 20:
+	case 21:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:114
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "/", yyDollar[3].comp)
 		}
-	case 21:
+	case 22:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:117
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "%", yyDollar[3].comp)
 		}
-	case 22:
+	case 23:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:123
 		{
@@ -639,21 +644,21 @@ yydefault:
 			}
 			yyVAL.comp = yyDollar[1].comp
 		}
-	case 23:
+	case 24:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:129
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "+", yyDollar[3].comp)
 
 		}
-	case 24:
+	case 25:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:133
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "-", yyDollar[3].comp)
 
 		}
-	case 25:
+	case 26:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:141
 		{
@@ -663,14 +668,14 @@ yydefault:
 			yyVAL.comp = yyDollar[1].comp
 
 		}
-	case 26:
+	case 27:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:148
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
 
 		}
-	case 27:
+	case 28:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:155
 		{
@@ -680,7 +685,7 @@ yydefault:
 			yyVAL.comp = yyDollar[1].comp
 
 		}
-	case 28:
+	case 29:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:162
 		{
@@ -690,7 +695,7 @@ yydefault:
 			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
 
 		}
-	case 29:
+	case 30:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:173
 		{
@@ -700,14 +705,14 @@ yydefault:
 			yyVAL.comp = yyDollar[1].comp
 
 		}
-	case 30:
+	case 31:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:180
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
 
 		}
-	case 31:
+	case 32:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:187
 		{
@@ -717,7 +722,7 @@ yydefault:
 			yyVAL.comp = yyDollar[1].comp
 
 		}
-	case 32:
+	case 33:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:194
 		{

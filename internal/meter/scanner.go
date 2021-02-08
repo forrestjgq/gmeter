@@ -96,7 +96,7 @@ func (s *Scanner) Lex(lval *yySymType) int {
 	}
 
 	lval.str = lit
-	fmt.Printf(">> lex token %d lit %s\n", ret, lit)
+	//fmt.Printf(">> lex token %d lit %s\n", ret, lit)
 	return ret
 }
 

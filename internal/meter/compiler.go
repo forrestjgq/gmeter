@@ -23,6 +23,10 @@ import (
 	"github.com/forrestjgq/gmeter/internal/argv"
 )
 
+const (
+	eps = 0.00000001
+)
+
 // composable is an entity which generates a string,
 type composable interface {
 	compose(bg *background) (string, error)
@@ -1348,32 +1352,43 @@ func makeBase64(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                           eval                            ///////////
+////////////////////////////////////////////////////////////////////////////////
+type cmdEval struct {
+	raw  string
+	eval composable
+}
+
+func (c *cmdEval) iterable() bool {
+	return false
+}
+
+func (c *cmdEval) close() {
+}
+
+func (c *cmdEval) execute(bg *background) (string, error) {
+	return c.eval.compose(bg)
+}
+
+func makeEval(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	c := &cmdEval{
+		raw: raw,
+	}
+	if len(v) == 0 {
+		return nil, errors.New("eval nothing")
+	}
+
+	c.eval = makeExpression(raw)
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                          assert                           ///////////
 ////////////////////////////////////////////////////////////////////////////////
-const (
-	opIs = iota
-	opNot
-	opEqual
-	opNotEqual
-	opGreater
-	opGreaterEqual
-	opLess
-	opLessEqual
-)
-
-const (
-	isFloat = iota
-	isNum
-	isStr
-)
-
 type cmdAssert struct {
-	raw   string
-	a, b  segments
-	op    int
-	float *regexp.Regexp
-	num   *regexp.Regexp
-	hint  segments
+	raw  string
+	eval composable
 }
 
 func (c *cmdAssert) iterable() bool {
@@ -1381,180 +1396,26 @@ func (c *cmdAssert) iterable() bool {
 }
 
 func (c *cmdAssert) close() {
-	c.a = nil
-	c.b = nil
 }
 
-func (c *cmdAssert) kindOf(s string) int {
-	if c.float.MatchString(s) {
-		return isFloat
-	}
-	if c.num.MatchString(s) {
-		return isNum
-	}
-	return isStr
-}
-
-const (
-	eps = 0.00000001
-)
-
-func (c *cmdAssert) doFloat(lhs, rhs string, _ *background) error {
-	var (
-		a, b float64
-		err  error
-	)
-	if a, err = strconv.ParseFloat(lhs, 64); err != nil {
-		return errors.Wrapf(err, "convert %s", lhs)
-	}
-	if b, err = strconv.ParseFloat(rhs, 64); err != nil {
-		return errors.Wrapf(err, "convert %s", rhs)
-	}
-
-	delta := a - b
-	switch c.op {
-	case opEqual:
-		if delta < -eps || delta > eps {
-			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
-		}
-	case opNotEqual:
-		if delta >= -eps && delta <= eps {
-			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
-		}
-	case opGreater:
-		if delta <= 0 {
-			return errors.Errorf("assert fail: %s > %s", lhs, rhs)
-		}
-	case opGreaterEqual:
-		if delta < 0 {
-			return errors.Errorf("assert fail: %s >= %s", lhs, rhs)
-		}
-	case opLess:
-		if delta >= 0 {
-			return errors.Errorf("assert fail: %s < %s", lhs, rhs)
-		}
-	case opLessEqual:
-		if delta > 0 {
-			return errors.Errorf("assert fail: %s <= %s", lhs, rhs)
-		}
-	default:
-		return errors.Errorf("assert(%s): unknown operator %d", c.raw, c.op)
-	}
-	return nil
-}
-func (c *cmdAssert) doNum(lhs, rhs string, _ *background) error {
-	var (
-		a, b int
-		err  error
-	)
-	if a, err = strconv.Atoi(lhs); err != nil {
-		return errors.Wrapf(err, "convert %s", lhs)
-	}
-	if b, err = strconv.Atoi(rhs); err != nil {
-		return errors.Wrapf(err, "convert %s", rhs)
-	}
-
-	delta := a - b
-	switch c.op {
-	case opEqual:
-		if delta != 0 {
-			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
-		}
-	case opNotEqual:
-		if delta == 0 {
-			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
-		}
-	case opGreater:
-		if delta <= 0 {
-			return errors.Errorf("assert fail: %s > %s", lhs, rhs)
-		}
-	case opGreaterEqual:
-		if delta < 0 {
-			return errors.Errorf("assert fail: %s >= %s", lhs, rhs)
-		}
-	case opLess:
-		if delta >= 0 {
-			return errors.Errorf("assert fail: %s < %s", lhs, rhs)
-		}
-	case opLessEqual:
-		if delta > 0 {
-			return errors.Errorf("assert fail: %s <= %s", lhs, rhs)
-		}
-	default:
-		return errors.Errorf("assert(%s): unknown operator %d", c.raw, c.op)
-	}
-	return nil
-}
-func (c *cmdAssert) doStr(lhs, rhs string, _ *background) error {
-	if c.op == opEqual {
-		if lhs != rhs {
-			return errors.Errorf("assert fail: %s == %s", lhs, rhs)
-		}
-	} else if c.op == opNotEqual {
-		if lhs == rhs {
-			return errors.Errorf("assert fail: %s != %s", lhs, rhs)
-		}
-	} else {
-		return errors.Errorf("assert not support, op: %d, lhs %s rhs %s", c.op, lhs, rhs)
-	}
-	return nil
-}
-func (c *cmdAssert) judge(bg *background) error {
-	var (
-		a, b string
-		err  error
-	)
-	if a, err = c.a.compose(bg); err != nil {
-		return errors.Wrapf(err, "compose lhs")
-	}
-	if c.op == opIs {
-		if a == "1" || a == "true" {
-			return nil
-		}
-		return errors.Errorf("assert %s", a)
-	}
-	if c.op == opNot {
-		if a == "0" || a == "false" || a == "" {
-			return nil
-		}
-		return errors.Errorf("assert !%s", a)
-	}
-	if b, err = c.b.compose(bg); err != nil {
-		return errors.Wrapf(err, "compose rhs fail")
-	}
-
-	ta, tb := c.kindOf(a), c.kindOf(b)
-	if ta == isStr || tb == isStr {
-		err = c.doStr(a, b, bg)
-	} else if ta == isFloat || tb == isFloat {
-		err = c.doFloat(a, b, bg)
-	} else {
-		err = c.doNum(a, b, bg)
-	}
-
-	if err != nil {
-		return errors.Wrapf(err, "judge")
-	}
-	return nil
-}
 func (c *cmdAssert) execute(bg *background) (string, error) {
-	err := c.judge(bg)
+	str, err := c.eval.compose(bg)
 	if err != nil {
-		if c.hint != nil {
-			if hint, _ := c.hint.compose(bg); len(hint) > 0 {
-				return "", errors.Wrapf(err, hint)
-			}
-		}
-		return "", errors.Wrapf(err, c.raw)
+		return "", errors.Wrapf(err, "assert %s", c.raw)
 	}
 
-	return "", nil
+	if str == "TRUE" || str == "true" || str == "1" {
+		return "", nil
+	}
+	if str == "FALSE" || str == "false" || str == "0" {
+		return "", errors.Errorf("assert %s fail", c.raw)
+	}
+
+	return "", errors.Errorf("assert %s: result %s is not a bool", c.raw, str)
 }
 
 func makeAssert(v []string) (command, error) {
-	var a string
-	var b string
-	raw := "assert " + strings.Join(v, " ")
+	raw := strings.Join(v, " ")
 	c := &cmdAssert{
 		raw: raw,
 	}
@@ -1562,71 +1423,7 @@ func makeAssert(v []string) (command, error) {
 		return nil, errors.New("assert nothing")
 	}
 
-	for i, s := range v {
-		if s == "-h" {
-			if i < len(v)-1 {
-				hint := strings.Join(v[i+1:], " ")
-				seg, err := makeSegments(hint)
-				if err != nil {
-					return nil, errors.Wrapf(err, "%s make hint", raw)
-				}
-				c.hint = seg
-			}
-			v = v[0:i]
-			break
-		}
-	}
-
-	if v[0] == "!" {
-		c.op = opNot
-		if len(v) > 2 {
-			return nil, errors.Errorf("%s: expect ! variable, but more comes", raw)
-		}
-		a = v[1]
-	} else if len(v) == 1 {
-		a = v[0]
-		if a[0] == '!' {
-			c.op = opNot
-			a = a[1:]
-		} else {
-			c.op = opIs
-		}
-	} else if len(v) == 3 {
-		a, b = v[0], v[2]
-		switch v[1] {
-		case "==":
-			c.op = opEqual
-		case "!=":
-			c.op = opNotEqual
-		case ">":
-			c.op = opGreater
-		case ">=":
-			c.op = opGreaterEqual
-		case "<":
-			c.op = opLess
-		case "<=":
-			c.op = opLessEqual
-		default:
-			return nil, errors.Errorf("%s: invalid operator %s", raw, v[1])
-		}
-	} else {
-		return nil, errors.Errorf("%s: expect expr as <a op b>", raw)
-	}
-
-	var err error
-	if c.a, err = makeSegments(a); err != nil {
-		return nil, errors.Wrapf(err, "%s make lhs %s", raw, a)
-	}
-	if c.b, err = makeSegments(b); err != nil {
-		return nil, errors.Wrapf(err, "%s make rhs %s", raw, b)
-	}
-
-	if c.float, err = regexp.Compile(`^-?[0-9]+\.[0-9]*$`); err != nil {
-		glog.Fatalf("compile float expr fail")
-	}
-	if c.num, err = regexp.Compile("^-?[0-9]+$"); err != nil {
-		glog.Fatalf("compile num expr fail")
-	}
+	c.eval = makeExpression(raw)
 	return c, nil
 }
 
@@ -1914,6 +1711,7 @@ func init() {
 		"db":      makeDB,
 		"write":   makeWrite,
 		"assert":  makeAssert,
+		"eval":    makeEval,
 		"json":    makeJson,
 		"list":    makeList,
 		"b64":     makeBase64,

@@ -5,3 +5,4 @@ cmake-build-debug
 *.o
 build
 *.log
+internal/meter/y.output

@@ -4,6 +4,10 @@ import "testing"
 
 func TestYyParser(t *testing.T) {
 	m := map[string]string{
+		"abc == bc":                            "FALSE",
+		"bc == bc":                             "TRUE",
+		"'abc' == 'bc'":                        "FALSE",
+		"'bc' == 'bc'":                         "TRUE",
 		" 22 > 33":                             "FALSE",
 		" 22 >= 22":                            "TRUE",
 		" 22 < 33":                             "TRUE",

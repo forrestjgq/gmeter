@@ -326,6 +326,10 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 		}
 	case "!=", "==":
 		calc = func(lhs, rhs string) (string, error) {
+			if op == "==" && lhs == rhs {
+				return "TRUE", nil
+			}
+
 			f, err := comp(lhs, rhs, func(left, right float64) bool {
 				if op == "!=" {
 					return math.Abs(left-right) >= eps
@@ -340,7 +344,10 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 					return left == right
 				})
 			}
-			return f, err
+			if err != nil {
+				return "FALSE", nil
+			}
+			return f, nil
 		}
 	default:
 		err = errors.Errorf("unknown bianry operator %s", op)
@@ -426,7 +433,7 @@ func makeCombiner(lhs, rhs composer) composer {
 }
 
 func makeExpression(str string) composable {
-
+	//fmt.Printf("make expression %s\n", str)
 	s := &Scanner{}
 	s.Init([]byte(str), func(pos int, msg string) {
 		glog.Fatalf("expression parse %s fail: %s", str, msg)

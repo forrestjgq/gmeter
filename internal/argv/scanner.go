@@ -116,7 +116,15 @@ func (s *Scanner) Next() (Token, error) {
 				tok.Type = TokEOF
 				return tok, nil
 			case r == '|':
-				tok.Type = TokPipe
+				nr := s.nextRune()
+				if nr == r {
+					tok.Type = TokString
+					tok.Value = append(tok.Value, r)
+					tok.Value = append(tok.Value, nr)
+				} else {
+					s.unreadRune(r)
+					tok.Type = TokPipe
+				}
 				return tok, nil
 			case r == '`':
 				state = BackQuote
@@ -197,7 +205,7 @@ func (s *Scanner) Next() (Token, error) {
 			}
 		case String:
 			switch {
-			case r == _RuneEOF, r == '|', r == '`', r == '\'', r == '"', unicode.IsSpace(r):
+			case r == _RuneEOF, r == '`', r == '\'', r == '"', unicode.IsSpace(r):
 				tok.Type = TokString
 				s.unreadRune(r)
 				return tok, nil
