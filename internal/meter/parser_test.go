@@ -46,6 +46,7 @@ func TestYyParser(t *testing.T) {
 		"!(2 > 3)":                                                            "TRUE",
 		"!(TRUE)":                                                             "FALSE",
 		"!FALSE":                                                              "TRUE",
+		"! 'false'":                                                           "TRUE",
 		"45==12+33":                                                           "TRUE",
 		"0.5==3-2.5":                                                          "TRUE",
 		"7.5==3*2.5":                                                          "TRUE",
@@ -65,41 +66,30 @@ func TestYyParser(t *testing.T) {
 
 	for k, v := range m {
 		t.Logf("run %s, expect %s", k, v)
-		s := &Scanner{}
-		s.Init([]byte(k), func(pos int, msg string) {
-			t.Fatalf("scan fail: %s", msg)
-		})
-		yyDebug = 0
-		//yyErrorVerbose = true
-		yyParse(s)
 
-		if yyComposer == nil {
-			t.Fatalf("expect non-nil yy composer")
-		} else {
-			bg, err := createDefaultBackground()
-			if err != nil {
-				t.Fatalf(err.Error())
-			}
-			bg.setGlobalEnv("GLOBAL", "global")
-
-			type A struct {
-				a int
-			}
-			je := &jsonEnv{
-				value: &A{a: 1},
-				simp:  makeSimpEnv(),
-			}
-			je.simp.put(jsonEnvValue, "VALUE")
-			je.simp.put(jsonEnvKey, "KEY")
-			bg.pushJsonEnv(je)
-
-			res, err := yyComposer.compose(bg)
-			if err != nil {
-				t.Fatalf(err.Error())
-			} else if res != v {
-				t.Fatalf("expect %s got %s", v, res)
-			}
+		bg, err := createDefaultBackground()
+		if err != nil {
+			t.Fatalf(err.Error())
 		}
+		bg.setGlobalEnv("GLOBAL", "global")
 
+		type A struct {
+			a int
+		}
+		je := &jsonEnv{
+			value: &A{a: 1},
+			simp:  makeSimpEnv(),
+		}
+		je.simp.put(jsonEnvValue, "VALUE")
+		je.simp.put(jsonEnvKey, "KEY")
+		bg.pushJsonEnv(je)
+
+		c := makeExpression(k)
+		res, err := c.compose(bg)
+		if err != nil {
+			t.Fatalf(err.Error())
+		} else if res != v {
+			t.Fatalf("expect %s got %s", v, res)
+		}
 	}
 }

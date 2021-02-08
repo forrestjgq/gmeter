@@ -78,6 +78,44 @@ Variables can be referenced in the string of config or command, for example, a `
 In the request body, we defined a json with 3 members: `repo`, `type`, `quantity`. 
 `repo` has a value of static string `"fruit"`, `type` defines an dynamic string which refers to a local variable `$(FRUIT)`, `quantity` defines a command refers to `$(QTY)`. Vairables referred in a string will be replaced with its value, and vairables referred in a command will be treated as an argument even its value contains spaces inside(just like refers variables in shell command line).
 
+# Expression
+Expression is used in some commands like `if`/`eval`/`assert` commands. Actually any command requires an expression will declare its argument with `<expr>`.
+
+Expression supports aritchmatic and logical calculations following C language. Here are operators supported in the descent priority order:
+- =
+- ++, --, !
+- \*, /, %
+- +, -
+- >, >=, <, <=
+- ==, !=
+- &&
+- ||
+
+Expression processes everything as string. In arithmatic calculation, strings will be converted to numbers. For most operators it will be a float, so is the result. `5+2` will produce `7.00000000` instead of `7` and will be saved as a string `"7.00000000"`.
+But for `%` operator, numbers will be converted to integers. so `7.5 % 3.1` will produce `1`. 
+To make description easy, we'll ignore the `.00000000` part from here.
+
+Strings could be wrapped inside `''`. Although everything is treated as string, space will be used to seperate words. `HELLO` equals to `'HELLO'` but `HELLO WORLD`, which defines 2 strings, does not equal to `'HELLO WORLD'`.
+
+`!`/`&&`/`||` requires one or 2 bool operands. A bool operands should be a `"TRUE"` or `"true"` or `"FALSE"` or `"false"` or experssions that produces these values. `>, >=, <, <=, ==, !=` will produces a bool value. Let's show you how it works by examples:
+- `! TRUE` produces `"FALSE"`
+- `! 'false'` produces `"TRUE"`
+- `3 > 2` produces `"TRUE"`
+- `3 > 2 && 2 < 1` produces `"FALSE"`
+- `3 > 2 || 2 < 1` produces `"TRUE"`
+
+`()` is used to group expressions: `(3 + 2) * 10` produces `50`, `((3 + 2) * (6 - 4)) / 2` produces `5`
+
+`$(var)`, `${var}`, `$<var>` can be used in expression to read local/global/json environment variables. Assuming a local variable `VAR` has a value `4`, `$(VAR) + 3` produces `7`.
+
+`$(@cmd args...)` is used to call a command and replace with its output. `$(@echo 7) + 3` produces `10`. See command usage in next chapter for more.
+
+The assign operator `=` is used to set local variables. The left part can only be a variable name and right part will be an expression: `a=3+2` will write `5` to local variable `a`. Please note that variable can not be a left value in the form of `$(a)`, which is actually a right value. These expressions are invalid:
+- `$(a) = 3`
+- `a + 3 == 6`
+
+Multiple expresssions could be defined sperated by `;` and gmeter will calculate them in the sequence they are defined, and use the output of last one as the final result: `a = 3; a > 3; $(a) + 2` will set local variable `a` to 3 first, and calculate `a > 3`, which produces a bool value `"FALSE"`, but it is not the final expression, so it is discarded; then calculate the final one `$(a) + 2` and produces `5`, which is the final result of the whole expression.
+
 # Command
 gmeter command acts just like shell but is case sensitive. It will write a string as output, if error occurs, error string will be written to `$(ERROR)`. Command may output empty string.
 
@@ -102,6 +140,8 @@ If command is embedded inside a string like:
 the command will be replaced by the output of `cmd arg1 arg2`.
 
 gmeter command process only strings, although some command will treat strings as numbers or booleans, it basicly takes string inputs and generates string output.
+
+Specially, if an argument of command takes an expression, `<expr>` is used to define argument.
 
 ## iterable command
 
@@ -336,44 +376,19 @@ env -r <variable>
 // delete <variable> from local environment
 env -d <variable>
 ```
+## eval - expression calculation
+```
+eval <expr>
+```
+
+eval command will calculate an expression.
 
 ## assert - condition checking
 ```
-assert <condition> [-h <hints...>]
+assert <expr>
 ```
 
-assert will report an error if `<condition>` is evaluated as `false`. If `-h <hints...>` is present, error string will evaluate `<hints...>` and attach to error string for debugging.
-
-`<condition>` accepts two forms: compare and logical judgment:
-
-### compare expression
-```
-a == b
-a != b
-a > b
-a >= b
-a < b
-a <= b
-```
-
-when compare operators are used, it compares both strings or numbers, here is the rule:
-1. when `a` and `b` are integer numbers, all operators are supported
-2. when `a` and `b` are numbers, but at least one of them are float number(with a '.' inside), `==` and `!=` will be judged by `abs(a-b)`, if this value is less then `0.00000001`, consider `a == b`, other operators are compared directly.
-3. when `a` or `b` is not number, use string compare, and only `==` and `!=` can be applied, or it will report an error.
-
-### logical judgment expression
-```
-a
-!a
-```
-
-when logical judgment operators are used, `a` can be 
-- `1`
-- `0`
-- `true`
-- `false`
-
-specially, `!$(var)` while `$(var)` is empty will be treat as true.
+assert will report an error if `<expr>` is NOT evaluated as `TRUE`. 
 
 ## list - read line by line from a file
 `list <file>`
@@ -490,21 +505,20 @@ Here gives some examples of path:
 
 ## until - do test until condition satisfied
 ```
-until <condition>
+until <expr>
 ```
 `until` command is an iterate command.
 
-If `<condition>` evaluates as `true`, an `EOF` is generated.
+If `<expr>` evaluates as `TRUE`, an `EOF` is generated.
 
 This is offen used to do prefix HTTP testing until success. For example, send `PING` HTTP request to HTTP server to make sure it pongs to indicate the HTTP server is ready.
 
 ## if-then-else - if condition
 ```
-if <condition> then <command1> [else <command2>]
+if <expr> then <command1> [else <command2>]
 ```
-if `<condition>` evaluates as `true`, then `<command1>` is executed, otherwise if `<command2>` is defined, it will be executed.
+if `<expr>` evaluates as `TRUE`, then `<command1>` is executed, otherwise if `<command2>` is defined, it will be executed.
 
-`<condition>` has same definition of `assert`.
 `<command1>` and `<command2>` could be any command except `if-then-else` itself.
 
 ## report - write string to report file

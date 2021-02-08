@@ -11,6 +11,7 @@ gmeter customizes HTTP RESTful clients and HTTP RESTful servers and runs them by
 7. proxy support
 8. performance monitoring, QPS limiting(under development)
 9. json compare based on template(under development)
+10. arithmatic and logical expressions support.
 
 # Install
 
@@ -50,6 +51,4 @@ Optional arguments includes:
 
 # TODOs
 1. gomark support
-2. QPS restriction
-3. better logging
-4. better guides
+2. better logging
