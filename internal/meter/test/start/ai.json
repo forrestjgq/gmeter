@@ -1,0 +1,104 @@
+{
+  "Name": "sample",
+  "Hosts": {
+    "vse": {
+      "Host": "http://127.0.0.1:8009",
+      "Proxy": ""
+    }
+  },
+  "Messages": {
+    "req": {
+      "Method": "POST",
+      "Path": "/ai/detect/all",
+      "Headers": {
+        "content-type": "application/json"
+      },
+      "Body": {
+        "image": {
+          "url": "/file/to/a.jpg"
+        }
+      }
+    }
+  },
+  "Tests": {
+    "recognize": {
+      "Host": "vse",
+      "Request": "req",
+      "Response": {
+        "Check": [
+        ],
+        "Success": [
+          "`report -n -t common`"
+        ],
+        "Failure": [
+          "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
+        ],
+        "Template": {
+          "Context": {
+            "Status": "`assert $ == 200`"
+          },
+          "Result": {
+            "InnerStatus": "`assert $ == 200`",
+            "Pedestrian": [
+              {
+                "`list`": "`assert $<length> == 8`",
+                "`item`": [
+                  "`json -e .PedesAttr $`",
+                  "`json -e .PedesAttr.Sex $`"
+                ],
+                "`default`": [
+                  "`json .Img.Cutboard.X $ | env -w X`",
+                  "`json .Img.Cutboard.Y $ | env -w Y`",
+                  "`print cutboard(x: $(X), y: $(Y))`"
+                ]
+              },
+              {
+                "Id: optional": "`assert $ > 0`",
+                "Img: index": {
+                  "Cutboard": {
+                    "X": "`assert $ >= 1530 | assert $ < 1550`",
+                    "Y": "`assert $ >= 650 | assert $ < 665`"
+                  }
+                },
+                "PedesAttr": {
+                  "`default`": [
+                    "`print found pedestrian property: $<key>`"
+                  ],
+                  "Age": {
+                    "Id": "`assert $ == 3`",
+                    "Confidence": "`assert $ > 0.9`"
+                  }
+                },
+                "Features": "`strlen $ | assert $$ > 400`",
+                "HasFace": false
+              }
+            ]
+          }
+        }
+      },
+      "Timeout": "10s"
+    }
+  },
+  "Mode": "",
+  "Schedules": [
+    {
+      "Name": "recog-image",
+      "PreProcess": [],
+      "Tests": "recognize",
+      "Reporter": {
+        "Path": "report.log",
+        "Format": "{ \"Error\": \"$(FAILURE)\" }",
+        "Templates": {
+          "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
+        }
+      },
+      "Count": 1,
+      "Concurrency": 1,
+      "Env": null
+    }
+  ],
+  "Options": {
+    "AbortIfFail": "true",
+    "Debug": "false"
+  }
+}

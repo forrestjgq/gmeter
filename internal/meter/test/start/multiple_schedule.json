@@ -1,0 +1,68 @@
+{
+    "Name": "multi-tests",
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009",
+            "Proxy": ""
+        }
+    },
+    "Tests": {
+        "add": {
+            "Host": "vse",
+            "RequestMessage": {
+                "Method": "POST",
+                "Path": "/add",
+                "Headers": { "content-type": "application/json" },
+                "Body": {
+                    "Fruit": "$(FRUIT)",
+                    "Qty": 100
+                }
+            },
+            "Response": {
+                "Check": [ "`assert $(STATUS) == 200`" ]
+            }
+        },
+        "query": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`",
+                    "`json .Fruit $(RESPONSE) | assert $$ == $(FRUIT)`",
+                    "`json .Qty $(RESPONSE) | assert $$ == 100`"
+                ]
+            },
+            "Timeout": "10s"
+        },
+        "delete": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "DELETE", "Path": "/del" },
+            "Response": { "Check": [ "`assert $(STATUS) == 200`" ] },
+            "Timeout": "10s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "add-fruit",
+            "Tests": "add",
+            "Count": 1,
+            "Env": { "FRUIT": "apple" }
+        },
+        {
+            "Name": "query-fruit",
+            "Tests": "query",
+            "Count": 1000,
+            "Env": { "FRUIT": "apple" }
+        },
+        {
+            "Name": "del-fruit",
+            "Tests": "delete",
+            "Count": 1,
+            "Env": { "FRUIT": "apple" }
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

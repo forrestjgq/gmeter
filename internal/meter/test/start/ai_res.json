@@ -1,0 +1,1025 @@
+{
+    "Context": {
+        "Status": "200",
+        "Message": "SUCCESS",
+        "RequestTs": {
+            "Seconds": 1609404919,
+            "NanoSecs": 120369735
+        },
+        "ResponseTs": {
+            "Seconds": 1609404919,
+            "NanoSecs": 564074542
+        }
+    },
+    "Result": {
+        "InnerStatus": "200",
+        "InnerMessage": "SUCCESS",
+        "Image": {
+            "Data": {
+                "Id": "b6a6580e-070f-4a6f-8d7e-3d5e52814c9f",
+                "Width": 2560,
+                "Height": 1440,
+                "URI": "/file/to/a.jpg"
+            }
+        },
+        "Pedestrian": [
+            {
+                "Id": 2,
+                "Img": {
+                    "Cutboard": {
+                        "X": 1544,
+                        "Y": 660,
+                        "Width": 341,
+                        "Height": 776,
+                        "Confidence": 0.99773765
+                    },
+                    "Img": {
+                        "Id": "19b0409b-8662-4149-a5c2-8bd4f5c148e8",
+                        "Width": 341,
+                        "Height": 776
+                    },
+                    "Rect": {
+                        "CenterX": 1714.5,
+                        "CenterY": 1048,
+                        "Width": 341,
+                        "Height": 776,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 1,
+                        "Name": "女",
+                        "Confidence": 0.9985551
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.9995505
+                    },
+                    "Category": [
+                        {
+                            "Id": 52,
+                            "CategoryName": "包",
+                            "Items": [
+                                {
+                                    "Id": 6,
+                                    "Name": "斜挎包",
+                                    "Confidence": 0.99955374
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "短发",
+                                    "Confidence": 0.9999962
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.9999989
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.99943334
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 10,
+                            "CategoryName": "下身类别",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "长裤",
+                                    "Confidence": 0.99579984
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 1
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 1
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg44cKmdh8CNPbgYBwiYm/6l/tFP0JsaH3BCl84llKdSaLyGrPD1LOdV6V+siJ27PqDSqqNAv+azMItimnXvhTwQSBf6xf7bQp31eWZN8ueFELNN9ljj0cnAUyxQeI+7slCXDJxwvwEBUGlRKjWbgaewmG3TCG/GxRWhZwEN+tqmON9qWU2atM1NtOfASKknfCXiisgIk1Q26HmWF32UuX0QoxY1wPZd4c2ADPLQg6CqMNMR+LCVpPHQsHlRbeQjSoBcffwN9VHyZcPr133+EaTYpQao0MzAY4BFWyLgjDkR4L55Y/Co7btIW8j1faSr2wCc1ivoSFS+LZqskx3QIDr4tMFpLYav9q2LrPsAsPdXJf0qiMCcy8sQQWGjjZQszuCnGRCQ9t/RPdGzklCV00ow18XTSIVKkhiJ8avt6Yx/4Emb6h36a+nV6czYTeNYM3CyXE7ozkKR2EGDa5iy9GdwpESPQKPpvyA6E1hdlDo/MJ2dp7hSb3mll7hrhe1kOyiyC1F9nve1ZbP3Xjig0Cfd2EOuwPjF+dhA5P4VjCyVSJqAXBjz4oVV4EZMKJ5+O/jOGw1gnbcCiI7mmzXmHpRAceYgfey5mW3yEtgVmohtaL4Wzai6P5MIcYKGiLE4kmC+MZC4rgP6KEhTLk35eY4Q4JoXCGfNBuWklvflh41uCN",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 1,
+                "Img": {
+                    "Cutboard": {
+                        "X": 1767,
+                        "Y": 188,
+                        "Width": 376,
+                        "Height": 810,
+                        "Confidence": 0.9986873
+                    },
+                    "Img": {
+                        "Id": "16cb9b42-e7fd-48b1-b6f5-592477512cde",
+                        "Width": 376,
+                        "Height": 810
+                    },
+                    "Rect": {
+                        "CenterX": 1955,
+                        "CenterY": 593,
+                        "Width": 376,
+                        "Height": 810,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 1,
+                        "Name": "女",
+                        "Confidence": 0.9999546
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.9999211
+                    },
+                    "Category": [
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 2,
+                                    "Name": "长发",
+                                    "Confidence": 0.9903093
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.9999988
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.8196723
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 0.98296
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.9999964
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg43rP2diL5LTbh5goCqwOE124Z8IJN6vqhQ8IMtrGBR+Ju2ovjwL8rF4HgLMIr8vjDQmHuAiza9iI0fKFX24cG4WdDUdclkDOXvsu8dnMAO0LK9g1jav8yIRBLtGLiyD4CjajHYrtZt8FYqwQWSkElQmDsiwFtBspWXsuhF6soRmMgzyQ2DgYqdsln3mLaDqi3+r7TYnKWy6E0RMo2dxKwIuO0d6Jq0ETXjFND4nYkFIMM3A0Cww3gYlZ6u7eB/OHBWBbg98dzHNcuhiJ3ozVAou4xisOApV4BN9wJghVNccL+zgwiu5feoR6rZXYM1ssCTRTjwWyNPVZKzsjX8rE3o1u3RXbzpySW++3yormCAxeWDOwjwbz+oSgVBxart5LiQQhjQ/XZT3YCt87CXXEKgwS7j0IO1jDCXuX497qndMFJ6mxX+4pk14auNTfVJchChGB1YzTD5wESf/6Cw6O+IoYuBAJf3rbg5K1eFkQAJ0JHxuChYx4Xdl6qL7eSc+kDKQLl9gGRhZdJ8VADDpv2N5IOJ2JzKhVhGOX3lnPHqeKJrEIjzyUnV6+8UmJtZ5DjdQBIgvaWBuLqTIcXnDFvAP4KZxe3KYz3BHAj98IRqmLsk7AjKxZgATxCrWLmYqmitiM/ou4U9aF1HPg2Zi7N4mRn7mFFbjIWQUHOd3Z9T8O",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 6,
+                "Img": {
+                    "Cutboard": {
+                        "X": 537,
+                        "Y": 47,
+                        "Width": 157,
+                        "Height": 627,
+                        "Confidence": 0.970289
+                    },
+                    "Img": {
+                        "Id": "7a66079a-5717-4c4c-9402-5e8a77b7b216",
+                        "Width": 157,
+                        "Height": 627
+                    },
+                    "Rect": {
+                        "CenterX": 615.5,
+                        "CenterY": 360.5,
+                        "Width": 157,
+                        "Height": 627,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 2,
+                        "Name": "男",
+                        "Confidence": 0.9958407
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.9695607
+                    },
+                    "Category": [
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "短发",
+                                    "Confidence": 0.9488933
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.9999342
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.9997142
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.99986553
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 10,
+                            "CategoryName": "下身类别",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "长裤",
+                                    "Confidence": 0.99997306
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 0.99998295
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 24,
+                            "CategoryName": "鞋子颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑",
+                                    "Confidence": 0.998978
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg44rruNhR9M/bN3JPigD8GV7VaK4IZ43UApi6rln9vq2KRJRID6QoZNhEUmWJucSVjOdgLAhIf7wI41Ap3kPkwISFTYpZPeMe3DsUZ9xZsd2L+yWyjZ7ghISIxGGI4CnyCvOQ5wv0jvEFRzJBWrghhAlmmpKFaR3vWWt2OV3KNDsNxXgd2LRlndrozIELVf8v3uv04gmvQ6WETtt/Wal44Ipk7g2OvTHb3mDHB4oQwI+N79/2COkIZ4iHWXjeSToUhJaTZljmipxYtju236mIkYuys8UNpWbghRHvbQuR2eIKIr44iefTqARWc9VYf2nkDqBW7wSjLdRZ8uGG39A8bA0S4D/bG7V226B9hori4O9e0bO0jy77hgRfzMVZm74BinTxho98XrfecisViW50Xgpt7ZAJpzT5icW/tF57ZYwE7uJ3X8wl+V48z1XeLD9ei9AQKY5zAyOHgUDHC1+Tgw3G1Y6MpNDNBGz7+dgfqB+JIrUYBXk1598Va/reigd3DDCHu9gMO2RbC7WTipufv979Kk0KIf22hIAJF9lcpfWLcMm+j+iKmV7ChECJAKX6jISO/w4/cs4JgKV0XSrmdwUbA2PcHF8Z3O1JOt/QJHMLX163DThzjQSsk0QI6WqUimjkoApQnrIFhKh4WTRIYQjq2HKFOco+WTyhEN7azOON",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 5,
+                "Img": {
+                    "Cutboard": {
+                        "X": 1163,
+                        "Y": 178,
+                        "Width": 258,
+                        "Height": 885,
+                        "Confidence": 0.97668594
+                    },
+                    "Img": {
+                        "Id": "271f5cbe-c9e8-46f0-a752-15a1b7316002",
+                        "Width": 258,
+                        "Height": 885
+                    },
+                    "Rect": {
+                        "CenterX": 1292,
+                        "CenterY": 620.5,
+                        "Width": 258,
+                        "Height": 885,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 2,
+                        "Name": "男",
+                        "Confidence": 0.9999913
+                    },
+                    "Age": {
+                        "Id": 2,
+                        "Name": "15到30岁",
+                        "Confidence": 0.9993925
+                    },
+                    "Category": [
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "短发",
+                                    "Confidence": 0.9982753
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 10,
+                            "CategoryName": "下身类别",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "长裤",
+                                    "Confidence": 0.9996747
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.99949753
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 24,
+                            "CategoryName": "鞋子颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑",
+                                    "Confidence": 0.99370605
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.9913737
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.9993179
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 0.99877876
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg47KwCNszgULakapdis8zeV0MrA6KgSVShUiQG9lZgjAMtSZUjuzefF7/armP5SMjDG/2uAkYyS8J0MR13Vht5QViiRVfb/nMXwlAT9yOlOgLslbWDLbTjIW6nJKLkI0oCYyTvgyb0J2EOcR4WuXRZQiQqqMELBrgWlDex14UbI2MnNKjWIMgZltWZccL2phoXkEu1IltA3aEGVVTWP1ekQs/J5GPBdGS34bq8IjsMZ6NenpJiLU2vAjVxZLew23FhbTpkN+jShVcbaOU34Qoo4qaznKMl0bIhWLv94sD4byKqDbbixAK0wMSYxhYHCGTCHCTnYUTHQXYPUcm3rkRBA3rqvPZ8y7pWzJAZovDufVeO48BiGD76QX50m7ZIKzHiijycAydTd/eZe8HiAKceQ8gJgAIbAyPiMZDjl7VuK4Erzsx3Kz9DFwmDOrZQG91ChqhO4yJg/IF7vO0i6mWlQujK9MKEfqEBX05YdnSanQKPbVFhS3W5FlneNDezWXrDS5y2tk1dmlbS6+tC7uHIt6e6vwJf7x+hH8J4lm7RnuJUJ14DG+naF93NBcJmavijK9jLgsngcWI1lPd31CzEQcMaPrfa3uP3wzAdd4McgAKUcddDX/ak4JZoMMLtHiEjd8bKAnL1b0FF8V+WfWKZYnCBFgFTeQtWjtEvdgoIFUN",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 4,
+                "Img": {
+                    "Cutboard": {
+                        "X": 2178,
+                        "Y": 179,
+                        "Width": 223,
+                        "Height": 589,
+                        "Confidence": 0.98580706
+                    },
+                    "Img": {
+                        "Id": "244c1ff1-a953-4169-b08f-d6a81fb86736",
+                        "Width": 223,
+                        "Height": 589
+                    },
+                    "Rect": {
+                        "CenterX": 2289.5,
+                        "CenterY": 473.5,
+                        "Width": 223,
+                        "Height": 589,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 1,
+                        "Name": "女",
+                        "Confidence": 0.99545527
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.74271446
+                    },
+                    "Category": [
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "短发",
+                                    "Confidence": 0.99997616
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.99861777
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.9983487
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 0.99997735
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.9981476
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg44PgAtt4ahfYt6DNiuL2y16NMTMJ9AJBBNGIr1/3mZWKq9XKCSeGjd5yMgIKWjBAj1NMmwj4uIUIB63aX6iTEAVABxJfLZ0D30zFFl+pQ14L6cGcjC+pooR6oyaIx7GyC+4IkQo62EEGXrbsWYMpXokJo/aFZnESWQm+5l4n4bMNE/o/223uytrJJOwMAibH34hEG4nUWoOEErO/2fIgo4puLj0Pie6o3je8kInDgvUMyr25C+VMxwgHyj9f51v/A5S9e9xXDzhchYZEX5MsTgthIq4N4DcYhH2v4wvpjO+LUlFojL84coU+fsFYaL+7D+q7FoatK1PZYjp0X4vAII2qQgPb8zL82p14JoswoWVdsLdriRjkloRHQTvZu3Bgiv87Q480GzPdtoIjCfCyLAzjqCIJBROWiHRdOt0OPxQFEx+OX/iBOFw2C0je7X0oCxA+fgx9MLyFhKVRCsPbMYl9BSgJ82sQhf2O3FktqacJwHZvBD4ARdkSqFteojEmC7+yuNmCd7ZbsMT5jEtlMt2Up6OJSmRUBFIPoVk0jSSKovDzDoGmqF40zdSJxlKjjJ+o+AiujwOI6lfa34L8MYQ6SUHfdVw13I0Gcd9Rpe4K5fWvjcTEYYT1LPMLf4spCtIkPwpKApqDSuKCWGEPOokq5gOF65yDWXB0z96fX4yM",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 3,
+                "Img": {
+                    "Cutboard": {
+                        "X": 919,
+                        "Y": 3,
+                        "Width": 172,
+                        "Height": 603,
+                        "Confidence": 0.9951142
+                    },
+                    "Img": {
+                        "Id": "f0f74abd-e4b9-4349-8e50-849add1a02ac",
+                        "Width": 172,
+                        "Height": 603
+                    },
+                    "Rect": {
+                        "CenterX": 1005,
+                        "CenterY": 304.5,
+                        "Width": 172,
+                        "Height": 603,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 2,
+                        "Name": "男",
+                        "Confidence": 0.9999852
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.97351587
+                    },
+                    "Category": [
+                        {
+                            "Id": 2,
+                            "CategoryName": "头部标志物",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "眼镜",
+                                    "Confidence": 0.9981713
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "短发",
+                                    "Confidence": 0.9995189
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.99991465
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 10,
+                            "CategoryName": "下身类别",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "长裤",
+                                    "Confidence": 0.9999995
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 1
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 52,
+                            "CategoryName": "包",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "拎物品",
+                                    "Confidence": 0.99942696
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.996402
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色上身",
+                                    "Confidence": 0.99919945
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg47IYAtt4367bHEz9CkEldF1H/8WJZjkfhRUpDVnp19sKJxL5Dxc2k1+AtNaJoKBmD4A31wiqbqUImy/tWIUfLAShTqNfW4TjX0mKNtzBikgK9MVwjjYflYT4kKaKPsejCm0CJgpfjRYFI2n3WYAHDgmVu6CENvdKWoYDol77+FkNfaW02FAGH9hsq9EKO1FX34q+o4gOATQE4z89387fSgsST++OctuUXhnB/gmLRAyMIIPSCSKM8gixlrTfSV4+hC4cmt8rZf1fwS09XBoBH4qm4HuMmLgHhPcZhYs83AaM3rKZC+TeNQVberDYhpsqCum5FYZgL1Rej2g13dndqw2N/8DYD2m225IIUgkr0tRfxxYsiejkqYQh+i9Z8hDriinmY4/N5YHeNMufCaxydQzRXAUIy0fgCANeu18zvBsH6wRZXntxyVnaX67fTTGCC8o0LA2bYy4EvdS9C/iRLwrbOjIJKVMbhWV3G9ntUO0J6ZcChZ+3aNku/0tYnw0NjaVofdvqRhhbSpW7CgPu2d85UR8ItZXGBNv8+VkW/yaJoutDD7w/fF6m+zqKfKFoj/jTxQjijWKJbk6S3v8/8gSFh17eTzdr3JzVqF+bTE4KHp06DbRwnASlDiMIU+A3Cq1Cl4oYx/4Da4ILWXTQDYiwc56F1zdD3wwvk15vr+IN",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 9,
+                "Img": {
+                    "Cutboard": {
+                        "X": 1566,
+                        "Y": 7,
+                        "Width": 173,
+                        "Height": 278,
+                        "Confidence": 0.75306016
+                    },
+                    "Img": {
+                        "Id": "ca246b6d-fe60-42db-829f-8f317a25922d",
+                        "Width": 173,
+                        "Height": 278
+                    },
+                    "Rect": {
+                        "CenterX": 1652.5,
+                        "CenterY": 146,
+                        "Width": 173,
+                        "Height": 278,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 2,
+                        "Name": "男",
+                        "Confidence": 0.6513472
+                    },
+                    "Age": {
+                        "Id": 3,
+                        "Name": "30到50岁",
+                        "Confidence": 0.9965155
+                    },
+                    "Category": [
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.9982698
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 10,
+                            "CategoryName": "下身类别",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "长裤",
+                                    "Confidence": 0.9999832
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.9999753
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Features": "cAcg45pZVljutJ7b4O9HC3UIm9hKRZEJsh9WBErZlNnnzuGLdGnbj8tc5V959zYKrBCjDJBDxQmFcDSLTwKt3oM0mQQG2yFcEBorXCqVW9/cGO6L6FKLDFRt4YXAeHAKkx2QC0K9XgyfnWyDvLRXWtwauInytZKDvvPSWQZ+sl9HvzYOp0rD2JXortuidcIKeoB23pmSxInywrOAGheeX6I7xQryicOPRuToWWsaMop8WGuP7V4YC8fI8gkmJTbdJR7yhCvMld7bnYxeNVg53NGT6osyGKQNqBqRhDxCDwvbb+4LeE6+C1Q4aAKd7C9fBZSJD4M8yYU6PW7Zjci53oZuNI499qfYJRFPWyXGtYu9le5e7wSLifbPMYQxSI9YCyV7iS6UFY9y5CTdAj37iT79kAwwbVcITvCOiC0pIt0gX5cFWxvt388xzF8R59xf/pUli7vwPwoJTXaEQ5k4DYO5AYmcoXQJCo93BImKx9lv/joKms45BWO9qd//xZlegqgWDehVuNnOcF3bEU3kiqoyXd3A4q0Pu1XmBNExg9lw6KULTS2dj82klN+0qcqJtUKJDd/anIl49GCJtd/S3gcQ6wUjb4jfavE6X5yWLd86mUOI0aItDZ4U8IJ9ZuALfmyjijpglovMVFwFDL/LWGjVIw4eL6wFq72GWdJWvd3F6nwN",
+                "HasFace": false,
+                "PrimaryObjectScore": 0
+            },
+            {
+                "Id": 7,
+                "Img": {
+                    "Cutboard": {
+                        "X": 1735,
+                        "Y": 51,
+                        "Width": 245,
+                        "Height": 655,
+                        "Confidence": 0.9543599
+                    },
+                    "Img": {
+                        "Id": "fe8d3b7d-24a4-4a71-9489-0876f0924e3e",
+                        "Width": 245,
+                        "Height": 655
+                    },
+                    "Rect": {
+                        "CenterX": 1857.5,
+                        "CenterY": 378.5,
+                        "Width": 245,
+                        "Height": 655,
+                        "Angle": 0
+                    }
+                },
+                "PedesAttr": {
+                    "Sex": {
+                        "Id": 1,
+                        "Name": "女",
+                        "Confidence": 0.9999088
+                    },
+                    "Category": [
+                        {
+                            "Id": 21,
+                            "CategoryName": "发型",
+                            "Items": [
+                                {
+                                    "Id": 2,
+                                    "Name": "长发",
+                                    "Confidence": 0.9999713
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 22,
+                            "CategoryName": "上衣款式",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "长袖",
+                                    "Confidence": 0.99995756
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 9,
+                            "CategoryName": "上身纹理",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "纯色上身",
+                                    "Confidence": 0.9856154
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 54,
+                            "CategoryName": "上身颜色",
+                            "Items": [
+                                {
+                                    "Id": 1,
+                                    "Name": "白色上身",
+                                    "Confidence": 0.9998578
+                                }
+                            ]
+                        },
+                        {
+                            "Id": 56,
+                            "CategoryName": "下身颜色",
+                            "Items": [
+                                {
+                                    "Id": 3,
+                                    "Name": "黑色下身",
+                                    "Confidence": 0.9444066
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Face": {
+                    "Id": 8,
+                    "Confidence": 0.248935,
+                    "Img": {
+                        "Cutboard": {
+                            "X": 134,
+                            "Y": 54,
+                            "Width": 46,
+                            "Height": 63,
+                            "Confidence": 0.9356659
+                        },
+                        "Img": {
+                            "Id": "53737376-57d7-40f2-ac63-82563ac411d2",
+                            "Width": 46,
+                            "Height": 63
+                        },
+                        "Rect": {
+                            "CenterX": 157,
+                            "CenterY": 85.5,
+                            "Width": 46,
+                            "Height": 63,
+                            "Angle": 0
+                        }
+                    },
+                    "AlignResult": {
+                        "Scores": {
+                            "global_front_face": 1,
+                            "global_is_face": 1,
+                            "local_is_face": 0.248935
+                        }
+                    },
+                    "Qualities": {
+                        "AlignScore": 0.248935,
+                        "AlignScore_G_frontface": 1,
+                        "AlignScore_G_isface": 1,
+                        "Aspect": 1,
+                        "Blur": 0.09252443,
+                        "Border": 1,
+                        "DetectScore": 0.9356659,
+                        "Eye_occlusion": 0.4864546,
+                        "IsFace": 0.0032127085,
+                        "Mouth_occlusion": 0.020125026,
+                        "Pitch": 8.056155,
+                        "Roll": 5.529626,
+                        "Size": 1,
+                        "Yaw": 88.545906
+                    },
+                    "PrimaryObjectScore": 0
+                },
+                "Features": "cAcg4+LxfVjNoufYr3ecCjK8hl5jxXuJdoiOBAlUx9mfHQ+KueJGD9uKCli6n+eJGnBjjJtPI4mpVnWLtIMJ2HI5qgT43B5c/3DcX9thJ9w0znaNuFm1ij6jqwQJYDELQaFICs2RUIp1LvQF5MGGWZDCwwmzKc+ES33r2fTjKF1pFIoNcU5y2Lj9ztvIANKKC/ap3zNNJwpdZGuEAdNV2ULAXwoRqgCPtLab3ixRewjV6GUMy6M3C71DgIigRrFeM44xhFIzF9/Xkz9c42mD30Apnot8P+oN7KMahCFn8wuk6jKKzkPVCzIYKwZmmWZav0M6CllOPIUPmgxZ2oOwXq+CK40v9rrY6T3gWua9+gr3QKVfs1kWisYhl4SzfCbYgKd8inu+bY/rAGfdJkFOCaSacA/tUTyL1a8yi4FgEt06MekFBqo8X/VgOF+jAjHfj95QC/0C7A0IHqCEEy0/iFDq/orO1KcKQroPBfAgy90bHGeIJIXEheAX3FgrSXTe8+lODX5ljdiB29FbEPdaCan+iN9KFCIJ6fIWhK38K1kqfewKMoURj773TF90bGQJb1a9ja4EZQnEOnoIGHYxXnDXpgLpep3flKrW37JXwl5YhfKLuh7ODVGQzgWOeZwLwqpkimxrDIqG0bwFJQRL2vuYAwqTssOFPHt5WsSYGVg9fEWM",
+                "HasFace": true,
+                "PrimaryObjectScore": 0
+            }
+        ],
+        "Faces": [
+            {
+                "Id": 10,
+                "Confidence": 0.464543,
+                "Img": {
+                    "Cutboard": {
+                        "X": 975,
+                        "Y": 10,
+                        "Width": 55,
+                        "Height": 51,
+                        "Confidence": 0.9199617
+                    },
+                    "Img": {
+                        "Id": "06ab6219-b0e0-4910-b6b6-2beeb9237a70",
+                        "Width": 55,
+                        "Height": 51
+                    },
+                    "Rect": {
+                        "CenterX": 1002.5,
+                        "CenterY": 35.5,
+                        "Width": 55,
+                        "Height": 51,
+                        "Angle": 0
+                    }
+                },
+                "AlignResult": {
+                    "Scores": {
+                        "global_front_face": 1,
+                        "global_is_face": 1,
+                        "local_is_face": 0.464543
+                    }
+                },
+                "Qualities": {
+                    "AlignScore": 0.464543,
+                    "AlignScore_G_frontface": 1,
+                    "AlignScore_G_isface": 1,
+                    "Aspect": 1,
+                    "Blur": 0.14330871,
+                    "Border": 1,
+                    "DetectScore": 0.9199617,
+                    "Eye_occlusion": 0.79070884,
+                    "IsFace": 0.9983469,
+                    "Mouth_occlusion": 0.0090045305,
+                    "Pitch": 14.564923,
+                    "Roll": 4.2302895,
+                    "Size": 1,
+                    "Yaw": -0.4158698
+                },
+                "Features": "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",
+                "Attributes": [
+                    {
+                        "AttributeId": 19,
+                        "Name": "其他",
+                        "ValueId": 1,
+                        "Confidence": 0.9189453,
+                        "ValueString": "1",
+                        "ValueStr": "1",
+                        "ValueType": "ValueType_String"
+                    },
+                    {
+                        "AttributeId": 1,
+                        "Name": "年龄",
+                        "ValueId": 32,
+                        "Confidence": 0.9,
+                        "ValueString": "0",
+                        "ValueStr": "0",
+                        "ValueType": "ValueType_Int"
+                    },
+                    {
+                        "AttributeId": 4,
+                        "Name": "帽子",
+                        "ValueId": 1,
+                        "Confidence": 0.87841797,
+                        "ValueString": "无帽子",
+                        "ValueStr": "无帽子",
+                        "ValueType": "ValueType_String"
+                    },
+                    {
+                        "AttributeId": 6,
+                        "Name": "口罩",
+                        "ValueId": 1,
+                        "Confidence": 0.8564453,
+                        "ValueString": "无口罩",
+                        "ValueStr": "无口罩",
+                        "ValueType": "ValueType_String"
+                    },
+                    {
+                        "AttributeId": 16,
+                        "Name": "性别",
+                        "ValueId": 1,
+                        "Confidence": 0.7548828,
+                        "ValueString": "男",
+                        "ValueStr": "男",
+                        "ValueType": "ValueType_String"
+                    },
+                    {
+                        "AttributeId": 3,
+                        "Name": "眼镜",
+                        "ValueId": 2,
+                        "Confidence": 0.8989258,
+                        "ValueString": "有眼镜",
+                        "ValueStr": "有眼镜",
+                        "ValueType": "ValueType_String"
+                    }
+                ],
+                "PrimaryObjectScore": 0
+            }
+        ]
+    }
+}

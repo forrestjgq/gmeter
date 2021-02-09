@@ -1,0 +1,69 @@
+{
+    "Name": "sample",
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009",
+            "Proxy": ""
+        }
+    },
+    "Messages": {
+        "req": {
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "$(IMAGE)"
+                }
+            }
+        }
+    },
+    "Tests": {
+        "recognize": {
+            "PreProcess": [
+                "`list ./img.list | env -w JSON`",
+                "`json .image $(JSON) | env -w IMAGE`"
+            ],
+            "Host": "vse",
+            "Request": "req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ],
+                "Success": [
+                    "`report -n -t common`"
+                ],
+                "Failure": [
+                    "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
+                ],
+                "Template": null
+            },
+            "Timeout": "10s"
+        }
+    },
+    "Mode": "",
+    "Schedules": [
+        {
+            "Name": "recog-image",
+            "PreProcess": [],
+            "Tests": "recognize",
+            "Reporter": {
+                "Path": "sample.log",
+                "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Append": true,
+                "Templates": {
+                    "common" : { "Image": "$(IMAGE)", "Status": "`cvt -i $(STATUS)`"}
+                }
+            },
+            "Count": 0,
+            "Concurrency": 1,
+            "Env": null
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

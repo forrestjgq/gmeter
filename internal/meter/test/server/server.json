@@ -1,0 +1,110 @@
+{
+  "Servers": {
+    "library": {
+      "Address":  "${IP}:${PORT}",
+      "Routes":  [
+
+        {
+          "Comment": "route to take a ping to pong",
+          "Method":  "GET",
+          "Path":  "/ping",
+          "Request":  { "Success":  [ "`env -w STATUS 200 `" ] }
+        },
+
+        {
+          "Comment": "echo anything",
+          "Method":  "POST",
+          "Path":  "/echo",
+          "Request":  {
+            "Success":  [
+              "`env -w STATUS 200 `",
+              "`env -w RESPONSE $(REQUEST)`"
+            ]
+          }
+        },
+
+        {
+          "Comment": "add a new book",
+          "Method":  "POST",
+          "Path":  "/add",
+          "Request":  {
+            "Template": {
+              "isbn": "`assert $(@strlen $) > 0 | env -w ISBN $`",
+              "book": "`assert $(@strlen $) > 0 | env -w BOOK $`",
+              "author": "`assert $(@strlen $) > 0 | env -w AUTHOR $`",
+              "price": "`assert $ > 0 | env -w PRICE $`",
+              "publisher": "`assert $(@strlen $) > 0 | env -w PUBLISHER $`"
+            },
+            "Check": [
+              "`assert $(@strlen $(@db -r $(ISBN))) == 0`"
+            ],
+            "Success": [
+              "`db -w $(ISBN) $(REQUEST)`"
+            ],
+            "Failure": [
+              "`env -w STATUS 400`"
+            ]
+          },
+          "EndsOfRoute": "/add"
+        },
+
+        {
+          "Comment": "query book by ISBN which is presented in URL by ?isbn=xxxxx",
+          "Method":  "GET",
+          "Path":  "/query",
+          "Request":  {
+            "Check": [
+              "`assert $(@strlen $(isbn)) != 0`",
+              "`env -w JSON $(@db -r $(isbn))`",
+              "`assert $(@strlen $(JSON)) != 0`"
+            ],
+            "Success": [
+              "`json -m . $(JSON)`",
+              "`env -w RESPONSE book`"
+            ],
+            "Failure": [
+              "`print $(isbn) not found`",
+              "`env -w STATUS 404`"
+            ]
+          },
+          "Response": {
+            "book": {
+              "isbn": "$(isbn)",
+              "book": "$(book)",
+              "author": "$(author)",
+              "price": "`cvt -f $(price)`",
+              "publisher": "$(publisher)"
+            }
+          },
+          "EndsOfRoute": "/query"
+        },
+
+        {
+          "Comment": "delete book by isbn",
+          "Method":  "DELETE",
+          "Path":  "/del/{isbn}",
+          "Request":  {
+            "Check": [
+              "`assert $(@strlen $(isbn)) != 0`",
+              "`env -w JSON $(@db -r $(isbn))`",
+              "`assert $(@strlen $(JSON)) != 0`"
+            ],
+            "Success": [
+              "`db -d $(isbn)`"
+            ],
+            "Failure": [
+              "`print $(isbn) not found`",
+              "`env -w STATUS 404`"
+            ]
+          },
+          "EndsOfRoute": "/del"
+        }
+      ],
+      "Report":  {
+        "Path":  "",
+        "Format":  "",
+        "Templates":  null
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+    "Name": "batch-book",
+    "Schedules": [
+        {
+            "PreProcess": [
+                "`print Start ${SCHEDULE}`"
+            ],
+            "Name": "add-from-list",
+            "Tests": "add-list",
+            "Concurrency": 100,
+            "Parallel": 10,
+            "Env": {
+                "BookList": "../res/book.list"
+            }
+        },
+        {
+            "PreProcess": [
+                "`print Start ${SCHEDULE}`"
+            ],
+            "Name": "query-from-list",
+            "Tests": "query-list",
+            "Concurrency": 100,
+            "QPS": 20,
+            "Env": {
+                "BookList": "../res/book.list"
+            }
+        },
+        {
+            "PreProcess": [
+                "`print Start ${SCHEDULE}`"
+            ],
+            "Name": "delete-from-list",
+            "Tests": "del-list",
+            "Concurrency": 100,
+            "Parallel": 10,
+            "QPS": 20,
+            "Env": {
+                "BookList": "../res/book.list"
+            }
+        }
+    ]
+}

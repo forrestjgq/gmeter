@@ -1,0 +1,105 @@
+{
+    "Hosts": {
+        "library": {
+            "Host": "http://${IP}:${PORT}"
+        }
+    },
+
+    "Messages": {
+        "echo": {
+            "Method": "POST",
+            "Path": "/echo",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+              "author": "AUTHOR"
+            }
+        },
+
+        "add-req": {
+            "Comment": "add a new book",
+            "Method": "POST",
+            "Path": "/add",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "isbn": "$(ISBN)",
+                "book": "$(BOOK)",
+                "author": "$(AUTHOR)",
+                "price": "`cvt -f $(PRICE)`",
+                "publisher": "$(PUBLISHER)"
+            }
+        },
+
+        "query-req": {
+            "Comment": "query a new book",
+            "Method": "GET",
+            "Path": "/query?isbn=$(ISBN)"
+        },
+
+        "del-req": {
+            "Comment": "delete a new book",
+            "Method": "DELETE",
+            "Path": "/del/$(ISBN)"
+        }
+    },
+
+    "Tests": {
+        "add-list": {
+            "Comment": "add book stored in a list file",
+            "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
+            "PreProcess": [
+                "`list $(BookList) | json -m .`"
+            ],
+            "Request": "add-req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            },
+            "Timeout": "5s"
+        },
+        "query-list": {
+            "Comment": "query book stored in a list file",
+            "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
+            "PreProcess": [
+                "`list $(BookList) | json -m .`"
+            ],
+            "Request": "query-req",
+            "Response": {
+                "Template": {
+                    "isbn": "`assert $(ISBN) == $`",
+                    "book": "`assert $(BOOK) == $`",
+                    "author": "`assert $(AUTHOR) == $`",
+                    "price": "`assert $(PRICE) == $`",
+                    "publisher": "`assert $(PUBLISHER) == $`"
+                },
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            },
+            "Timeout": "5s"
+        },
+        "del-list": {
+            "Comment": "delete book stored in a list file",
+            "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
+            "PreProcess": [
+                "`list $(BookList) | json -m .`"
+            ],
+            "Request": "del-req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`"
+                ]
+            },
+            "Timeout": "5s"
+        }
+    },
+
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

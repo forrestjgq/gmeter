@@ -63,7 +63,17 @@ func (s *httpsrv) start(name string, cfg *config.HttpServer) error {
 		}
 		s.r.Methods(method).Path(rc.Path).Handler(f)
 	}
-	l, err := net.Listen("tcp", cfg.Address)
+	seg, err := makeSegments(cfg.Address)
+	if err != nil {
+		return err
+	}
+
+	addr, err := seg.compose(bg)
+	if err != nil {
+		return err
+	}
+
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}

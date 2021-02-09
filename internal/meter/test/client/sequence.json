@@ -1,0 +1,83 @@
+{
+    "Name": "sequence-book",
+
+    "Tests": {
+        "base": {
+            "Comment": "this test is used as base of other tests. See Schedule.TestBase",
+            "Response": {
+                "Check": [ "`assert $(STATUS) == 200`" ]
+            },
+            "Timeout": "1s"
+        },
+
+        "add": {
+            "Comment": [
+                "This test verifies: ",
+                "1. RequestMessage define message inside Test",
+                "2. Global Variables defined in Config.Env"
+            ],
+            "RequestMessage": {
+                "Method": "POST",
+                "Path": "/add",
+                "Headers": {
+                    "content-type": "application/json"
+                },
+                "Body": {
+                    "isbn": "${ISBN}",
+                    "book": "${BOOK}",
+                    "author": "${AUTHOR}",
+                    "price": "`cvt -f ${PRICE}`",
+                    "publisher": "${PUBLISHER}"
+                }
+            }
+        },
+
+        "query": {
+            "Comment": [
+                "This test verifies: ",
+                "1. eval write global variable value to local one",
+                "2. Quote tests from global template"
+            ],
+            "PreProcess": [
+                "`eval ISBN=${ISBN}`"
+            ],
+            "Request": "query-req",
+            "Response": {
+                "Template": {
+                    "isbn": "`assert ${ISBN} == $`",
+                    "book": "`assert ${BOOK} == $`",
+                    "author": "`assert ${AUTHOR} == $`",
+                    "price": "`assert ${PRICE} == $`",
+                    "publisher": "`assert ${PUBLISHER} == $`"
+                }
+            }
+        },
+
+        "del": {
+            "PreProcess": [
+                "`eval ISBN = ${ISBN}`"
+            ],
+            "Request": "del-req"
+        }
+    },
+
+    "Schedules": [
+        {
+            "PreProcess": [
+                "`print Start Sequence`"
+            ],
+            "Name": "Sequence",
+            "Tests": "add|query|del",
+            "TestBase": "base",
+            "Count": 1
+        }
+    ],
+
+    "Env": {
+        "ISBN": "10000",
+        "BOOK": "Big bang",
+        "AUTHOR": "Sheldon Cooper",
+        "PRICE": "1.22",
+        "PUBLISHER": "HB"
+    }
+}

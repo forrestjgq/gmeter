@@ -35,7 +35,7 @@ type TestFruit struct {
 
 func examplePath() string {
 	_, f, _, _ := runtime.Caller(0)
-	d := filepath.Dir(f) + "/../../example"
+	d := filepath.Dir(f) + "/test/start"
 	return filepath.Clean(d)
 }
 func readExample(name string) ([]byte, error) {

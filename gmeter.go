@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/forrestjgq/gmeter/internal/exec"
+	"github.com/forrestjgq/gmeter/internal/meter"
 
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/pkg/errors"
@@ -74,7 +74,7 @@ func run() error {
 		opt.Configs = flag.Args()
 	}
 
-	return exec.Execute(opt)
+	return meter.Execute(opt)
 }
 func main() {
 	err := run()

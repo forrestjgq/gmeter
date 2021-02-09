@@ -116,11 +116,16 @@ func (db *kvdb) dup() env {
 	return db
 }
 
+var globaldb env
+
 func createDB() env {
-	return &kvdb{
-		m:   make(map[string]string),
-		mtx: sync.Mutex{},
+	if globaldb == nil {
+		globaldb = &kvdb{
+			m:   make(map[string]string),
+			mtx: sync.Mutex{},
+		}
 	}
+	return globaldb
 }
 
 // container to store environment

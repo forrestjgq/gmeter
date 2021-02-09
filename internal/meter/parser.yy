@@ -38,9 +38,6 @@ stat:
 
 expression:
 	logical_or {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: expression -> logical_or")
-	    }
         $$ = $1
 	}
 	;
@@ -75,9 +72,6 @@ primary:
 
 postfix:
 	primary {
-	    if yyDebug > 5 {
-	        fmt.Println(" RULE: postfix -> primary")
-	    }
         $$ = $1
 	}
 	| 	postfix UNARY_ARITH_OP {
@@ -87,9 +81,6 @@ postfix:
 
 unary:
 	postfix{
-	    if yyDebug > 5 {
-	        fmt.Println(" RULE: unary -> postfix")
-	    }
         $$ = $1
 	}
 	| 	UNARY_ARITH_OP unary{
@@ -103,9 +94,6 @@ unary:
 
 multiplicative:
 	unary {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: multiplicative -> unary")
-	    }
         $$ = $1
 	}
 	| multiplicative '*' unary {
@@ -121,75 +109,48 @@ multiplicative:
 
 additive:
 	multiplicative  {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: additive -> multiplicative")
-	    }
         $$ = $1
 	}
 	| additive '+' multiplicative {
         $$ = makeCalc($1, "+", $3)
-
 	}
 	| additive '-' multiplicative {
         $$ = makeCalc($1, "-", $3)
-
 	}
 	;
 
 
 relational:
 	additive {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: relational -> additive")
-	    }
         $$ = $1
-
 	}
 	| relational COMP_OP additive {
         $$ = makeCalc($1, $2, $3)
-
 	}
 	;
 
 equality:
 	relational {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: equality -> relational")
-	    }
         $$ = $1
-
 	}
 	| equality EQUAL_OP relational {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: equality EQUAL_OP relational ")
-	    }
         $$ = makeCalc($1, $2, $3)
-
 	}
 	;
 
 
 logical_and:
 	equality {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: logical_and -> equality")
-	    }
         $$ = $1
-
 	}
 	| logical_and AND_OP equality {
         $$ = makeCalc($1, $2, $3)
-
 	}
 	;
 
 logical_or:
 	logical_and {
-	    if yyDebug > 5 {
-            fmt.Println(" RULE: logical_or -> logical_and")
-	    }
         $$ = $1
-
 	}
 	| logical_or OR_OP logical_and {
         $$ = makeCalc($1, $2, $3)

@@ -1,0 +1,67 @@
+{
+    "Name": "sample",
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009",
+            "Proxy": ""
+        }
+    },
+    "Messages": {
+        "req": {
+            "Method": "POST",
+            "Path": "/ai/detect/all",
+            "Headers": {
+                "content-type": "application/json"
+            },
+            "Body": {
+                "image": {
+                    "url": "/file/to/a.jpg"
+                }
+            }
+        }
+    },
+    "Tests": {
+        "recognize": {
+            "PreProcess": [
+                "`print ${SCHEDULE} runs in routine $(ROUTINE) seq $(SEQUENCE)`"
+            ],
+            "Host": "vse",
+            "Request": "req",
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`",
+                    "`json .Context.Status $(RESPONSE) | assert $$ == 200`",
+                    "`json -n .Result.Pedestrian $(RESPONSE) | assert $$ == 8`",
+                    "`json -n .Result.Faces $(RESPONSE) | assert $$ == 1`"
+                ],
+                "Success": [
+                    "`report -n -t common`"
+                ],
+                "Failure": [
+                    "`report -n -t common`"
+                ]
+            },
+            "Timeout": "10s"
+        }
+    },
+    "Mode": "",
+    "Schedules": [
+        {
+            "Name": "recog-image",
+            "Tests": "recognize",
+            "Reporter": {
+                "Path": "report.log",
+                "Format": "{ \"Error\": \"$(FAILURE)\" }",
+                "Templates": {
+                    "common" : { "Error": "", "Status": "`cvt -i $(STATUS)`", "Response": "`cvt -r $(RESPONSE)`" }
+                }
+            },
+            "Count": 1000,
+            "Concurrency": 10
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

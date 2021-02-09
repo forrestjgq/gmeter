@@ -1,4 +1,4 @@
-package exec
+package meter
 
 import (
 	"bufio"
@@ -17,7 +17,6 @@ import (
 
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/forrestjgq/gmeter/internal/arcee"
-	"github.com/forrestjgq/gmeter/internal/meter"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -30,20 +29,20 @@ func Execute(opt *config.GOptions) error {
 
 	if len(opt.Vars) > 0 {
 		for k, v := range opt.Vars {
-			meter.AddGlobalVariable(k, v)
+			AddGlobalVariable(k, v)
 		}
 	}
 
 	hasServer := false
 	if len(opt.HTTPServerCfg) > 0 {
-		err := meter.StartHTTPServer(opt.HTTPServerCfg)
+		err := StartHTTPServer(opt.HTTPServerCfg)
 		if err != nil {
 			return errors.Wrapf(err, "HTTP server start")
 		} else {
 			hasServer = true
 		}
 		defer func() {
-			meter.StopAll()
+			StopAll()
 		}()
 	}
 
@@ -64,7 +63,7 @@ func Execute(opt *config.GOptions) error {
 
 	executor := func(path string) error {
 		fmt.Println("gmeter starts ", path)
-		c, err := loadCfg(path)
+		c, err := loadConfig(path)
 		if err != nil {
 			return errors.Wrapf(err, "load config %s", path)
 		}
@@ -83,7 +82,7 @@ func Execute(opt *config.GOptions) error {
 		if err != nil {
 			return errors.Wrapf(err, "get abs config path %s", path)
 		}
-		err = meter.StartConfig(c)
+		err = StartConfig(c)
 		if err != nil {
 			return errors.Wrap(err, "test "+path)
 		}
@@ -297,7 +296,7 @@ func walk(path string, executor func(s string) error) error {
 
 	return nil
 }
-func loadCfg(path string) (*config.Config, error) {
+func loadConfig(path string) (*config.Config, error) {
 
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
