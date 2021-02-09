@@ -1,7 +1,7 @@
 {
   "Servers": {
     "library": {
-      "Address":  "${IP}:${PORT}",
+      "Address":  ":0",
       "Routes":  [
 
         {
