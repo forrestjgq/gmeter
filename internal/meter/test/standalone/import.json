@@ -78,7 +78,7 @@
             "Name": "ImportSchedule",
             "Tests": "add|query|del",
             "TestBase": "base",
-            "Count": 1
+            "Count": 100
         }
     ],
 
