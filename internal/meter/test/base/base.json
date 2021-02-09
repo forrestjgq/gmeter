@@ -1,7 +1,7 @@
 {
     "Hosts": {
         "library": {
-            "Host": "http://${IP}:${PORT}"
+            "Host": "http://127.0.0.1:${HTTP.PORT}"
         }
     },
 

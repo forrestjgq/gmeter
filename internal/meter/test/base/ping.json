@@ -3,7 +3,7 @@
     "Tests": {
         "ping": {
             "PreProcess": [ "`until $(@db -r PONG) == 1 | print Waiting for server ready...`" ],
-            "Hosts": "http://127.0.0.1:8009",
+            "Hosts": "http://127.0.0.1:${HTTP.PORT}",
             "RequestMessage": { "Path": "/ping" },
             "Response": {
                 "Check": [ 

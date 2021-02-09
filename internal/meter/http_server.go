@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -79,6 +80,8 @@ func (s *httpsrv) start(name string, cfg *config.HttpServer) error {
 	}
 	s.l = l
 	s.port = l.Addr().(*net.TCPAddr).Port
+
+	AddGlobalVariable("HTTP.PORT", strconv.Itoa(s.port))
 
 	s.s = &http.Server{
 		Handler: s.r,

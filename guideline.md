@@ -1530,6 +1530,9 @@ type Route struct {
 	Env      map[string]string          // predefined local variables
 }
 ```
+
+The port server is listening will be written to a global variable `${HTTP.PORT}`. HTTP client could use this value to make up a host.
+
 A route matches HTTP request by `Method` and `Path`. If `Headers` is defined, a header match is also required.
 Route path matching follows [gorilla mux](https://github.com/gorilla/mux), and path variables and request parameters in URL are written into local variables automatically by gmeter.
 

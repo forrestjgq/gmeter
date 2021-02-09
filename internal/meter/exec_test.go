@@ -9,10 +9,6 @@ import (
 func TestExecute(t *testing.T) {
 
 	opt := &config.GOptions{
-		Vars: map[string]string{
-			"IP":   "127.0.0.1",
-			"PORT": "18009",
-		},
 		Template: "test/base/base.json",
 		Configs: []string{
 			"test/base/ping.json",
@@ -32,10 +28,6 @@ func TestExecute(t *testing.T) {
 func TestExecuteImports(t *testing.T) {
 
 	opt := &config.GOptions{
-		Vars: map[string]string{
-			"IP":   "127.0.0.1",
-			"PORT": "18009",
-		},
 		Configs: []string{
 			"test/standalone/import.json",
 		},
