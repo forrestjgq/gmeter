@@ -68,6 +68,7 @@ const (
 	LOCAL_VAR  // $(xxx)
 	GLOBAL_VAR // ${xxx}
 	JSON_VAR   // $<xxx>
+	ARGUMENT   // $1, $2, ...
 
 )
 

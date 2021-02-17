@@ -22,6 +22,7 @@ const (
 	varLocal varType = iota
 	varGlobal
 	varJson
+	varArgument
 )
 
 type varReader struct {
@@ -42,6 +43,12 @@ func (v *varReader) compose(bg *background) (string, error) {
 		return bg.getGlobalEnv(v.name), nil
 	case varJson:
 		return bg.getJsonEnv(v.name), nil
+	case varArgument:
+		idx, err := strconv.Atoi(v.name)
+		if err != nil {
+			return "", errors.Wrapf(err, "convert argument index %s", v.name)
+		}
+		return bg.getArgument(idx)
 	default:
 		return "", errors.Errorf("unknown var type %d", v.typ)
 	}

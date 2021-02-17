@@ -93,6 +93,8 @@ func (s *Scanner) Lex(lval *yySymType) int {
 		ret = V_GLOBAL
 	case JSON_VAR:
 		ret = V_JSON
+	case ARGUMENT:
+		ret = V_ARGUMENT
 	}
 
 	lval.str = lit
@@ -388,8 +390,13 @@ func (s *Scanner) scanVars() (tok Token, lit string) {
 		s.scanVarEnds('{', '}')
 		lit = string(s.src[offs+1 : s.offset-1])
 	default:
-		tok = JSON_VAR
-		lit = "value"
+		if unicode.IsDigit(s.ch) {
+			tok = ARGUMENT
+			lit = s.scanInt()
+		} else {
+			tok = JSON_VAR
+			lit = "value"
+		}
 	}
 	return
 }
@@ -447,6 +454,21 @@ func (s *Scanner) digits(base int, invalid *int) (digsep int) {
 	return
 }
 
+func (s *Scanner) scanInt() string {
+	offs := s.offset
+	invalid := -1 // index of invalid digit in literal, or < 0
+	digsep := s.digits(10, &invalid)
+
+	lit := string(s.src[offs:s.offset])
+	if invalid >= 0 {
+		s.errorf(invalid, "invalid digit %q", lit[invalid-offs])
+	}
+	if digsep&2 != 0 {
+		s.error(offs, "_ is not expected")
+	}
+
+	return lit
+}
 func (s *Scanner) scanNumber() (Token, string) {
 	offs := s.offset
 	tok := ILLEGAL

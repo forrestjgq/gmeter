@@ -467,6 +467,10 @@ type Config struct {
 	// this.
 	Imports []string
 
+	// Functions defines several groups, each one is stored inside a map, with a function name
+	// as map key.
+	Functions map[string][]string
+
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
 	Hosts map[string]*Host

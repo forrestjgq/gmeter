@@ -39,6 +39,7 @@ func TestSegments(t *testing.T) {
 	bg.setGlobalEnv("GENV", "global variable")
 	bg.setLocalEnv("LENV", "local variable")
 	bg.setLocalEnv("FILE", name)
+
 	enc := base64.StdEncoding.EncodeToString([]byte(base))
 	fenc := base64.StdEncoding.EncodeToString([]byte(content))
 
@@ -167,6 +168,69 @@ func TestSegments(t *testing.T) {
 			t.Fatal("expect EOF")
 		} else if !isEof(err) {
 			t.Fatalf("expect EOF, got %s", err)
+		}
+	}
+
+}
+func TestFunction(t *testing.T) {
+	bg := &background{
+		name:   "",
+		local:  makeSimpEnv(),
+		global: makeSimpEnv(),
+		lr:     nil,
+		err:    nil,
+	}
+
+	add := []string{
+		"`print add $1 $2`",
+		"`eval $1 + $2`",
+	}
+	adder, _ := makeGroup(add, false)
+
+	mul := []string{
+		"`print mul $1 $2`",
+		"`eval $1 * $2`",
+	}
+	muler, _ := makeGroup(mul, false)
+
+	comp := []string{
+		"`print compound $1 $2`",
+		"`eval $(@call add $1 $2) + $(@call mul $1 $2)`",
+	}
+	comper, _ := makeGroup(comp, false)
+	bg.functions = map[string]composable{
+		"add":  adder,
+		"mul":  muler,
+		"comp": comper,
+	}
+
+	m := map[string]string{
+		"`call add 3 5 | assert $$ == 8`":   "",
+		"`call mul 3 5 | assert $$ == 15`":  "",
+		"`call comp 3 5 | assert $$ == 23`": "",
+	}
+	for k, v := range m {
+		bg.setError(nil)
+
+		t.Log(k)
+		if seg, err := makeSegments(k); err != nil {
+			t.Fatal(err)
+		} else {
+			if res, err := seg.compose(bg); err != nil {
+				if v != "ERROR" {
+					t.Fatal(err)
+				} else {
+					t.Log("get error: ", err)
+				}
+			} else if res != v {
+				if v == "NE" {
+					if len(res) == 0 {
+						t.Fatalf("expect not empty, got empty")
+					}
+				} else {
+					t.Fatalf("expect %s, get %s", v, res)
+				}
+			}
 		}
 	}
 

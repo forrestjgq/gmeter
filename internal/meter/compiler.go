@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/pkg/errors"
@@ -1352,6 +1353,42 @@ func makeBase64(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                           call                            ///////////
+////////////////////////////////////////////////////////////////////////////////
+type cmdCall struct {
+	raw  string
+	args arguments
+}
+
+func (c *cmdCall) iterable() bool {
+	return false
+}
+
+func (c *cmdCall) close() {
+}
+
+func (c *cmdCall) execute(bg *background) (string, error) {
+	return c.args.call(bg)
+}
+
+func makeCall(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	c := &cmdCall{
+		raw: raw,
+	}
+	if len(v) == 0 {
+		return nil, errors.New("eval nothing")
+	}
+
+	var err error
+	c.args, err = makeArguments(v)
+	if err != nil {
+		return nil, errors.Wrapf(err, "make function call(%s)", raw)
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                           eval                            ///////////
 ////////////////////////////////////////////////////////////////////////////////
 type cmdEval struct {
@@ -1712,6 +1749,7 @@ func init() {
 		"write":   makeWrite,
 		"assert":  makeAssert,
 		"eval":    makeEval,
+		"call":    makeCall,
 		"json":    makeJson,
 		"list":    makeList,
 		"b64":     makeBase64,
@@ -1779,6 +1817,7 @@ const (
 	phaseLocal
 	phaseGlobal
 	phaseJsonEnv
+	phaseArguments
 	phaseString
 )
 
@@ -1791,7 +1830,16 @@ func makeSegments(str string) (segments, error) {
 	depth := 0
 	var segs segments
 
-	for i, c := range r {
+	i :=  0
+	c := rune(-1)
+	n := c
+	for {
+		i, c := range r
+		if i >= len(r) {
+			break
+		}
+		c =
+
 		old := phase
 		switch phase {
 		case phaseString:
@@ -1811,6 +1859,9 @@ func makeSegments(str string) (segments, error) {
 				phase = phaseGlobal
 			} else if c == '<' {
 				phase = phaseJsonEnv
+			} else if unicode.IsDigit(c) {
+				phase = phaseArguments
+				start--
 			} else {
 				return nil, errors.Errorf("[%d]: expect '(' or '{' after '$'", i)
 			}
@@ -1827,6 +1878,20 @@ func makeSegments(str string) (segments, error) {
 		case phaseJsonEnv:
 			if c == '>' {
 				phase = phaseString
+			}
+		case phaseArguments:
+			if unicode.IsLetter(c) {
+				return nil, errors.Errorf("invalid argument char %c", c)
+			}
+			if unicode.IsDigit(c) {
+				// continue
+			} else if unicode.IsSpace(c) || c == '|' {
+				start--
+				phase = phaseString
+			} else if i == len(r)-1 {
+				phase = phaseString
+			} else {
+				return nil, errors.Errorf("invalid argument char %c", c)
 			}
 		case phaseGlobal:
 			if c == '{' {
@@ -1868,6 +1933,20 @@ func makeSegments(str string) (segments, error) {
 					}
 					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
 						return bg.getJsonEnv(name), nil
+					}})
+				}
+			case phaseArguments:
+				if i > start {
+					name := string(r[start:i])
+					if len(name) == 0 {
+						return nil, errors.New("no arguments")
+					}
+					idx, err := strconv.Atoi(name)
+					if err != nil {
+						return nil, errors.Wrapf(err, "make arg index %s", name)
+					}
+					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
+						return bg.getArgument(idx)
 					}})
 				}
 			case phaseLocal:
@@ -1930,16 +2009,17 @@ type group struct {
 
 func (g *group) compose(bg *background) (string, error) {
 	var err error
+	var output string
 	for i, seg := range g.segs {
 		bg.setInput("")
-		_, err = seg.compose(bg)
+		output, err = seg.compose(bg)
 		if err != nil {
 			if !g.ignoreError {
 				return "", errors.Wrapf(err, "group[%d]", i)
 			}
 		}
 	}
-	return "", nil
+	return output, nil
 }
 
 func (g *group) iterable() bool {

@@ -177,11 +177,24 @@ func create(cfg *config.Config) ([]*plan, error) {
 	}
 	var plans []*plan
 
+	functions := map[string]composable{}
+	if cfg.Functions != nil {
+		for k, v := range cfg.Functions {
+			c, err := makeGroup(v, false)
+			if err != nil {
+				return nil, errors.Wrapf(err, "make function %s", k)
+			}
+			functions[k] = c
+		}
+	}
+
 	for _, s := range cfg.Schedules {
 		bg, err := createBackground(cfg, s)
 		if err != nil {
 			return nil, errors.Wrapf(err, "schedule %s create background ", s.Name)
 		}
+		bg.functions = functions
+
 		tests := strings.Split(s.Tests, "|")
 		if len(tests) == 0 {
 			return nil, errors.Errorf("schedule %s contains no tests", s.Name)
@@ -441,6 +454,19 @@ func override(template, cfg *config.Config) {
 		}
 
 		cfg.Options[k] = v
+	}
+
+	for k, v := range template.Functions {
+		if cfg.Functions != nil {
+			if _, ok := cfg.Functions[k]; ok {
+				// already defined, skip
+				continue
+			}
+
+		} else {
+			cfg.Functions = make(map[string][]string)
+		}
+		cfg.Functions[k] = v
 	}
 }
 func StartConfig(cfg *config.Config) error {

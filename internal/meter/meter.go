@@ -137,6 +137,53 @@ type env interface {
 	dup() env
 }
 
+type arguments []composable
+
+func (a arguments) get(bg *background, idx int) (string, error) {
+	if idx >= len(a) {
+		return "", errors.Errorf("argument %d out of range %d", idx, len(a))
+	}
+
+	c := a[idx]
+	s, err := c.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "get argument %d", idx)
+	}
+	return s, nil
+}
+func (a arguments) call(bg *background) (string, error) {
+	bg.fargs = append(bg.fargs, a)
+	defer func() {
+		bg.fargs = bg.fargs[:len(bg.fargs)-1]
+	}()
+
+	function, err := a.get(bg, 0)
+	if err != nil {
+		return "", errors.Wrapf(err, "compose function name")
+	}
+	if f, exist := bg.functions[function]; exist {
+		s, err := f.compose(bg)
+		if err != nil {
+			return "", errors.Wrapf(err, "call function %s", function)
+		}
+		return s, nil
+	}
+
+	return "", errors.Errorf("function %s not found", function)
+}
+
+func makeArguments(args []string) (arguments, error) {
+	var a arguments
+	for _, arg := range args {
+		c, err := makeSegments(arg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "compose argument %s", arg)
+		}
+		a = append(a, c)
+	}
+	return a, nil
+}
+
 type background struct {
 	name              string // global test name
 	db, local, global env
@@ -146,6 +193,8 @@ type background struct {
 	rpt               *reporter
 	predefine         map[string]string
 	fc                *flowControl
+	fargs             []arguments // arguments stacks
+	functions         map[string]composable
 }
 
 const (
@@ -168,6 +217,7 @@ func (bg *background) dup() *background {
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
 		fc:        bg.fc,
+		functions: bg.functions,
 	}
 }
 func (bg *background) next() {
@@ -276,6 +326,19 @@ func (bg *background) dbWrite(key string, value string) {
 }
 func (bg *background) dbDelete(key string) {
 	bg.db.delete(key)
+}
+func (bg *background) getArgument(index int) (string, error) {
+	length := len(bg.fargs)
+	if length == 0 {
+		return "", errors.Errorf("not in function call")
+	}
+
+	args := bg.fargs[length-1]
+	if index >= len(args) {
+		return "", errors.Errorf("arg %d exceed range %d", index, len(args))
+	}
+	arg := args[index]
+	return arg.compose(bg)
 }
 func (bg *background) getLocalEnv(key string) string {
 	if key == KeyError {

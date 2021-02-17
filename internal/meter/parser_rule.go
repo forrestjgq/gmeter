@@ -7,8 +7,6 @@ import __yyfmt__ "fmt"
 
 //line parser.yy:2
 
-import "fmt"
-
 //line parser.yy:7
 type yySymType struct {
 	yys  int
@@ -31,6 +29,7 @@ const V_LOCAL = 57355
 const V_GLOBAL = 57356
 const V_JSON = 57357
 const CMD_EXEC = 57358
+const V_ARGUMENT = 57359
 
 var yyToknames = [...]string{
 	"$end",
@@ -49,6 +48,7 @@ var yyToknames = [...]string{
 	"V_GLOBAL",
 	"V_JSON",
 	"CMD_EXEC",
+	"V_ARGUMENT",
 	"';'",
 	"'('",
 	"')'",
@@ -66,7 +66,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line parser.yy:199
+//line parser.yy:163
 
 //line yacctab:1
 var yyExca = [...]int{
@@ -77,75 +77,75 @@ var yyExca = [...]int{
 
 const yyPrivate = 57344
 
-const yyLast = 58
+const yyLast = 60
 
 var yyAct = [...]int{
-	12, 10, 8, 9, 2, 11, 29, 30, 36, 17,
-	14, 31, 32, 33, 7, 35, 37, 18, 19, 20,
-	21, 4, 22, 23, 15, 6, 50, 24, 39, 42,
-	44, 43, 47, 48, 49, 45, 46, 5, 17, 14,
-	41, 25, 26, 27, 38, 28, 18, 19, 20, 21,
-	40, 22, 34, 15, 1, 3, 13, 16,
+	12, 7, 10, 30, 31, 11, 51, 25, 37, 17,
+	14, 32, 33, 34, 9, 36, 38, 18, 19, 20,
+	22, 21, 8, 23, 2, 15, 6, 4, 42, 5,
+	17, 14, 45, 48, 49, 50, 46, 47, 18, 19,
+	20, 22, 21, 44, 23, 24, 15, 26, 27, 40,
+	43, 39, 41, 28, 29, 35, 1, 3, 13, 16,
 }
 
 var yyPact = [...]int{
-	33, 6, -1000, -1000, -1000, 15, 30, 32, 35, 38,
-	-18, -10, -1000, 46, 4, 4, -1000, -1000, -1000, -1000,
-	-1000, -1000, 4, 33, 4, 4, 4, 4, 4, 4,
-	4, 4, 4, 4, -1000, -1000, -1000, -1000, 7, -1000,
-	30, 32, 35, 38, -18, -10, -10, -1000, -1000, -1000,
-	-1000,
+	25, 27, -1000, -1000, -1000, -5, 36, 38, 45, 47,
+	-22, -11, -1000, 49, 4, 4, -1000, -1000, -1000, -1000,
+	-1000, -1000, -1000, 4, 25, 4, 4, 4, 4, 4,
+	4, 4, 4, 4, 4, -1000, -1000, -1000, -1000, -14,
+	-1000, 36, 38, 45, 47, -22, -11, -11, -1000, -1000,
+	-1000, -1000,
 }
 
 var yyPgo = [...]int{
-	0, 57, 56, 0, 5, 1, 3, 2, 14, 25,
-	21, 55, 54, 4,
+	0, 59, 58, 0, 5, 2, 14, 22, 1, 26,
+	27, 57, 56, 24,
 }
 
 var yyR1 = [...]int{
 	0, 12, 12, 13, 13, 10, 11, 1, 1, 1,
-	1, 1, 1, 1, 2, 2, 3, 3, 3, 4,
-	4, 4, 4, 5, 5, 5, 6, 6, 7, 7,
-	8, 8, 9, 9,
+	1, 1, 1, 1, 1, 2, 2, 3, 3, 3,
+	4, 4, 4, 4, 5, 5, 5, 6, 6, 7,
+	7, 8, 8, 9, 9,
 }
 
 var yyR2 = [...]int{
 	0, 1, 3, 1, 1, 1, 3, 1, 1, 1,
-	1, 1, 1, 3, 1, 2, 1, 2, 2, 1,
-	3, 3, 3, 1, 3, 3, 1, 3, 1, 3,
-	1, 3, 1, 3,
+	1, 1, 1, 1, 3, 1, 2, 1, 2, 2,
+	1, 3, 3, 3, 1, 3, 3, 1, 3, 1,
+	3, 1, 3, 1, 3,
 }
 
 var yyChk = [...]int{
 	-1000, -12, -13, -11, -10, 4, -9, -8, -7, -6,
-	-5, -4, -3, -2, 6, 20, -1, 5, 13, 14,
-	15, 16, 18, 17, 12, 11, 10, 8, 7, 24,
-	25, 21, 22, 23, 6, -3, 4, -3, -10, -13,
-	-9, -8, -7, -6, -5, -4, -4, -3, -3, -3,
-	19,
+	-5, -4, -3, -2, 6, 21, -1, 5, 13, 14,
+	15, 17, 16, 19, 18, 12, 11, 10, 8, 7,
+	25, 26, 22, 23, 24, 6, -3, 4, -3, -10,
+	-13, -9, -8, -7, -6, -5, -4, -4, -3, -3,
+	-3, 20,
 }
 
 var yyDef = [...]int{
-	0, -2, 1, 3, 4, 8, 5, 32, 30, 28,
-	26, 23, 19, 16, 0, 0, 14, 7, 9, 10,
-	11, 12, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 15, 17, 8, 18, 0, 2,
-	6, 33, 31, 29, 27, 24, 25, 20, 21, 22,
-	13,
+	0, -2, 1, 3, 4, 8, 5, 33, 31, 29,
+	27, 24, 20, 17, 0, 0, 15, 7, 9, 10,
+	11, 12, 13, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 16, 18, 8, 19, 0,
+	2, 6, 34, 32, 30, 28, 25, 26, 21, 22,
+	23, 14,
 }
 
 var yyTok1 = [...]int{
 	1, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 20, 3, 3, 3, 23, 3, 3,
-	18, 19, 21, 24, 3, 25, 3, 22, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 3, 3, 17,
+	3, 3, 3, 21, 3, 3, 3, 24, 3, 3,
+	19, 20, 22, 25, 3, 26, 3, 23, 3, 3,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 18,
 }
 
 var yyTok2 = [...]int{
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16,
+	12, 13, 14, 15, 16, 17,
 }
 
 var yyTok3 = [...]int{
@@ -519,212 +519,179 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:40
 		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: expression -> logical_or")
-			}
 			yyVAL.comp = yyDollar[1].comp
 		}
 	case 6:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:48
+//line parser.yy:45
 		{
 			yyVAL.comp = makeAssign(yyDollar[1].str, yyDollar[2].str, yyDollar[3].comp)
 		}
 	case 7:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:53
+//line parser.yy:50
 		{
 			yyVAL.comp = makeStaticReader(yyDollar[1].str)
 		}
 	case 8:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:56
+//line parser.yy:53
 		{
 			yyVAL.comp = makeStaticReader(yyDollar[1].str)
 		}
 	case 9:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:59
+//line parser.yy:56
 		{
 			yyVAL.comp = makeVarReader(varLocal, yyDollar[1].str)
 		}
 	case 10:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:62
+//line parser.yy:59
 		{
 			yyVAL.comp = makeVarReader(varGlobal, yyDollar[1].str)
 		}
 	case 11:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:65
+//line parser.yy:62
 		{
 			yyVAL.comp = makeVarReader(varJson, yyDollar[1].str)
 		}
 	case 12:
 		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:65
+		{
+			yyVAL.comp = makeVarReader(varArgument, yyDollar[1].str)
+		}
+	case 13:
+		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:68
 		{
 			yyVAL.comp = makeCommand(yyDollar[1].str)
 		}
-	case 13:
+	case 14:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.yy:71
 		{
 			yyVAL.comp = yyDollar[2].comp
 		}
-	case 14:
+	case 15:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:77
 		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: postfix -> primary")
-			}
 			yyVAL.comp = yyDollar[1].comp
 		}
-	case 15:
+	case 16:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.yy:83
+//line parser.yy:80
 		{
 			yyVAL.comp = makePostUnary(yyDollar[1].comp, yyDollar[2].str)
 		}
-	case 16:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:89
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: unary -> postfix")
-			}
-			yyVAL.comp = yyDollar[1].comp
-		}
 	case 17:
-		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.yy:95
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:86
 		{
-			yyVAL.comp = makePreUnary(yyDollar[2].comp, yyDollar[1].str)
+			yyVAL.comp = yyDollar[1].comp
 		}
 	case 18:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line parser.yy:98
+//line parser.yy:89
+		{
+			yyVAL.comp = makePreUnary(yyDollar[2].comp, yyDollar[1].str)
+		}
+	case 19:
+		yyDollar = yyS[yypt-2 : yypt+1]
+//line parser.yy:92
 		{
 			yyVAL.comp = makeNotUnary(yyDollar[2].comp)
 		}
-	case 19:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:105
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: multiplicative -> unary")
-			}
-			yyVAL.comp = yyDollar[1].comp
-		}
 	case 20:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:111
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:99
 		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, "*", yyDollar[3].comp)
+			yyVAL.comp = yyDollar[1].comp
 		}
 	case 21:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:114
+//line parser.yy:102
 		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, "/", yyDollar[3].comp)
+			yyVAL.comp = makeCalc(yyDollar[1].comp, "*", yyDollar[3].comp)
 		}
 	case 22:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:117
+//line parser.yy:105
+		{
+			yyVAL.comp = makeCalc(yyDollar[1].comp, "/", yyDollar[3].comp)
+		}
+	case 23:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line parser.yy:108
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, "%", yyDollar[3].comp)
 		}
-	case 23:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:123
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: additive -> multiplicative")
-			}
-			yyVAL.comp = yyDollar[1].comp
-		}
 	case 24:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:129
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:114
 		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, "+", yyDollar[3].comp)
-
+			yyVAL.comp = yyDollar[1].comp
 		}
 	case 25:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:133
+//line parser.yy:117
 		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, "-", yyDollar[3].comp)
-
+			yyVAL.comp = makeCalc(yyDollar[1].comp, "+", yyDollar[3].comp)
 		}
 	case 26:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:141
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line parser.yy:120
 		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: relational -> additive")
-			}
-			yyVAL.comp = yyDollar[1].comp
-
+			yyVAL.comp = makeCalc(yyDollar[1].comp, "-", yyDollar[3].comp)
 		}
 	case 27:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:148
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:127
 		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
-
+			yyVAL.comp = yyDollar[1].comp
 		}
 	case 28:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line parser.yy:130
+		{
+			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
+		}
+	case 29:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:136
+		{
+			yyVAL.comp = yyDollar[1].comp
+		}
+	case 30:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line parser.yy:139
+		{
+			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
+		}
+	case 31:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line parser.yy:146
+		{
+			yyVAL.comp = yyDollar[1].comp
+		}
+	case 32:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line parser.yy:149
+		{
+			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
+		}
+	case 33:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line parser.yy:155
 		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: equality -> relational")
-			}
 			yyVAL.comp = yyDollar[1].comp
-
 		}
-	case 29:
+	case 34:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:162
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: equality EQUAL_OP relational ")
-			}
-			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
-
-		}
-	case 30:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:173
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: logical_and -> equality")
-			}
-			yyVAL.comp = yyDollar[1].comp
-
-		}
-	case 31:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:180
-		{
-			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
-
-		}
-	case 32:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line parser.yy:187
-		{
-			if yyDebug > 5 {
-				fmt.Println(" RULE: logical_or -> logical_and")
-			}
-			yyVAL.comp = yyDollar[1].comp
-
-		}
-	case 33:
-		yyDollar = yyS[yypt-3 : yypt+1]
-//line parser.yy:194
+//line parser.yy:158
 		{
 			yyVAL.comp = makeCalc(yyDollar[1].comp, yyDollar[2].str, yyDollar[3].comp)
 		}
