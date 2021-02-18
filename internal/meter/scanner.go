@@ -114,10 +114,10 @@ const bom = 0xFEFF // byte order mark, only permitted as very first character
 func (s *Scanner) next() {
 	if s.rdOffset < len(s.src) {
 		s.offset = s.rdOffset
-		if s.ch == '\n' {
-			//s.lineOffset = s.offset
-			//s.file.AddLine(s.offset)
-		}
+		//if s.ch == '\n' {
+		//s.lineOffset = s.offset
+		//s.file.AddLine(s.offset)
+		//}
 		r, w := rune(s.src[s.rdOffset]), 1
 		switch {
 		case r == 0:

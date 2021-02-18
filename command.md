@@ -541,6 +541,12 @@ If report without a valid format string, nothing is reported.
 
 if `[-n]` is present, an extra newline `\n` is appended.
 
+## call - function call
+```
+call <function> <arguments...>
+```
+
+Call a function `<function>` defined by `Config.Functions`, and the arguments is listed in `<arguments...>`.
 
 ## lua support
 NOT SUPPORTED YET.

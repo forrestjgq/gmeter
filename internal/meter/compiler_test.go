@@ -65,65 +65,68 @@ func TestSegments(t *testing.T) {
     }
 `
 	bg.setLocalEnv("JSON", json)
-	m := map[string]string{
-		"LocalEnv: this is something $(LENV)":                                        "LocalEnv: this is something local variable",
-		"GlobalEnv: this is something ${GENV}":                                       "GlobalEnv: this is something global variable",
-		"echo: `echo \"$(FILE)\"` ends":                                              "echo: " + name + " ends",
-		"echo: `echo` ends":                                                          "echo:  ends",
-		"echo: `echo \"what oop\"s` ends":                                            "echo: what oops ends",
-		"echo: `echo what oops` ends":                                                "echo: what oops ends",
-		"cat: `cat " + name + "` ends":                                               "cat: " + content + " ends",
-		"cat: `cat $(FILE)` ends":                                                    "cat: " + content + " ends",
-		"write: `write -c $(FILE) ${OUT} | cat ${OUT}` ends":                         "write: " + name + " ends",
-		"b64: `b64 \"hello world\"` hello world ":                                    "b64: " + enc + " hello world ",
-		"b64: `b64 $(BASE)` hello world ":                                            "b64: " + enc + " hello world ",
-		"b64 file: `b64 -f " + name + "` hello world ":                               "b64 file: " + fenc + " hello world ",
-		"pipe: `cat " + name + " | b64` hello world ":                                "pipe: " + fenc + " hello world ",
-		"env: `env -w ENVW \"content\" |echo $(ENVW)`":                               "env: content",
-		"env: `env -w ENVW input  |echo $(ENVW)`":                                    "env: input",
-		"env: `env -w ENVW |env -d ENVW | echo $(ENVW)`":                             "env: ",
-		"`env -w SRC hello | env -m SRC DST |env DST`":                               "hello",
-		"`assert 1 != 1`":                                                            "ERROR",
-		"`assert 1 == 1 | assert 1.0 == 1.0 | assert abc == abc | echo $(ERROR)`":    "",
-		"`assert 1 != 2 | assert 1.1 != 1.0 | assert abc != bbc | echo $(ERROR)`":    "ERROR",
-		"`assert 2 >= 1 | assert 2 > 1 | assert 2 >= 2 | echo $(ERROR)`":             "",
-		"`assert 1 <= 1 | assert 1 < 2 | assert 1 <= 2 | echo $(ERROR)`":             "",
-		"`assert 2.0 >= 1.0 | assert 2.0 > 1.0 | assert 2.0 >= 2.0 | echo $(ERROR)`": "",
-		"`assert 1.0 <= 1.0 | assert 1.0 < 2.0 | assert 1.0 <= 2.0 | echo $(ERROR)`": "",
-		"`assert !false | assert true | assert !0 | assert 1 | echo $(ERROR)`":       "",
-		"`assert 1 != 1 | echo $(ERROR)`":                                            "ERROR",
-		"`json -e .bool $(JSON) | echo $(ERROR)`":                                    "",
-		"`json  .bool $(JSON)`":                                                      "1",
-		"`json  .int $(JSON) | assert $$ == 3 | echo $(ERROR)`":                      "",
-		"`json  .float $(JSON) | assert $$ == 3.0 | echo $(ERROR)`":                  "",
-		"`json  .string $(JSON)`":                                                    "string",
-		"`json  .map.k1 $(JSON)`":                                                    "this",
-		"`json  -n .list $(JSON)`":                                                   "2",
-		"`json  .list.[1] $(JSON)`":                                                  "line2",
-		"`json  .list $(JSON) | json [1]. `":                                         "line2",
-		"`json  -m .map $(JSON) | echo $(k1)`":                                       "this",
-		"`json  -m .map $(JSON) | assert $(k2) == 2`":                                "",
-		"`json  -m . $(JSON) | assert $(deep.map.k2) == 2`":                          "",
-		"`assert $(@echo 3) == 3`":                                                   "",
-		"`assert 3 != 2 && 1 < 2 | assert 10 > 9`":                                   "",
-		"`assert 3 != 2 || 1 > 2 | assert 1 > 0`":                                    "",
-		"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
-		"`env -w TEMP jgq | echo I am $(TEMP)`":                                      "I am jgq",
-		"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",
-		"`fail whatever is wrong`":                                                   "ERROR",
-		"`if true then echo jiang`":                                                  "jiang",
-		"`if false then echo jiang else echo guoqing`":                               "guoqing",
-		"`strlen $(@echo jiang)`":                                                    "5",
-		"`assert $(@json .int $(JSON)) == 3`":                                        "",
-		"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`":                        "",
-		"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
-		"`eval 3+1|cvt -i`":                                                          "`4`",
-		"`eval 3+1==4`":                                                              "TRUE",
+	var m map[string]string
+	if true {
+		m = map[string]string{
+			"LocalEnv: this is something $(LENV)":                                        "LocalEnv: this is something local variable",
+			"GlobalEnv: this is something ${GENV}":                                       "GlobalEnv: this is something global variable",
+			"echo: `echo \"$(FILE)\"` ends":                                              "echo: " + name + " ends",
+			"echo: `echo` ends":                                                          "echo:  ends",
+			"echo: `echo \"what oop\"s` ends":                                            "echo: what oops ends",
+			"echo: `echo what oops` ends":                                                "echo: what oops ends",
+			"cat: `cat " + name + "` ends":                                               "cat: " + content + " ends",
+			"cat: `cat $(FILE)` ends":                                                    "cat: " + content + " ends",
+			"write: `write -c $(FILE) ${OUT} | cat ${OUT}` ends":                         "write: " + name + " ends",
+			"b64: `b64 \"hello world\"` hello world ":                                    "b64: " + enc + " hello world ",
+			"b64: `b64 $(BASE)` hello world ":                                            "b64: " + enc + " hello world ",
+			"b64 file: `b64 -f " + name + "` hello world ":                               "b64 file: " + fenc + " hello world ",
+			"pipe: `cat " + name + " | b64` hello world ":                                "pipe: " + fenc + " hello world ",
+			"env: `env -w ENVW \"content\" |echo $(ENVW)`":                               "env: content",
+			"env: `env -w ENVW input  |echo $(ENVW)`":                                    "env: input",
+			"env: `env -w ENVW |env -d ENVW | echo $(ENVW)`":                             "env: ",
+			"`env -w SRC hello | env -m SRC DST |env DST`":                               "hello",
+			"`assert 1 != 1`":                                                            "ERROR",
+			"`assert 1 == 1 | assert 1.0 == 1.0 | assert abc == abc | echo $(ERROR)`":    "",
+			"`assert 1 != 2 | assert 1.1 != 1.0 | assert abc != bbc | echo $(ERROR)`":    "ERROR",
+			"`assert 2 >= 1 | assert 2 > 1 | assert 2 >= 2 | echo $(ERROR)`":             "",
+			"`assert 1 <= 1 | assert 1 < 2 | assert 1 <= 2 | echo $(ERROR)`":             "",
+			"`assert 2.0 >= 1.0 | assert 2.0 > 1.0 | assert 2.0 >= 2.0 | echo $(ERROR)`": "",
+			"`assert 1.0 <= 1.0 | assert 1.0 < 2.0 | assert 1.0 <= 2.0 | echo $(ERROR)`": "",
+			"`assert !false | assert true | assert !0 | assert 1 | echo $(ERROR)`":       "",
+			"`assert 1 != 1 | echo $(ERROR)`":                                            "ERROR",
+			"`json -e .bool $(JSON) | echo $(ERROR)`":                                    "",
+			"`json  .bool $(JSON)`":                                                      "1",
+			"`json  .int $(JSON) | assert $$ == 3 | echo $(ERROR)`":                      "",
+			"`json  .float $(JSON) | assert $$ == 3.0 | echo $(ERROR)`":                  "",
+			"`json  .string $(JSON)`":                                                    "string",
+			"`json  .map.k1 $(JSON)`":                                                    "this",
+			"`json  -n .list $(JSON)`":                                                   "2",
+			"`json  .list.[1] $(JSON)`":                                                  "line2",
+			"`json  .list $(JSON) | json [1]. `":                                         "line2",
+			"`json  -m .map $(JSON) | echo $(k1)`":                                       "this",
+			"`json  -m .map $(JSON) | assert $(k2) == 2`":                                "",
+			"`json  -m . $(JSON) | assert $(deep.map.k2) == 2`":                          "",
+			"`assert $(@echo 3) == 3`":                                                   "",
+			"`assert 3 != 2 && 1 < 2 | assert 10 > 9`":                                   "",
+			"`assert 3 != 2 || 1 > 2 | assert 1 > 0`":                                    "",
+			"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
+			"`env -w TEMP jgq | echo I am $(TEMP)`":                                      "I am jgq",
+			"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",
+			"`fail whatever is wrong`":                                                   "ERROR",
+			"`if true then echo jiang`":                                                  "jiang",
+			"`if false then echo jiang else echo guoqing`":                               "guoqing",
+			"`strlen $(@echo jiang)`":                                                    "5",
+			"`assert $(@json .int $(JSON)) == 3`":                                        "",
+			"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`":                        "",
+			"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
+			"`eval 3+1|cvt -i`":                                                          "`4`",
+			"`eval 3+1==4`":                                                              "TRUE",
+		}
+	} else {
+		m = map[string]string{
+			"`if true then echo jiang`": "jiang",
+		}
 	}
-	//m := map[string]string{
-	//	"`assert $(@json .int $(JSON)) == 3`":                 "",
-	//	"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`": "",
-	//}
 
 	for k, v := range m {
 		//bg.setOutput("input") // output will be put into input while pipeline starts
@@ -188,13 +191,13 @@ func TestFunction(t *testing.T) {
 	adder, _ := makeGroup(add, false)
 
 	mul := []string{
-		"`print mul $1 $2`",
+		//"`print mul $1 $2`",
 		"`eval $1 * $2`",
 	}
 	muler, _ := makeGroup(mul, false)
 
 	comp := []string{
-		"`print compound $1 $2`",
+		//"`print compound $1 $2`",
 		"`eval $(@call add $1 $2) + $(@call mul $1 $2)`",
 	}
 	comper, _ := makeGroup(comp, false)
@@ -208,6 +211,7 @@ func TestFunction(t *testing.T) {
 		"`call add 3 5 | assert $$ == 8`":   "",
 		"`call mul 3 5 | assert $$ == 15`":  "",
 		"`call comp 3 5 | assert $$ == 23`": "",
+		//"`call comp 3 5`": "23.00000000",
 	}
 	for k, v := range m {
 		bg.setError(nil)

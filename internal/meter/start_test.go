@@ -150,6 +150,41 @@ func TestStart(t *testing.T) {
 	//}
 	//fmt.Print(string(b))
 }
+func TestFunctionMatch(t *testing.T) {
+	m := &mockServer{}
+	err := m.start("ai_res.json")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	defer m.stop()
+
+	b, err := readExample("function.json")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg := &config.Config{}
+	err = json.Unmarshal(b, cfg)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg.Messages["req"].Path = "/"
+	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
+
+	cfg.Options[config.OptionCfgPath] = examplePath()
+	err = meter.StartConfig(cfg)
+	if err != nil {
+		t.Fatalf("failed: %+v", err)
+	}
+
+	//b, err = ioutil.ReadFile(dir + "/report.log")
+	//if err != nil {
+	//	t.Fatalf(err.Error())
+	//}
+	//fmt.Print(string(b))
+}
 func TestStartConcurrent(t *testing.T) {
 	m := &mockServer{}
 	err := m.start("ai_res.json")
