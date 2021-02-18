@@ -501,6 +501,15 @@ type Config struct {
 	// this.
 	Imports []string
 
+   	// Functions defines several functions, each one is stored inside a map, with a function name
+	// as map key.
+	// A function is a command group defined by config and called by command `call`.
+	// Commands inside function could visit arguments by $n. $0 is always the name of function, and $1
+	// is the first argument, $2 is the second argument, ...
+	// command `call` will pass function name and all required arguments, for example: `call add 3 5` will
+	// execute function `add` with argument 1($1) is `3` and argument 2($2) is `5`.
+	Functions map[string][]string
+
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
 	Hosts map[string]*Host
@@ -1480,6 +1489,27 @@ QPS indicates in recent 1 second, how many request has been sent but not respond
 To make a flow control, you may define `Schedule.QPS` and `Schedule.Parallel` to make sure gmeter send request under control and as precise as possible.
 
 User should know that `Schedule.Concurrency` can not be used as parallel control, because it decides how many gmeter threads should be started for HTTP request, which includes request composing, client request execution, and response processing. With a given concurrency number, the parallel requests number is always less because some of them are composing requests and some of them are processing response. The parallel number is decided by concurrency number and the proportion one client request takes in one full execution. Less the proportion, less the parallel number.
+
+### Functions
+Function plays just like shell function. A function is actually a command group, but it could use arguments passed by caller. Argument `$0` is always the function name, and `$n` where `n > 0` is the `n-th` argument string.
+
+Functions are always defined in `Config.Functions` and called by command `call`. The result of a function is the result of command group, which is the output of last command.
+
+Here is an example of usage. Assume config defines these functions:
+```json
+{
+	"Functions": {
+		"add": [ "`eval $1 + $2`" ],
+		"sub": [ "`eval $1 - $2`" ],
+		"comp": [ "`eval $(@call add $1 $2) * $(@call sub $1 $2)`" ]
+	}
+}
+```
+`add` function adds two argument, `sub` function substitudes two arguments, and `comp` will multiple result of `add` and `sub`.
+
+Now if you execute `call comp 5 3`, you'll get `(5+3) * (5-3)`, which is `16.00000000`(because we use floats always).
+
+Functions may be useful while you need write many same code to do the same work.
 
 # HTTP RESTful server
 gmeter allows user create several HTTP RESTful servers from a config file.

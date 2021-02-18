@@ -13,7 +13,7 @@ import "fmt"
 
 %token <str> IDENTITY LITERAL
 %token <str> UNARY_ARITH_OP COMP_OP EQUAL_OP LOGIC_OP AND_OP OR_OP ASSIGN_OP
-%token <str> V_LOCAL V_GLOBAL V_JSON CMD_EXEC
+%token <str> V_LOCAL V_GLOBAL V_JSON CMD_EXEC V_ARGUMENT
 %type <comp> primary postfix unary multiplicative additive relational equality logical_and logical_or expression assign stats stat
 
 %%
@@ -61,6 +61,9 @@ primary:
     }
     | V_JSON {
         $$ = makeVarReader(varJson, $1)
+    }
+    | V_ARGUMENT {
+        $$ = makeVarReader(varArgument, $1)
     }
     | CMD_EXEC {
         $$ = makeCommand($1)

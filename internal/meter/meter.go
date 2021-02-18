@@ -137,6 +137,52 @@ type env interface {
 	dup() env
 }
 
+type arguments []composable
+
+func (a arguments) call(bg *background) (string, error) {
+	// Before call a function, the arguments must be composed first, and the
+	// result as strings will be pushing into background as argument of function
+	// call.
+	var args []string
+	for i, arg := range a {
+		s, err := arg.compose(bg)
+		if err != nil {
+			return "", errors.Wrapf(err, "arg %d compose", i)
+		}
+		args = append(args, s)
+	}
+	if len(args) == 0 {
+		return "", errors.New("arguments without function name")
+	}
+	bg.fargs = append(bg.fargs, args)
+	defer func() {
+		bg.fargs = bg.fargs[:len(bg.fargs)-1]
+	}()
+
+	function := args[0]
+	if f, exist := bg.functions[function]; exist {
+		s, err := f.compose(bg)
+		if err != nil {
+			return "", errors.Wrapf(err, "call function %s", function)
+		}
+		return s, nil
+	}
+
+	return "", errors.Errorf("function %s not found", function)
+}
+
+func makeArguments(args []string) (arguments, error) {
+	var a arguments
+	for _, arg := range args {
+		c, err := makeSegments(arg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "compose argument %s", arg)
+		}
+		a = append(a, c)
+	}
+	return a, nil
+}
+
 type background struct {
 	name              string // global test name
 	db, local, global env
@@ -146,6 +192,8 @@ type background struct {
 	rpt               *reporter
 	predefine         map[string]string
 	fc                *flowControl
+	fargs             [][]string // arguments stacks
+	functions         map[string]composable
 }
 
 const (
@@ -168,6 +216,7 @@ func (bg *background) dup() *background {
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
 		fc:        bg.fc,
+		functions: bg.functions,
 	}
 }
 func (bg *background) next() {
@@ -276,6 +325,18 @@ func (bg *background) dbWrite(key string, value string) {
 }
 func (bg *background) dbDelete(key string) {
 	bg.db.delete(key)
+}
+func (bg *background) getArgument(index int) (string, error) {
+	length := len(bg.fargs)
+	if length == 0 {
+		return "", errors.Errorf("not in function call")
+	}
+
+	args := bg.fargs[length-1]
+	if index >= len(args) {
+		return "", errors.Errorf("arg %d exceed range %d", index, len(args))
+	}
+	return args[index], nil
 }
 func (bg *background) getLocalEnv(key string) string {
 	if key == KeyError {

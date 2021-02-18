@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/pkg/errors"
@@ -24,7 +25,8 @@ import (
 )
 
 const (
-	eps = 0.00000001
+	eps   = 0.00000001
+	debug = false
 )
 
 // composable is an entity which generates a string,
@@ -80,6 +82,7 @@ func (s segments) isStatic() bool {
 	return false
 }
 func (s segments) compose(bg *background) (string, error) {
+	//fmt.Printf("compose %+v\n", s)
 	arr := make([]string, len(s))
 	for i, seg := range s {
 		str, err := seg.produce(bg)
@@ -1352,6 +1355,45 @@ func makeBase64(v []string) (command, error) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//////////                           call                            ///////////
+////////////////////////////////////////////////////////////////////////////////
+type cmdCall struct {
+	raw  string
+	args arguments
+}
+
+func (c *cmdCall) iterable() bool {
+	return false
+}
+
+func (c *cmdCall) close() {
+}
+
+func (c *cmdCall) execute(bg *background) (string, error) {
+	if debug {
+		glog.Errorf("execute call %s", c.raw)
+	}
+	return c.args.call(bg)
+}
+
+func makeCall(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	c := &cmdCall{
+		raw: raw,
+	}
+	if len(v) == 0 {
+		return nil, errors.New("eval nothing")
+	}
+
+	var err error
+	c.args, err = makeArguments(v)
+	if err != nil {
+		return nil, errors.Wrapf(err, "make function call(%s)", raw)
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //////////                           eval                            ///////////
 ////////////////////////////////////////////////////////////////////////////////
 type cmdEval struct {
@@ -1367,6 +1409,9 @@ func (c *cmdEval) close() {
 }
 
 func (c *cmdEval) execute(bg *background) (string, error) {
+	if debug {
+		glog.Errorf("execute eval %s", c.raw)
+	}
 	return c.eval.compose(bg)
 }
 
@@ -1712,6 +1757,7 @@ func init() {
 		"write":   makeWrite,
 		"assert":  makeAssert,
 		"eval":    makeEval,
+		"call":    makeCall,
 		"json":    makeJson,
 		"list":    makeList,
 		"b64":     makeBase64,
@@ -1775,151 +1821,278 @@ func parseCmd(str string) (command, error) {
 
 const (
 	phaseCmd = iota
-	phaseEnv
+	//phaseEnv
 	phaseLocal
 	phaseGlobal
 	phaseJsonEnv
+	phaseArguments
 	phaseString
 )
 
-// makeSegments creates a segment list which will create a string eventually.
-func makeSegments(str string) (segments, error) {
+type stream struct {
+	phase int
+	src   []byte // source
+	segs  segments
 
-	r := []rune(str)
-	start := 0
-	phase := phaseString
+	// scanning state
+	ch         rune // current character
+	buf        []rune
+	offset     int // character offset
+	rdOffset   int // reading offset (position after current character)
+	prevOffset int
+	err        error
+	expect     rune
+}
+
+func (s *stream) errorFrom(err error) {
+	if s.err != nil {
+		s.err = err
+	}
+}
+func (s *stream) error(offset int, format string, args ...interface{}) {
+	if s.err != nil {
+		e := errors.Errorf(format, args...)
+		s.err = errors.Wrapf(e, "offset: %d", offset)
+	}
+}
+func (s *stream) init(str string) {
+	s.src = []byte(str)
+
+	s.ch = ' '
+	s.offset = 0
+	s.rdOffset = 0
+	s.prevOffset = 0
+	s.phase = phaseString
+}
+func (s *stream) clear() string {
+	str := string(s.buf)
+	s.buf = nil
+	return str
+}
+func (s *stream) read() {
+	if s.ch != -1 {
+		s.buf = append(s.buf, s.ch)
+	}
+}
+func (s *stream) unread() {
+	if s.ch != -1 {
+		s.rdOffset = s.offset
+	}
+}
+func (s *stream) next() {
+	if s.rdOffset < len(s.src) {
+		s.offset = s.rdOffset
+		r, w := rune(s.src[s.rdOffset]), 1
+		switch {
+		case r == 0:
+			s.error(s.offset, "illegal character NUL")
+		case r >= utf8.RuneSelf:
+			// not ASCII
+			r, w = utf8.DecodeRune(s.src[s.rdOffset:])
+			if r == utf8.RuneError && w == 1 {
+				s.error(s.offset, "illegal UTF-8 encoding")
+			} else if r == bom && s.offset > 0 {
+				s.error(s.offset, "illegal byte order mark")
+			}
+		}
+		s.rdOffset += w
+		s.ch = r
+		//fmt.Printf("ch: %c\n", s.ch)
+	} else {
+		s.offset = len(s.src)
+		s.ch = -1 // eof
+		//fmt.Printf("ch: eof\n")
+	}
+}
+func (s *stream) end() {
+	str := s.clear()
+	switch s.phase {
+	case phaseString:
+		if len(str) > 0 {
+			s.segs = append(s.segs, staticSegment(str))
+		}
+	case phaseCmd:
+		if len(str) == 0 {
+			return
+		}
+
+		cmd, err := parseCmd(str)
+		if err != nil {
+			s.errorFrom(errors.Wrapf(err, "parse cmd"))
+			return
+		}
+		seg := &dynamicSegment{f: func(bg *background) (string, error) {
+			return cmd.execute(bg)
+		}}
+
+		seg.isIterable = cmd.iterable()
+		s.segs = append(s.segs, seg)
+	case phaseJsonEnv:
+		if len(str) == 0 {
+			s.errorFrom(errors.New("json env variable name is missing"))
+			return
+		}
+		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
+			return bg.getJsonEnv(str), nil
+		}})
+	case phaseGlobal:
+		if len(str) == 0 {
+			s.errorFrom(errors.New("global variable name is missing"))
+			return
+		}
+		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
+			return bg.getGlobalEnv(str), nil
+		}})
+	case phaseLocal:
+		name := strings.TrimSpace(str)
+		if len(name) == 0 {
+			s.errorFrom(errors.New("local variable name is missing"))
+			return
+		}
+		if isCmd(name) {
+			// treat as command instead of variable
+			name = name[1:]
+			cmd, err := parseCmd(name)
+			if err != nil {
+				s.errorFrom(errors.Wrapf(err, "parse cmd"))
+				return
+			}
+			seg := &dynamicSegment{f: func(bg *background) (string, error) {
+				return cmd.execute(bg)
+			}}
+
+			seg.isIterable = cmd.iterable()
+			s.segs = append(s.segs, seg)
+		} else {
+			s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
+				return bg.getLocalEnv(name), nil
+			}})
+		}
+	case phaseArguments:
+		if len(str) == 0 {
+			s.errorFrom(errors.New("no arguments"))
+			return
+		}
+		idx, err := strconv.Atoi(str)
+		if err != nil {
+			s.errorFrom(errors.Wrapf(err, "make arg index %s", str))
+			return
+		}
+		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
+			return bg.getArgument(idx)
+		}})
+	}
+}
+
+func (s *stream) compile() (segments, error) {
 	depth := 0
-	var segs segments
+	end := false
 
-	for i, c := range r {
-		old := phase
-		switch phase {
+	for !end {
+		s.next()
+		if s.ch == -1 {
+			end = true
+		}
+		switch s.phase {
 		case phaseString:
-			if c == '$' {
-				phase = phaseEnv
-			} else if c == '`' {
-				phase = phaseCmd
+			if end {
+				s.end()
+			} else if s.ch == '$' {
+				s.end()
+				s.next()
+				if s.ch == '(' {
+					s.phase = phaseLocal
+				} else if s.ch == '{' {
+					s.phase = phaseGlobal
+				} else if s.ch == '<' {
+					s.phase = phaseJsonEnv
+				} else if unicode.IsDigit(s.ch) {
+					s.phase = phaseArguments
+					s.unread()
+				} else {
+					return nil, errors.Errorf("[%d]: expect '(' or '{' after '$'", s.offset)
+				}
+			} else if s.ch == '`' {
+				s.end()
+				s.phase = phaseCmd
+			} else {
+				s.read()
 			}
 		case phaseCmd:
-			if c == '`' {
-				phase = phaseString
-			}
-		case phaseEnv:
-			if c == '(' {
-				phase = phaseLocal
-			} else if c == '{' {
-				phase = phaseGlobal
-			} else if c == '<' {
-				phase = phaseJsonEnv
+			if s.ch == '`' || end {
+				s.end()
+				s.phase = phaseString
 			} else {
-				return nil, errors.Errorf("[%d]: expect '(' or '{' after '$'", i)
+				s.read()
 			}
 		case phaseLocal:
-			if c == '(' {
+			if end {
+				return nil, errors.Errorf("expect local variable ending, but got eof")
+			} else if s.ch == '(' {
+				s.read()
 				depth++
-			} else if c == ')' {
+			} else if s.ch == ')' {
 				if depth > 0 {
+					s.read()
 					depth--
 				} else {
-					phase = phaseString
+					s.end()
+					s.phase = phaseString
 				}
+			} else {
+				s.read()
 			}
 		case phaseJsonEnv:
-			if c == '>' {
-				phase = phaseString
+			if end {
+				return nil, errors.Errorf("expect json variable ending, but got eof")
+			} else if s.ch == '>' {
+				s.end()
+				s.phase = phaseString
+			} else {
+				s.read()
+			}
+		case phaseArguments:
+			if unicode.IsDigit(s.ch) {
+				s.read()
+			} else {
+				s.end()
+				if !end {
+					s.unread()
+				}
+				s.phase = phaseString
 			}
 		case phaseGlobal:
-			if c == '{' {
+			if end {
+				return nil, errors.Errorf("expect global variable ending, but got eof")
+			} else if s.ch == '{' {
+				s.read()
 				depth++
-			} else if c == '}' {
+			} else if s.ch == '}' {
 				if depth > 0 {
+					s.read()
 					depth--
 				} else {
-					phase = phaseString
+					s.end()
+					s.phase = phaseString
 				}
+			} else {
+				s.read()
 			}
 		}
-
-		if old != phase {
-			switch old {
-			case phaseString:
-				if i > start {
-					segs = append(segs, staticSegment(r[start:i]))
-				}
-			case phaseCmd:
-				if i > start {
-					cmd, err := parseCmd(string(r[start:i]))
-					if err != nil {
-						return nil, errors.Wrapf(err, "parse cmd")
-					}
-					seg := &dynamicSegment{f: func(bg *background) (string, error) {
-						return cmd.execute(bg)
-					}}
-
-					seg.isIterable = cmd.iterable()
-					segs = append(segs, seg)
-				}
-			case phaseEnv:
-			case phaseJsonEnv:
-				if i > start {
-					name := string(r[start:i])
-					if len(name) == 0 {
-						return nil, errors.New("json env variable name is missing")
-					}
-					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
-						return bg.getJsonEnv(name), nil
-					}})
-				}
-			case phaseLocal:
-				if i > start {
-					name := string(r[start:i])
-					name = strings.TrimSpace(name)
-					if len(name) == 0 {
-						return nil, errors.New("local variable name is missing")
-					}
-					if isCmd(name) {
-						// treat as command instead of variable
-						name = name[1:]
-						cmd, err := parseCmd(name)
-						if err != nil {
-							return nil, errors.Wrapf(err, "parse cmd")
-						}
-						seg := &dynamicSegment{f: func(bg *background) (string, error) {
-							return cmd.execute(bg)
-						}}
-
-						seg.isIterable = cmd.iterable()
-						segs = append(segs, seg)
-					} else {
-						segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
-							return bg.getLocalEnv(name), nil
-						}})
-					}
-				}
-			case phaseGlobal:
-				if i > start {
-					name := string(r[start:i])
-					if len(name) == 0 {
-						return nil, errors.New("global variable name is missing")
-					}
-					segs = append(segs, &dynamicSegment{f: func(bg *background) (string, error) {
-						return bg.getGlobalEnv(name), nil
-					}})
-				}
-			}
-
-			start = i + 1
-		}
 	}
 
-	if phase != phaseString {
-		return nil, errors.Errorf("parse finish with phase %d, source: %s", phase, str)
-	}
-	if len(r) > start {
-		segs = append(segs, staticSegment(r[start:]))
+	if s.phase != phaseString {
+		return nil, errors.Errorf("parse finish with phase %d, source: %s", s.phase, string(s.src))
 	}
 
-	return segs, nil
+	return s.segs, nil
+}
+
+// makeSegments creates a segment list which will create a string eventually.
+func makeSegments(str string) (segments, error) {
+	s := stream{}
+	s.init(str)
+	return s.compile()
 }
 
 type group struct {
@@ -1930,16 +2103,17 @@ type group struct {
 
 func (g *group) compose(bg *background) (string, error) {
 	var err error
+	var output string
 	for i, seg := range g.segs {
 		bg.setInput("")
-		_, err = seg.compose(bg)
+		output, err = seg.compose(bg)
 		if err != nil {
 			if !g.ignoreError {
 				return "", errors.Wrapf(err, "group[%d]", i)
 			}
 		}
 	}
-	return "", nil
+	return output, nil
 }
 
 func (g *group) iterable() bool {

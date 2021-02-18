@@ -167,7 +167,7 @@
                 "PedesAttr": {
                     "Sex": {
                         "Id": 1,
-                        "Name": "女",
+                        "Name": "男",
                         "Confidence": 0.9999546
                     },
                     "Age": {

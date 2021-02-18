@@ -467,6 +467,15 @@ type Config struct {
 	// this.
 	Imports []string
 
+	// Functions defines several functions, each one is stored inside a map, with a function name
+	// as map key.
+	// A function is a command group defined by config and called by command `call`.
+	// Commands inside function could visit arguments by $n. $0 is always the name of function, and $1
+	// is the first argument, $2 is the second argument, ...
+	// command `call` will pass function name and all required arguments, for example: `call add 3 5` will
+	// execute function `add` with argument 1($1) is `3` and argument 2($2) is `5`.
+	Functions map[string][]string
+
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
 	Hosts map[string]*Host

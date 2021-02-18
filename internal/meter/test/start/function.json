@@ -1,0 +1,99 @@
+{
+  "Name": "function",
+  "Comment": [
+    "Functions defines 2 functions: inrange and inbox",
+    "inbox accept 5 arguments: a cutboard json, and expected xywh, compare each of them by inrange",
+    "Response template will match Pedestrian by .Img.Cutboard, while a person matches, make sure it is female"
+  ],
+  "Hosts": {
+    "vse": {
+      "Host": "http://127.0.0.1:8009",
+      "Proxy": ""
+    }
+  },
+  "Functions": {
+    "inrange": [
+      "Check if a number is in range, arguments: x, y, makes sure x > y - 5 && x < y + 5",
+      "`assert $1 > $2 - 5 && $1 < $2 + 5`"
+    ],
+    "inbox": [
+      "Check if a cutboard is in range, arguments: CutBoard json, X, Y, W, H",
+      "`call inrange $(@json .X $1) $2`",
+      "`call inrange $(@json .Y $1) $3`",
+      "`call inrange $(@json .Width $1) $4`",
+      "`call inrange $(@json .Height $1) $5`"
+    ]
+  },
+  "Messages": {
+    "req": {
+      "Method": "POST",
+      "Path": "/ai/detect/all",
+      "Headers": {
+        "content-type": "application/json"
+      },
+      "Body": {
+        "image": {
+          "url": "/file/to/a.jpg"
+        }
+      }
+    }
+  },
+  "Tests": {
+    "recognize": {
+      "Host": "vse",
+      "Request": "req",
+      "Response": {
+        "Template": {
+          "Context": {
+            "Status": "`assert $ == 200`"
+          },
+          "Result": {
+            "Pedestrian": [
+              {
+                "`list`": "`assert $<length> == 8`",
+                "`item`": [
+                  "`json -e .PedesAttr $`",
+                  "`json -e .PedesAttr.Sex $`"
+                ],
+                "`default`": [
+                  "`json .Img.Cutboard.X $ | env -w X`",
+                  "`json .Img.Cutboard.Y $ | env -w Y`",
+                  "`print cutboard(x: $(X), y: $(Y))`"
+                ]
+              },
+              {
+                "Img: index": {
+                  "Cutboard": "`call inbox $ 1544 660 341 776`"
+                },
+                "PedesAttr": {
+                  "`default`": [
+                    "`print found pedestrian property: $<key>`"
+                  ],
+                  "Sex": {
+                    "Id": "`assert $ == 1`",
+                    "Name": "女"
+                  }
+                },
+                "HasFace": false
+              }
+            ]
+          }
+        }
+      },
+      "Timeout": "10s"
+    }
+  },
+  "Mode": "",
+  "Schedules": [
+    {
+      "Name": "recog-image",
+      "Tests": "recognize",
+      "Count": 1,
+      "Concurrency": 1
+    }
+  ],
+  "Options": {
+    "AbortIfFail": "true",
+    "Debug": "false"
+  }
+}
