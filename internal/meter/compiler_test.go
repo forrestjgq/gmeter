@@ -110,7 +110,19 @@ func TestSegments(t *testing.T) {
 			"`assert 3 != 2 && 1 < 2 | assert 10 > 9`":                                   "",
 			"`assert 3 != 2 || 1 > 2 | assert 1 > 0`":                                    "",
 			"cvt-d: `cvt -i 3.00`":                                                       "cvt-d: 3",
+			"`cvt -i 3.i0`":                                                              "ERROR",
+			"`cvt -b 0`":                                                                 "`false`",
+			"`cvt -b 1`":                                                                 "`true`",
+			"`cvt -b false`":                                                             "`false`",
+			"`cvt -b true`":                                                              "`true`",
+			"`cvt -b FALSE`":                                                             "`false`",
+			"`cvt -b TRUE`":                                                              "`true`",
+			"`cvt -b 11`":                                                                "ERROR",
+			"`cvt -f 11.11.11`":                                                          "ERROR",
+			"`cvt -i 11.11`":                                                             "ERROR",
+			"`cvt -i 11`":                                                                "`11`",
 			"`env -w TEMP jgq | echo I am $(TEMP)`":                                      "I am jgq",
+			"`cvt parse`":                                                                "parse",
 			"`strrepl jiangguoqing jiang zhu`":                                           "zhuguoqing",
 			"`fail whatever is wrong`":                                                   "ERROR",
 			"`if true then echo jiang`":                                                  "jiang",
@@ -121,6 +133,8 @@ func TestSegments(t *testing.T) {
 			"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
 			"`eval 3+1|cvt -i`":                                                          "`4`",
 			"`eval 3+1==4`":                                                              "TRUE",
+			"`print 江国庆`":                                                                "",
+			"print 江国庆":                                                                  "print 江国庆",
 		}
 	} else {
 		m = map[string]string{
@@ -175,6 +189,47 @@ func TestSegments(t *testing.T) {
 	}
 
 }
+func TestSegmentMakeFailure(t *testing.T) {
+	bg := &background{
+		name:   "",
+		local:  makeSimpEnv(),
+		global: makeSimpEnv(),
+		lr:     nil,
+		err:    nil,
+	}
+
+	var m []string
+	if true {
+		m = []string{
+			"`eval 3 + 5",
+			"$(hello",
+			"$(@hello",
+			"${hello",
+			"$<hello",
+			"$",
+			"$$",
+			"$$$",
+			"$()",
+			"${}",
+			"$<>",
+			"`not a command`",
+			"`cvt -f 1 1`",
+			"`cvt -ff 1`",
+			"`cvt -ff $(hello`",
+		}
+	} else {
+		m = []string{"$$$"}
+	}
+
+	for _, s := range m {
+		bg.setError(nil)
+
+		t.Log(s)
+		if _, err := makeSegments(s); err == nil {
+			t.Fatal("expect fail, got pass")
+		}
+	}
+}
 func TestFunction(t *testing.T) {
 	bg := &background{
 		name:   "",
@@ -184,15 +239,20 @@ func TestFunction(t *testing.T) {
 		err:    nil,
 	}
 
+	exceed := []string{
+		"`eval $1 + $10`",
+	}
+	exceeding, _ := makeGroup(exceed, false)
+
 	add := []string{
-		"`print add $1 $2`",
+		"`print $0 $1 $2`",
 		"`eval $1 + $2`",
 	}
 	adder, _ := makeGroup(add, false)
 
 	mul := []string{
 		//"`print mul $1 $2`",
-		"`eval $1 * $2`",
+		"`eval $1*$2`",
 	}
 	muler, _ := makeGroup(mul, false)
 
@@ -202,16 +262,18 @@ func TestFunction(t *testing.T) {
 	}
 	comper, _ := makeGroup(comp, false)
 	bg.functions = map[string]composable{
-		"add":  adder,
-		"mul":  muler,
-		"comp": comper,
+		"exceed": exceeding,
+		"add":    adder,
+		"mul":    muler,
+		"comp":   comper,
 	}
 
 	m := map[string]string{
 		"`call add 3 5 | assert $$ == 8`":   "",
 		"`call mul 3 5 | assert $$ == 15`":  "",
 		"`call comp 3 5 | assert $$ == 23`": "",
-		//"`call comp 3 5`": "23.00000000",
+		"`call comp 3`":                     "ERROR",
+		"`call exceed 3 3 3`":               "ERROR",
 	}
 	for k, v := range m {
 		bg.setError(nil)

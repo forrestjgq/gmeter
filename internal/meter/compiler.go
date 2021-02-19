@@ -161,9 +161,9 @@ func (c *cmdCvt) execute(bg *background) (string, error) {
 		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
 		if c.toBool {
-			if content == "0" || content == "false" {
+			if content == "0" || content == "false" || content == "FALSE" {
 				output = "`false`"
-			} else if content == "1" || content == "true" {
+			} else if content == "1" || content == "true" || content == "TRUE" {
 				output = "`true`"
 			} else {
 				return "", errors.Errorf("%s convert %s to bool fail", c.raw, content)
@@ -171,6 +171,10 @@ func (c *cmdCvt) execute(bg *background) (string, error) {
 		} else if c.toFloat {
 			if !c.exp.MatchString(content) {
 				return "", errors.Errorf("%s convert %s to number fail", c.raw, content)
+			}
+			_, err = strconv.ParseFloat(content, 64)
+			if err != nil {
+				return "", errors.Wrapf(err, "parse float %s", content)
 			}
 			output = "`" + content + "`"
 		} else if c.toInt {
@@ -1845,12 +1849,12 @@ type stream struct {
 }
 
 func (s *stream) errorFrom(err error) {
-	if s.err != nil {
+	if s.err == nil {
 		s.err = err
 	}
 }
 func (s *stream) error(offset int, format string, args ...interface{}) {
-	if s.err != nil {
+	if s.err == nil {
 		e := errors.Errorf(format, args...)
 		s.err = errors.Wrapf(e, "offset: %d", offset)
 	}
@@ -1989,6 +1993,9 @@ func (s *stream) compile() (segments, error) {
 	end := false
 
 	for !end {
+		if s.err != nil {
+			return nil, errors.Wrapf(s.err, "compile %s", string(s.src))
+		}
 		s.next()
 		if s.ch == -1 {
 			end = true
@@ -2019,7 +2026,9 @@ func (s *stream) compile() (segments, error) {
 				s.read()
 			}
 		case phaseCmd:
-			if s.ch == '`' || end {
+			if end {
+				return nil, errors.Errorf("expect ` for command ending, but got eof")
+			} else if s.ch == '`' {
 				s.end()
 				s.phase = phaseString
 			} else {
