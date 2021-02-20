@@ -22,9 +22,9 @@ import "encoding/json"
 // If $(STATUS) is empty, it will be default value 200. If $(RESPONSE) is empty, no
 // response body will be written.
 type RequestProcess struct {
-	Check    []string        // [dynamic] segments called after server responds.
-	Success  []string        // [dynamic] segments called if error is reported during http request and Check
-	Failure  []string        // [dynamic] segments called if any error occurs.
+	Check    interface{}     // [dynamic] segments called after server responds.
+	Success  interface{}     // [dynamic] segments called if error is reported during http request and Check
+	Failure  interface{}     // [dynamic] segments called if any error occurs.
 	Template json.RawMessage // [dynamic] Template is a json compare template to compare with response.
 }
 

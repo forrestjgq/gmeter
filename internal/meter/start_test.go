@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/forrestjgq/gmeter/internal/meter"
 
 	"github.com/forrestjgq/gmeter/config"
@@ -217,6 +219,32 @@ func TestStartConcurrent(t *testing.T) {
 	}
 
 }
+func iface2strings(src interface{}) ([]string, error) {
+	if src == nil {
+		return []string{}, nil
+	}
+	switch v := src.(type) {
+	case string:
+		return []string{v}, nil
+	case []string:
+		return v, nil
+	case []interface{}:
+		if len(v) == 0 {
+			return []string{}, nil
+		}
+		var strs []string
+		for _, m := range v {
+			if s, ok := m.(string); ok {
+				strs = append(strs, s)
+			} else {
+				return nil, errors.Errorf("composable list accept string only, now found type %T value %v", m, m)
+			}
+		}
+		return strs, nil
+	default:
+		return nil, errors.Errorf("invalid composable type %T value %v", v, v)
+	}
+}
 func TestConfigFile(t *testing.T) {
 	m := &mockServer{}
 	err := m.start("ai_res.json")
@@ -251,7 +279,12 @@ func TestConfigFile(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
+	strs, err = iface2strings(cfg.Tests["recognize"].PreProcess)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	strs[0] = "`list " + list + " | env -w JSON`"
+	cfg.Tests["recognize"].PreProcess = strs
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfgContent, err := json.Marshal(cfg)
@@ -302,7 +335,14 @@ func TestStartIterable(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
+
+	strs, err = iface2strings(cfg.Tests["recognize"].PreProcess)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	strs[0] = "`list " + list + " | env -w JSON`"
+	cfg.Tests["recognize"].PreProcess = strs
+
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()
@@ -348,7 +388,14 @@ func TestStartTimeout(t *testing.T) {
 	cfg.Tests["recognize"].Timeout = "3s"
 	cfg.Messages["req"].Path = "/"
 	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
+
+	strs, err = iface2strings(cfg.Tests["recognize"].PreProcess)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	strs[0] = "`list " + list + " | env -w JSON`"
+	cfg.Tests["recognize"].PreProcess = strs
+
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()
@@ -419,7 +466,14 @@ func TestStartURLExplicit(t *testing.T) {
 
 	cfg.Messages["req"].Path = "/"
 	cfg.Tests["recognize"].Host = "http://127.0.0.1:" + m.port
-	cfg.Tests["recognize"].PreProcess[0] = "`list " + list + " | env -w JSON`"
+
+	strs, err = iface2strings(cfg.Tests["recognize"].PreProcess)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	strs[0] = "`list " + list + " | env -w JSON`"
+	cfg.Tests["recognize"].PreProcess = strs
+
 	cfg.Schedules[0].Reporter.Path = dir + "/report.log"
 
 	cfg.Options[config.OptionCfgPath] = examplePath()

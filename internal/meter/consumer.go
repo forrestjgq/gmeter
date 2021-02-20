@@ -32,9 +32,9 @@ const (
 
 type dynamicConsumer struct {
 	// set to true if you need process failure as response
-	check    *group
-	success  *group
-	fail     *group
+	check    composable
+	success  composable
+	fail     composable
 	template jsonRule
 	decision failDecision
 }
@@ -93,35 +93,28 @@ func (d *dynamicConsumer) processFailure(bg *background, err error) next {
 	return n
 }
 
-func makeDynamicConsumer(check, success, fail []string, template json.RawMessage, failAction failDecision) (*dynamicConsumer, error) {
+func makeDynamicConsumer(check, success, fail interface{}, template json.RawMessage, failAction failDecision) (*dynamicConsumer, error) {
 	d := &dynamicConsumer{}
 	d.decision = failAction
 
 	var err error
-	if len(check) > 0 {
-		d.check, err = makeGroup(check, false)
-		if err != nil {
-			return nil, err
-		}
+	d.check, _, err = makeComposable(check)
+	if err != nil {
+		return nil, err
 	}
-	if len(success) > 0 {
-		d.success, err = makeGroup(success, true)
-		if err != nil {
-			return nil, err
-		}
+	d.success, _, err = makeComposable(success, optIgnoreError())
+	if err != nil {
+		return nil, err
 	}
-	if len(fail) > 0 {
-		d.fail, err = makeGroup(fail, true)
-		if err != nil {
-			return nil, err
-		}
+	d.fail, _, err = makeComposable(fail, optIgnoreError())
+	if err != nil {
+		return nil, err
 	}
 
-	if len(template) > 0 {
-		d.template, err = makeJsonTemplate(template)
-		if err != nil {
-			return nil, err
-		}
+	d.template, err = makeJsonTemplate(template)
+	if err != nil {
+		return nil, err
 	}
+
 	return d, nil
 }

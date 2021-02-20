@@ -25,14 +25,9 @@
       "Host": "vse",
       "Request": "req",
       "Response": {
-        "Check": [
-        ],
-        "Success": [
-          "`report -n -t common`"
-        ],
-        "Failure": [
-          "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`"
-        ],
+        "Check": "",
+        "Success": "`report -n -t common`",
+        "Failure": "`env -m ERROR FAILURE |escape $(FAILURE)| report -n`",
         "Template": {
           "Context": {
             "Status": "`assert $ == 200`"
@@ -83,7 +78,7 @@
   "Schedules": [
     {
       "Name": "recog-image",
-      "PreProcess": [],
+      "PreProcess": "",
       "Tests": "recognize",
       "Reporter": {
         "Path": "report.log",

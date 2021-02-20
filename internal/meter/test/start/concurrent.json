@@ -34,12 +34,8 @@
                     "`json -n .Result.Pedestrian $(RESPONSE) | assert $$ == 8`",
                     "`json -n .Result.Faces $(RESPONSE) | assert $$ == 1`"
                 ],
-                "Success": [
-                    "`report -n -t common`"
-                ],
-                "Failure": [
-                    "`report -n -t common`"
-                ]
+                "Success": "`report -n -t common`",
+                "Failure": "`report -n -t common`"
             },
             "Timeout": "10s"
         }

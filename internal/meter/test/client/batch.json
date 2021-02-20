@@ -14,9 +14,7 @@
             }
         },
         {
-            "PreProcess": [
-                "`print Start ${SCHEDULE}`"
-            ],
+            "PreProcess": "`print Start ${SCHEDULE}`",
             "Name": "query-from-list",
             "Tests": "query-list",
             "Concurrency": 100,
@@ -26,9 +24,7 @@
             }
         },
         {
-            "PreProcess": [
-                "`print Start ${SCHEDULE}`"
-            ],
+            "PreProcess": "`print Start ${SCHEDULE}`",
             "Name": "delete-from-list",
             "Tests": "del-list",
             "Concurrency": 100,

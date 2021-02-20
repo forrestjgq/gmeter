@@ -50,23 +50,18 @@
         "add-list": {
             "Comment": "add book stored in a list file",
             "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
-            "PreProcess": [
-                "`list $(BookList) | json -m .`"
-            ],
+            "PreProcess": "`list $(BookList) | json -m .`"
+            ,
             "Request": "add-req",
             "Response": {
-                "Check": [
-                    "`assert $(STATUS) == 200`"
-                ]
+                "Check": "`assert $(STATUS) == 200`"
             },
             "Timeout": "5s"
         },
         "query-list": {
             "Comment": "query book stored in a list file",
             "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
-            "PreProcess": [
-                "`list $(BookList) | json -m .`"
-            ],
+            "PreProcess": "`list $(BookList) | json -m .`",
             "Request": "query-req",
             "Response": {
                 "Template": {
@@ -76,23 +71,18 @@
                     "price": "`assert $(PRICE) == $`",
                     "publisher": "`assert $(PUBLISHER) == $`"
                 },
-                "Check": [
-                    "`assert $(STATUS) == 200`"
-                ]
+                "Check": "`assert $(STATUS) == 200`"
+
             },
             "Timeout": "5s"
         },
         "del-list": {
             "Comment": "delete book stored in a list file",
             "Require": "$(BookList) is a file path in which each line has a json of ISBN/BOOK/AUTHOR/PRICE/PUBLISHER",
-            "PreProcess": [
-                "`list $(BookList) | json -m .`"
-            ],
+            "PreProcess": "`list $(BookList) | json -m .`",
             "Request": "del-req",
             "Response": {
-                "Check": [
-                    "`assert $(STATUS) == 200`"
-                ]
+                "Check": "`assert $(STATUS) == 200`"
             },
             "Timeout": "5s"
         }

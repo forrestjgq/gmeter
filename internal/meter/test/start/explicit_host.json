@@ -22,7 +22,7 @@
             ],
             "Host": "http://127.0.0.1:8009",
             "Request": "req",
-            "Response": { "Check": [ "`assert $(STATUS) == 200`" ] }
+            "Response": { "Check":  "`assert $(STATUS) == 200`"  }
         }
     },
     "Mode": "",

@@ -7,6 +7,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.4.3
 	github.com/gorilla/mux v1.8.0
+	github.com/huandu/go-clone v1.1.4
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/yuin/goldmark v1.3.1 // indirect

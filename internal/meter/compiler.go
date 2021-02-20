@@ -2145,3 +2145,67 @@ func makeGroup(src []string, ignoreError bool) (*group, error) {
 	}
 	return g, nil
 }
+
+type composeOption struct {
+	ignoreOnError bool
+}
+
+type composeOptionSetter func(opt *composeOption)
+
+func optIgnoreError() composeOptionSetter {
+	return func(opt *composeOption) {
+		opt.ignoreOnError = true
+	}
+}
+
+// makeComposable accepts:
+//    - string
+//    - []string
+// return composable, iterable, error.
+func makeComposable(src interface{}, setter ...composeOptionSetter) (composable, bool, error) {
+	if src == nil {
+		return nil, false, nil
+	}
+	opt := &composeOption{}
+	for _, set := range setter {
+		if set != nil {
+			set(opt)
+		}
+	}
+	switch v := src.(type) {
+	case string:
+		segs, err := makeSegments(v)
+		if err != nil {
+			return nil, false, err
+		}
+		return segs, segs.iterable(), nil
+	case []string:
+		if len(v) == 0 {
+			return nil, false, nil
+		}
+		g, err := makeGroup(v, opt.ignoreOnError)
+		if err != nil {
+			return nil, false, err
+		}
+		return g, g.iterable(), nil
+	case []interface{}:
+		if len(v) == 0 {
+			return nil, false, nil
+		}
+		var strs []string
+		for _, m := range v {
+			if s, ok := m.(string); ok {
+				strs = append(strs, s)
+			} else {
+				return nil, false, errors.Errorf("composable list accept string only, now found type %T value %v", m, m)
+			}
+		}
+		g, err := makeGroup(strs, opt.ignoreOnError)
+		if err != nil {
+			return nil, false, err
+		}
+		return g, g.iterable(), nil
+	default:
+		return nil, false, errors.Errorf("invalid composable type %T value %v", v, v)
+	}
+}

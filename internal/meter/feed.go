@@ -35,7 +35,7 @@ type dynamicFeeder struct {
 	seq        uint64
 	count      uint64
 	end        bool
-	preprocess *group
+	preprocess composable
 }
 
 func (f *dynamicFeeder) close() {
@@ -114,7 +114,7 @@ func (f *dynamicFeeder) run() {
 	}
 }
 
-func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string) (feeder, error) {
+func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess interface{}) (feeder, error) {
 	f := &dynamicFeeder{
 		source: make(map[string]segments),
 		c:      make(chan *baby),
@@ -133,16 +133,15 @@ func makeDynamicFeeder(cfg map[string]string, count uint64, preprocess []string)
 		}
 	}
 
-	if len(preprocess) > 0 {
-		g, err := makeGroup(preprocess, false)
-		if err != nil {
-			return nil, err
-		}
-		if g.iterable() {
-			iterable = true
-		}
-		f.preprocess = g
+	// preprocess
+	g, it, err := makeComposable(preprocess)
+	if err != nil {
+		return nil, err
 	}
+	if it {
+		iterable = true
+	}
+	f.preprocess = g
 
 	if iterable {
 		f.count = math.MaxUint64 - 1

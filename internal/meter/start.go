@@ -132,7 +132,7 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 	}
 	return bg, nil
 }
-func constructTest(t, base *config.Test) *config.Test {
+func constructTest(t, base *config.Test) (*config.Test, error) {
 	t = t.Dup()
 	if len(t.Host) == 0 && len(base.Host) > 0 {
 		t.Host = base.Host
@@ -144,8 +144,10 @@ func constructTest(t, base *config.Test) *config.Test {
 			t.Request = base.Request
 		}
 	}
-	if len(base.PreProcess) > 0 {
-		t.PreProcess = append(base.PreProcess, t.PreProcess...)
+	var err error
+	t.PreProcess, err = merge(base.PreProcess, t.PreProcess)
+	if err != nil {
+		return nil, errors.Wrapf(err, "merge PreProcess")
 	}
 	if len(t.Timeout) == 0 && len(base.Timeout) > 0 {
 		t.Timeout = base.Timeout
@@ -159,17 +161,20 @@ func constructTest(t, base *config.Test) *config.Test {
 		if len(src.Template) == 0 && len(dst.Template) > 0 {
 			src.Template = dst.Template
 		}
-		if len(dst.Success) > 0 {
-			src.Success = append(dst.Success, src.Success...)
+		src.Success, err = merge(dst.Success, src.Success)
+		if err != nil {
+			return nil, errors.Wrapf(err, "merge Success")
 		}
-		if len(dst.Check) > 0 {
-			src.Check = append(dst.Check, src.Check...)
+		src.Check, err = merge(dst.Check, src.Check)
+		if err != nil {
+			return nil, errors.Wrapf(err, "merge Check")
 		}
-		if len(dst.Failure) > 0 {
-			src.Failure = append(dst.Failure, src.Failure...)
+		src.Failure, err = merge(dst.Failure, src.Failure)
+		if err != nil {
+			return nil, errors.Wrapf(err, "merge Failure")
 		}
 	}
-	return t
+	return t, nil
 }
 func create(cfg *config.Config) ([]*plan, error) {
 	if len(cfg.Schedules) == 0 {
@@ -180,7 +185,7 @@ func create(cfg *config.Config) ([]*plan, error) {
 	functions := map[string]composable{}
 	if cfg.Functions != nil {
 		for k, v := range cfg.Functions {
-			c, err := makeGroup(v, false)
+			c, _, err := makeComposable(v)
 			if err != nil {
 				return nil, errors.Wrapf(err, "make function %s", k)
 			}
@@ -217,7 +222,10 @@ func create(cfg *config.Config) ([]*plan, error) {
 			}
 
 			if baseTest != nil {
-				t = constructTest(t, baseTest)
+				t, err = constructTest(t, baseTest)
+				if err != nil {
+					return nil, errors.Wrapf(err, "schedule %s construct test %s", s.Name, name)
+				}
 			}
 
 			var h *config.Host
@@ -358,11 +366,9 @@ func create(cfg *config.Config) ([]*plan, error) {
 			p.bg.fc = p.fc
 		}
 
-		if len(s.PreProcess) > 0 {
-			p.preprocess, err = makeGroup(s.PreProcess, false)
-			if err != nil {
-				return nil, errors.Wrapf(err, "schedule %s make preprocesss", s.Name)
-			}
+		p.preprocess, _, err = makeComposable(s.PreProcess)
+		if err != nil {
+			return nil, errors.Wrapf(err, "schedule %s make PreProcess", s.Name)
 		}
 		plans = append(plans, p)
 	}
@@ -464,13 +470,17 @@ func override(template, cfg *config.Config) {
 			}
 
 		} else {
-			cfg.Functions = make(map[string][]string)
+			cfg.Functions = make(map[string]interface{})
 		}
 		cfg.Functions[k] = v
 	}
 }
 func StartConfig(cfg *config.Config) error {
-	for _, base := range cfg.Imports {
+	imports, err := iface2strings(cfg.Imports)
+	if err != nil {
+		return errors.Wrapf(err, "convert imports to strings")
+	}
+	for _, base := range imports {
 		if len(base) == 0 {
 			continue
 		}

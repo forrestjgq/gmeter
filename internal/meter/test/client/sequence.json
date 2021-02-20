@@ -5,7 +5,7 @@
         "base": {
             "Comment": "this test is used as base of other tests. See Schedule.TestBase",
             "Response": {
-                "Check": [ "`assert $(STATUS) == 200`" ]
+                "Check":  "`assert $(STATUS) == 200`"
             },
             "Timeout": "1s"
         },
@@ -38,9 +38,7 @@
                 "1. eval write global variable value to local one",
                 "2. Quote tests from global template"
             ],
-            "PreProcess": [
-                "`eval ISBN=${ISBN}`"
-            ],
+            "PreProcess": "`eval ISBN=${ISBN}`",
             "Request": "query-req",
             "Response": {
                 "Template": {
@@ -54,18 +52,14 @@
         },
 
         "del": {
-            "PreProcess": [
-                "`eval ISBN = ${ISBN}`"
-            ],
+            "PreProcess": "`eval ISBN = ${ISBN}`",
             "Request": "del-req"
         }
     },
 
     "Schedules": [
         {
-            "PreProcess": [
-                "`print Start Sequence`"
-            ],
+            "PreProcess": "`print Start Sequence`",
             "Name": "Sequence",
             "Tests": "add|query|del",
             "TestBase": "base",

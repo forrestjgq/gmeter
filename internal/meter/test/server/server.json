@@ -8,7 +8,7 @@
           "Comment": "route to take a ping to pong",
           "Method":  "GET",
           "Path":  "/ping",
-          "Request":  { "Success":  [ "`env -w STATUS 200 `" ] }
+          "Request":  { "Success":   "`env -w STATUS 200 `"  }
         },
 
         {
@@ -35,15 +35,9 @@
               "price": "`assert $ > 0 | env -w PRICE $`",
               "publisher": "`assert $(@strlen $) > 0 | env -w PUBLISHER $`"
             },
-            "Check": [
-              "`assert $(@strlen $(@db -r $(ISBN))) == 0`"
-            ],
-            "Success": [
-              "`db -w $(ISBN) $(REQUEST)`"
-            ],
-            "Failure": [
-              "`env -w STATUS 400`"
-            ]
+            "Check": "`assert $(@strlen $(@db -r $(ISBN))) == 0`",
+            "Success": "`db -w $(ISBN) $(REQUEST)`",
+            "Failure": "`env -w STATUS 400`"
           },
           "EndsOfRoute": "/add"
         },
@@ -89,9 +83,7 @@
               "`env -w JSON $(@db -r $(isbn))`",
               "`assert $(@strlen $(JSON)) != 0`"
             ],
-            "Success": [
-              "`db -d $(isbn)`"
-            ],
+            "Success": "`db -d $(isbn)`",
             "Failure": [
               "`print $(isbn) not found`",
               "`env -w STATUS 404`"

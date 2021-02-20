@@ -855,6 +855,9 @@ func makeJsonTemplateFromValue(value interface{}) (jsonRule, error) {
 
 }
 func makeJsonTemplate(raw json.RawMessage) (jsonRule, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
 	if string(raw) == "null" {
 		return nil, nil
 	}

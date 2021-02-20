@@ -4,6 +4,9 @@
 //     variables and commands embedding. Refer to of gmeter command document
 //     https://github.com/forrestjgq/gmeter/blob/main/command.md for detail description.
 //
+//     Note: Fields declared as `interface{}` could be a `string` or `[]string`, which
+//     defines a command line or a command group.
+//
 // gmeter runs HTTP by definition of Schedule(s). Each schedule, defining one HTTP test, or a pipeline
 // of HTTP tests, is ran by gmeter independently, and contains a series of HTTP requests execution.
 // These requests can be linearly executed one by one, or concurrently executed through multiple routines.
@@ -20,198 +23,19 @@
 //  - Response processing: including response check, success and failure processing,
 //    or report writing.
 //
-// Before reading the following samples, it's strongly recommended for you to read Config and all
-// related definitions.
-//
-// The first sample is a static definition. It assumes your target server allows POST/GET/DELETE access
-// to '/repo' to operate storage quantity of a fruit, and you need write a new fruit, then read to check
-// if it's written, and delete it for next tests. Here is it:
-//		{
-//		    "Name": "fruit-repo",
-//		    "Hosts": {
-//		        "localhost": {
-//		            "Host": "http://127.0.0.1:8000"
-//		        }
-//		    },
-//		    "Messages": {
-//		        "quantity-write": {
-//		            "Method": "POST",
-//		            "Path": "/repo",
-//		            "Headers": {
-//		                "content-type": "application/json"
-//		            },
-//		            "Body": {
-//		                "repo": "fruit",
-//		                "type": "apple",
-//		                "quantity": 300
-//		            }
-//		        },
-//		        "quantity-read": {
-//		            "Method": "GET",
-//		            "Path": "/repo?id=fruit&type=apple"
-//		        },
-//		        "quantity-delete": {
-//		            "Method": "DELETE",
-//		            "Path": "/repo?id=fruit&type=apple"
-//		        }
-//		    },
-//		    "Tests": {
-//		        "test-write": {
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "3s"
-//		        },
-//		        "test-read": {
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "1s"
-//		        },
-//		        "test-delete": {
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "1s"
-//		        }
-//		    },
-//		    "Schedules": [
-//		        {
-//		            "Name": "quantity",
-//		            "Tests": "test-write|test-read|test-delete",
-//		            "Count": 100000,
-//		            "Concurrency": 1
-//		        }
-//		    ],
-//		    "Options": {
-//		        "AbortIfFail": "true"
-//		    }
-//		}
-//
-// You can see that `quantity` Schedule defines a pipeline of tests composed by `test-write`, `test-read`,
-// `test-delete`, and runs in a single routine for 100K times. Each time gmeter sends there 3 request:
-//   - request 1: POST http://127.0.0.1:8000/repo, body:
-//		          {
-//		              "repo": "fruit",
-//		              "type": "apple",
-//		              "quantity": 300
-//		          }
-//   - request 2: GET http://127.0.0.1:8000/repoid=fruit&type=apple
-//   - request 3: DELETE http://127.0.0.1:8000/repoid=fruit&type=apple
-//
-// You may not be satisfied with these tests for these reasons:
-//  - no concurrent
-//  - only apple is tested
-//  - test-read does not check response
-//  - or more for greed you
-//
-// Now dynamic request can be a great tool, let's improve it.
-//
-// First, create a list, each line of which is a json of fruit name and quantity like:
-// 		{"fruit": "apple", "quantity": 100}
-// 		{"fruit": "orange", "quantity": 310}
-// 		{"fruit": "pear", "quantity": 0}
-// 		{...}
-//
-// The name is irrelevant, so you may create random names to make these list bigger enough like
-// 100k lines.
-//
-// then we define configuration:
-//		 {
-//		    "Name": "fruit-repo",
-//		    "Hosts": {
-//		        "localhost": {
-//		            "Host": "http://127.0.0.1:8000"
-//		        }
-//		    },
-//		    "Messages": {
-//		        "quantity-write": {
-//		            "Method": "POST",
-//		            "Path": "/repo",
-//		            "Headers": {
-//		                "content-type": "application/json"
-//		            },
-//		            "Body": {
-//		                "repo": "fruit",
-//		                "type": "$(FRUIT)",
-//		                "quantity": "`cvt -i $(QTY)`"
-//		            },
-//		            "Response": {
-//		                "Check": [
-//		                    "`assert $(STATUS) == 200`"
-//		                ]
-//		            }
-//		        },
-//		        "quantity-read": {
-//		            "Method": "GET",
-//		            "Path": "/repo?type=$(FRUIT)",
-//		            "Response": {
-//		                "Check": [
-//		                    "`assert $(STATUS) == 200`",
-//		                    "`json .type $(RESPONSE) | assert $(INPUT) == $(FRUIT)`",
-//		                    "`json .quantity $(RESPONSE) | assert $(INPUT) == $(QTY)`"
-//		                ]
-//		            }
-//		        },
-//		        "quantity-delete": {
-//		            "Method": "DELETE",
-//		            "Path": "/repo?type=$(FRUIT)",
-//		            "Response": {
-//		                "Check": [
-//		                    "`assert $(STATUS) == 200`"
-//		                ]
-//		            }
-//		        }
-//		    },
-//		    "Tests": {
-//		        "test-write": {
-//		            "PreProcess": [
-//		                "`list /path/to/fruit/list | env -w JSON`",
-//		                "`json .fruit | env -w FRUIT`",
-//		                "`json .quantity | env -w QTY`"
-//		            ],
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "3s"
-//		        },
-//		        "test-read": {
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "1s"
-//		        },
-//		        "test-delete": {
-//		            "Host": "localhost",
-//		            "Request": "write",
-//		            "Timeout": "1s"
-//		        }
-//		    },
-//		    "Schedules": [
-//		        {
-//		            "Name": "quantity",
-//		            "Tests": "test-write|test-read|test-delete",
-//		            "Concurrency": 100
-//		        }
-//		    ],
-//		    "Options": {
-//		        "AbortIfFail": "true"
-//		    }
-//		}
-//
-// In this configuration, there are still 3 tests composing a pipeline, but as first request, test-write
-// applies a preprocess, which read a line from list and write fruit and quantity into environment variable
-// `$(FRUIT)` and `$(QTY)`. These two variables will be quoted in request generation and response checking.
-//
-// You may note that each case adds a `Response|Check`, containing one or several commands to check response
-// status and content.
-//
-// In `Schedules` a concurrency of 100 is applied.
-//
-// These covers all your needs.
 //
 // Read commands document for more tools to generate requests and process response.
+//
+// A Guideline document is provided to explain how gmeter works:
+//		https://github.com/forrestjgq/gmeter/blob/main/guideline.md
 package config
 
 import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+
+	"github.com/huandu/go-clone"
 )
 
 // Host defines a server and proxy to visit this server
@@ -250,7 +74,7 @@ func (h *Host) Check() error {
 //
 // If any failure occurs duration above procedures, Response.Failure will be called.
 type Test struct {
-	PreProcess []string // [dynamic] processing before each HTTP request
+	PreProcess interface{} // [dynamic] processing before each HTTP request
 	// `key` to Config.Hosts, or : [<proxy>|]<host>
 	// If Host is empty, gmeter will set it automatically following rules:
 	//   - if only 1 hosts exist, set to name of that host
@@ -265,13 +89,8 @@ type Test struct {
 	Timeout string
 }
 
-func cpList(src []string) []string {
-	if len(src) == 0 {
-		return nil
-	}
-	dst := make([]string, len(src))
-	copy(dst, src)
-	return dst
+func cpList(src interface{}) interface{} {
+	return clone.Clone(src)
 }
 func (t *Test) Dup() *Test {
 	ret := &Test{
@@ -382,8 +201,10 @@ type Schedule struct {
 	// PreProcess defines a group of segment which will be composed before tests runs.
 	// Note that this preprocessing will be called only once.
 	//
+	// PreProcess should be a string list or a single string
+	//
 	// [dynamic]
-	PreProcess []string
+	PreProcess interface{}
 
 	// Tests defined a test pipeline composed of one or more tests.
 	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...
@@ -459,22 +280,26 @@ const (
 type Config struct {
 	Name string // Everyone has a name, stored in ${CONFIG}
 
-	// Imports defines configuration files to be loaded as template.
+	// Imports defines configuration file(s) to be loaded as template. It could be a single
+	// string, or a string list([]string), each of which is a absolute or relative file path.
+	// While relative path is used, it is relate to this config file.
+	//
 	// All the Hosts/Messages/Tests/Env/Options defined inside those template configurations
 	// will be copied to this config except the same key already defined.
 	//
 	// If global template is specified by `-template <path>`, template will be imported before
 	// this.
-	Imports []string
+	Imports interface{}
 
 	// Functions defines several functions, each one is stored inside a map, with a function name
 	// as map key.
-	// A function is a command group defined by config and called by command `call`.
-	// Commands inside function could visit arguments by $n. $0 is always the name of function, and $1
-	// is the first argument, $2 is the second argument, ...
-	// command `call` will pass function name and all required arguments, for example: `call add 3 5` will
+	// A function is a command line(a string) or a command group(a string list: []string) defined
+	// by config and called by command `call`.
+	// Command(s) inside function could visit arguments by $n. $0 is always the name of function,
+	// and $1 is the first argument, $2 is the second argument, ...
+	// Command `call` will pass function name and all required arguments, for example: `call add 3 5` will
 	// execute function `add` with argument 1($1) is `3` and argument 2($2) is `5`.
-	Functions map[string][]string
+	Functions map[string]interface{}
 
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.

@@ -73,7 +73,10 @@ func Execute(opt *config.GOptions) error {
 			if err != nil {
 				return errors.Wrapf(err, "get abs path %s", opt.Template)
 			}
-			c.Imports = append([]string{opt.Template}, c.Imports...)
+			c.Imports, err = merge(opt.Template, c.Imports)
+			if err != nil {
+				return errors.Wrapf(err, "merge imports with template")
+			}
 		}
 		if c.Options == nil {
 			c.Options = make(map[config.Option]string)

@@ -66,8 +66,8 @@ func (m *Request) Check() error {
 // Any error reported in Success will NOT trigger Failure.
 //
 type Response struct {
-	Check    []string        // [dynamic] segments called after server responds.
-	Success  []string        // [dynamic] segments called if error is reported during http request and Check
-	Failure  []string        // [dynamic] segments called if any error occurs.
+	Check    interface{}     // [dynamic] segments called after server responds.
+	Success  interface{}     // [dynamic] segments called if error is reported during http request and Check
+	Failure  interface{}     // [dynamic] segments called if any error occurs.
 	Template json.RawMessage // [dynamic] Template is a json compare template to compare with response.
 }
