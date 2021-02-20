@@ -208,11 +208,14 @@ Actually in gmeter `json.RawMessage` is treated as a string, thanks to GO json p
     "Body": "{ \"BoolVar\": false, \"IntVar\": 1, \"StringVar\": \"hello world\" }"
 }
 ```
+
+There are some fields accept multiple types and they are defined as `interface{}`. In current version of gmeter, this situation happens while fields accept `string` or `[]string`.
+
 ## Test definition
 Let's start with definition of a Test:
 ```go
 type Test struct {
-	PreProcess []string // [dynamic] processing before each HTTP request
+	PreProcess interface{} // [dynamic] processing before each HTTP request
 
 	// `key` to Config.Hosts, or : [<proxy>|]<host>
 	// If Host is empty, gmeter will set it automatically following rules:
@@ -320,9 +323,9 @@ None of these fields is necessary.
 
 ```go
 type Response struct {
-	Check    []string        // [dynamic] segments called after server responds.
-	Success  []string        // [dynamic] segments called if error is reported during http request and Check
-	Failure  []string        // [dynamic] segments called if any error occurs.
+	Check    interface{}        // [dynamic] segments called after server responds.
+	Success  interface{}        // [dynamic] segments called if error is reported during http request and Check
+	Failure  interface{}        // [dynamic] segments called if any error occurs.
 	Template json.RawMessage // [dynamic] Template is a json compare template to compare with response.
 }
 
@@ -413,7 +416,7 @@ type Schedule struct {
 	// Note that this preprocessing will be called only once.
 	//
 	// [dynamic]
-	PreProcess []string
+	PreProcess interface{}
 
 	// Tests defined a test pipeline composed of one or more tests.
 	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...
@@ -499,7 +502,7 @@ type Config struct {
 	//
 	// If global template is specified by `-template <path>`, template will be imported before
 	// this.
-	Imports []string
+	Imports interface{}
 
    	// Functions defines several functions, each one is stored inside a map, with a function name
 	// as map key.
@@ -508,7 +511,7 @@ type Config struct {
 	// is the first argument, $2 is the second argument, ...
 	// command `call` will pass function name and all required arguments, for example: `call add 3 5` will
 	// execute function `add` with argument 1($1) is `3` and argument 2($2) is `5`.
-	Functions map[string][]string
+	Functions map[string]interface{}
 
 	// predefined hosts map that referred by a key string.
 	// if key is "-", this host is applied to those Tests defined without an explicit Test.Host.
