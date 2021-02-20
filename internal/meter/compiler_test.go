@@ -132,13 +132,13 @@ func TestSegments(t *testing.T) {
 			"`assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)`":                        "",
 			"`if 3 == 3 then echo $(@echo 3 | env -w HELLO | env -r HELLO)`":             "3",
 			"`eval 3+1|cvt -i`":                                                          "`4`",
-			"`eval 3+1==4`":                                                              "TRUE",
+			"`eval 3+1==4`":                                                              _true,
 			"`print 江国庆`":                                                                "",
 			"print 江国庆":                                                                  "print 江国庆",
 		}
 	} else {
 		m = map[string]string{
-			"`if true then echo jiang`": "jiang",
+			"`assert !false | assert true | assert !0 | assert 1 | echo $(ERROR)`": "",
 		}
 	}
 

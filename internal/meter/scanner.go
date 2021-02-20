@@ -859,7 +859,7 @@ func (s *Scanner) Scan() (pos int, tok Token, lit string) {
 	case isLetter(ch):
 		lit = s.scanIdentifier()
 		tok = IDENT
-		if lit == "TRUE" || lit == "true" || lit == "FALSE" || lit == "false" {
+		if lit == "TRUE" || lit == _true || lit == "FALSE" || lit == _false {
 			tok = STRING
 		}
 	case isDecimal(ch) || ch == '.' && isDecimal(rune(s.peek())):

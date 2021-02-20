@@ -134,10 +134,10 @@ func (u *unaryComposer) compose(bg *background) (string, error) {
 		return strconv.Itoa(i), nil
 	} else if u.tok == NOT {
 		r := ""
-		if s == "true" || s == "TRUE" || s == "1" {
-			r = "FALSE"
-		} else if s == "false" || s == "FALSE" || s == "0" {
-			r = "TRUE"
+		if isFalse(s) {
+			r = _true
+		} else if isTrue(s) {
+			r = _false
 		} else {
 			return "", errors.Errorf("! can not apply to (%s)", s)
 		}
@@ -205,10 +205,10 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 		return strconv.ParseFloat(s, 64)
 	}
 	toBool := func(s string) (bool, error) {
-		if s == "true" || s == "TRUE" {
+		if isTrue(s) {
 			return true, nil
 		}
-		if s == "false" || s == "FALSE" {
+		if isFalse(s) {
 			return false, nil
 		}
 		return false, errors.Errorf("expect a bool value: %s", s)
@@ -218,9 +218,9 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 	}
 	bToStr := func(b bool) string {
 		if b {
-			return "TRUE"
+			return _true
 		} else {
-			return "FALSE"
+			return _false
 		}
 	}
 	arith := func(lhs, rhs string, f func(left, right float64) float64) (string, error) {
@@ -335,7 +335,7 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 	case "!=", "==":
 		calc = func(lhs, rhs string) (string, error) {
 			if op == "==" && lhs == rhs {
-				return "TRUE", nil
+				return _true, nil
 			}
 
 			f, err := comp(lhs, rhs, func(left, right float64) bool {
@@ -353,7 +353,7 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 				})
 			}
 			if err != nil {
-				return "FALSE", nil
+				return _false, nil
 			}
 			return f, nil
 		}

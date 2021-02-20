@@ -2,6 +2,20 @@ package meter
 
 import "github.com/pkg/errors"
 
+var (
+	_true  = "true"
+	_false = "false"
+)
+
+func isTrue(s string) bool {
+	return s == "1" || s == "TRUE" || s == _true
+}
+func isFalse(s string) bool {
+	return s == "0" || s == "FALSE" || s == _false
+}
+func isBool(s string) bool {
+	return isTrue(s) || isFalse(s)
+}
 func merge(src, dst interface{}) (interface{}, error) {
 	s, err := iface2strings(src)
 	if err != nil {

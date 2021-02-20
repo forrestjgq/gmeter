@@ -161,10 +161,10 @@ func (c *cmdCvt) execute(bg *background) (string, error) {
 		return "", errors.Wrapf(err, "%s compose content", c.raw)
 	} else {
 		if c.toBool {
-			if content == "0" || content == "false" || content == "FALSE" {
-				output = "`false`"
-			} else if content == "1" || content == "true" || content == "TRUE" {
-				output = "`true`"
+			if isFalse(content) {
+				output = "`" + _false + "`"
+			} else if isTrue(content) {
+				output = "`" + _true + "`"
 			} else {
 				return "", errors.Errorf("%s convert %s to bool fail", c.raw, content)
 			}
@@ -1453,10 +1453,10 @@ func (c *cmdAssert) execute(bg *background) (string, error) {
 		return "", errors.Wrapf(err, "assert %s", c.raw)
 	}
 
-	if str == "TRUE" || str == "true" || str == "1" {
+	if isTrue(str) {
 		return "", nil
 	}
-	if str == "FALSE" || str == "false" || str == "0" {
+	if isFalse(str) {
 		return "", errors.Errorf("assert %s fail", c.raw)
 	}
 
