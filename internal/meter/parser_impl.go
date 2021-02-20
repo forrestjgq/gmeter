@@ -92,6 +92,8 @@ func (c *commandComposer) compose(bg *background) (string, error) {
 	if c.cmd == nil {
 		return "", nil
 	}
+	input := bg.getLocalEnv(KeyInput)
+	defer bg.setInput(input)
 	return c.cmd.execute(bg)
 }
 

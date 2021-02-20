@@ -135,10 +135,15 @@ func TestSegments(t *testing.T) {
 			"`eval 3+1==4`":                                                              _true,
 			"`print 江国庆`":                                                                "",
 			"print 江国庆":                                                                  "print 江国庆",
+			"`echo 5 | assert $(@eval $$ + 3) > 2`":                                      "ERROR",
+			"`echo 5 | assert 4 + 3 > $$ + 1`":                                           "",
+			"`echo 5 | assert $(@eval 4 + 3) > $$ + 1`":                                  "",
+			"`echo 5 | eval $$ + 3 | assert $$ > 3`":                                     "",
+			"`env -w HELLO $(@echo 3) | env -r HELLO`":                                   "3",
 		}
 	} else {
 		m = map[string]string{
-			"`assert !false | assert true | assert !0 | assert 1 | echo $(ERROR)`": "",
+			"`echo 5 | assert $(@eval 4 + 3) > $$ + 1`": "",
 		}
 	}
 
@@ -173,6 +178,7 @@ func TestSegments(t *testing.T) {
 	if seg, err := makeSegments(list); err != nil {
 		t.Fatal(err)
 	} else {
+		bg.cleanup()
 		for _, line := range res {
 			if out, err := seg.compose(bg); err != nil {
 				t.Fatal(err)

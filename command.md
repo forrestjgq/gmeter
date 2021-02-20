@@ -191,6 +191,24 @@ Multiple level embedded is supported, such as:
 assert $(@echo $(@echo $(@echo 3))) == $(@echo 3)
 ```
 
+Sometimes an embedded command euqals to a pipeline like:
+```
+echo 3 | env -w HELLO
+env -w HELLO $(@echo 3)
+```
+These two command does the same thing, but things changes in these two commands:
+```
+echo 5 | assert $(@eval $$ + 3) > 3
+echo 5 | eval $$ + 2 | assert $$ > 3
+```
+The first command seems does the same work as the second one, but actually it fails:
+```
+pipeline[0]: strconv.ParseFloat: parsing "": invalid syntax
+```
+This happens because embedded command can NOT visit outside `$$`. An embedded command is another pipeline which takes no input. so `$(@eval $$ + 3)` will try to parse `$$`, which is empty string, to float number, and it fails.
+
+So you can NOT use `$(INPUT)` or `$$` inside an embedded command.
+
 ## Group
 Commands and pipelines can be grouped as a list, for example, we define several `Check`s in `config.Response` to check HTTP response:
 ```json

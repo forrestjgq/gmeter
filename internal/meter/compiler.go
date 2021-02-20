@@ -1962,6 +1962,10 @@ func (s *stream) end() {
 				return
 			}
 			seg := &dynamicSegment{f: func(bg *background) (string, error) {
+				// here background should be duplicated
+				// assume we has a pipeline: echo 5 | assert $(@eval $$ + 3) > $(@eval $$ + 2)
+				input := bg.getLocalEnv(KeyInput)
+				defer bg.setInput(input)
 				return cmd.execute(bg)
 			}}
 
