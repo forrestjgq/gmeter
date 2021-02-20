@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate goyacc -o parser_rule.go parser.yy
 type composer interface {
 	composable
 	getError() error

@@ -1,7 +1,7 @@
 %{
 package meter
 
-import "fmt"
+//import "fmt"
 
 %}
 %union {

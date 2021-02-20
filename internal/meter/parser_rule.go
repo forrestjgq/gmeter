@@ -7,6 +7,8 @@ import __yyfmt__ "fmt"
 
 //line parser.yy:2
 
+//import "fmt"
+
 //line parser.yy:7
 type yySymType struct {
 	yys  int
