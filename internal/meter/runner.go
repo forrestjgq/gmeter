@@ -31,7 +31,24 @@ func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
 	if bg.fc != nil {
 		defer bg.fc.wait().cancel()
 	}
-	return r.h.Do(req)
+	var latency *gomark.Latency
+	if bg.lr != nil {
+		latency = gomark.NewLatency(bg.lr)
+	}
+	if bg.adder != nil {
+		bg.adder.Mark(1)
+	}
+
+	rsp, err := r.h.Do(req)
+
+	if bg.adder != nil {
+		bg.adder.Mark(-1)
+	}
+	// only successful request count latency
+	if latency != nil && err == nil {
+		latency.Mark()
+	}
+	return rsp, err
 }
 func (r *runner) run(bg *background) next {
 	var (
@@ -96,27 +113,9 @@ Body: %s
 		}
 	}
 
-	var latency *gomark.Latency
-	if bg.lr != nil {
-		latency = gomark.NewLatency(bg.lr)
-	}
-	if bg.adder != nil {
-		bg.adder.Mark(1)
-	}
-
 	rsp, err = r.do(bg, req)
-
-	if bg.adder != nil {
-		bg.adder.Mark(-1)
-	}
-
 	if err != nil {
 		return c.processFailure(bg, err)
-	}
-
-	// only successful request count latency
-	if latency != nil {
-		latency.Mark()
 	}
 
 	b, err := ioutil.ReadAll(rsp.Body)
