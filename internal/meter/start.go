@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forrestjgq/gomark"
+
 	"github.com/pkg/errors"
 
 	"github.com/forrestjgq/gmeter/config"
@@ -89,6 +91,8 @@ func createBackground(cfg *config.Config, sched *config.Schedule) (*background, 
 		db:     createDB(),
 		local:  makeSimpEnv(),
 		global: makeSimpEnv(),
+		lr:     gomark.NewLatencyRecorder(sched.Name),
+		adder:  gomark.NewAdder(sched.Name),
 	}
 
 	bg.setGlobalEnv(KeySchedule, sched.Name)

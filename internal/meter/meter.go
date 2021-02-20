@@ -188,6 +188,7 @@ type background struct {
 	db, local, global env
 	dyn               []env
 	lr                gmi.Marker
+	adder             gmi.Marker
 	err               error
 	rpt               *reporter
 	predefine         map[string]string
@@ -213,6 +214,7 @@ func (bg *background) dup() *background {
 		global:    bg.global,
 		db:        bg.db,
 		lr:        bg.lr,
+		adder:     bg.adder,
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
 		fc:        bg.fc,

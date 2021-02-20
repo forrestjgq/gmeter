@@ -40,6 +40,7 @@ func run() error {
 	template := ""
 	variables := ""
 	final := ""
+	gmport := 0
 	flag.StringVar(&variables, "e", "", "predefined global variables k=v, seperated by space if define multiple variables")
 	flag.StringVar(&template, "t", "", "template config file path")
 	flag.StringVar(&template, "template", "", "template config file path")
@@ -48,6 +49,7 @@ func run() error {
 	flag.StringVar(&arceeCfg, "arcee", "", "arcee configuration file path")
 	flag.StringVar(&call, "call", "", "extra program command line")
 	flag.StringVar(&final, "f", "", "final execute config")
+	flag.IntVar(&gmport, "gm", 7777, "gomark HTTP server, default 7777")
 	flag.Parse()
 
 	opt := &config.GOptions{
@@ -58,6 +60,7 @@ func run() error {
 		ArceeServerCfg: arceeCfg,
 		Call:           call,
 		Final:          final,
+		GoMarkPort:     gmport,
 	}
 
 	var err error

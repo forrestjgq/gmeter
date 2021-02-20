@@ -100,34 +100,42 @@ Body: %s
 	if bg.lr != nil {
 		latency = gomark.NewLatency(bg.lr)
 	}
+	if bg.adder != nil {
+		bg.adder.Mark(1)
+	}
 
-	if rsp, err = r.do(bg, req); err != nil {
+	rsp, err = r.do(bg, req)
+
+	if bg.adder != nil {
+		bg.adder.Mark(-1)
+	}
+
+	if err != nil {
 		return c.processFailure(bg, err)
-	} else {
-		if latency != nil {
-			latency.Mark()
-		}
+	}
 
-		b, err := ioutil.ReadAll(rsp.Body)
-		_ = rsp.Body.Close()
+	// only successful request count latency
+	if latency != nil {
+		latency.Mark()
+	}
 
-		if debug {
-			fmt.Printf(`
+	b, err := ioutil.ReadAll(rsp.Body)
+	_ = rsp.Body.Close()
+
+	if debug {
+		fmt.Printf(`
 
 --------Response %s-%s ------------
 Status: %d
 Body: %s
 `, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), rsp.StatusCode, string(b))
-		}
-		if err != nil {
-			return c.processFailure(bg, err)
-		}
-		bg.setLocalEnv(KeyStatus, strconv.Itoa(rsp.StatusCode))
-		bg.setLocalEnv(KeyResponse, string(b))
-		decision = c.processResponse(bg)
-
 	}
-
+	if err != nil {
+		return c.processFailure(bg, err)
+	}
+	bg.setLocalEnv(KeyStatus, strconv.Itoa(rsp.StatusCode))
+	bg.setLocalEnv(KeyResponse, string(b))
+	decision = c.processResponse(bg)
 	return decision
 }
 

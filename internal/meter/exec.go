@@ -15,13 +15,31 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/forrestjgq/gomark"
+
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/forrestjgq/gmeter/internal/arcee"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
+var gmInit = &sync.Once{}
+
+const defGomarkPort int = 7777
+
+func startGomark(port int) {
+	if port == 0 {
+		port = defGomarkPort
+	}
+
+	gmInit.Do(func() {
+		gomark.StartHTTPServer(port)
+	})
+}
+
 func Execute(opt *config.GOptions) error {
+	startGomark(opt.GoMarkPort)
+
 	_, err := startPerf(0)
 	if err != nil {
 		defer stopPerf()

@@ -9,4 +9,5 @@ type GOptions struct {
 	ArceeServerCfg string            // "-arceesrv"
 	Call           string            // "-call"
 	Final          string            // "-f"
+	GoMarkPort     int               // "-gm"
 }

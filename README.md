@@ -42,6 +42,7 @@ Optional arguments includes:
 - `-e="k1=v1 k2=v2 ..."`: predefined global variables. Each variable is defined in `key=value` form, and multiple key value pairs are seperated by spaces.
 - `-call <commandline>`: command line called before any config is executed and after any server is started.
 - `-f <final>`: final config called even running fails.
+- `-gm <port>`: set [GoMark](https://github.com/forrestjgq/gomark) HTTP port, default 7777.
 
 # Documents
 - [Guideline](./guideline.md): A guideline explains with examples for you to ease into gmeter:
