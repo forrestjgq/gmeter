@@ -9,12 +9,9 @@ import (
 )
 
 func TestSegments(t *testing.T) {
-	bg := &background{
-		name:   "",
-		local:  makeSimpEnv(),
-		global: makeSimpEnv(),
-		lr:     nil,
-		err:    nil,
+	bg, err := makeBackground(nil, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	os.TempDir()
@@ -150,6 +147,13 @@ func TestSegments(t *testing.T) {
 			"`assert $(?FILE)`":     "",
 			"`assert ${?GENV}`":     "",
 			"`assert ${?NOTEXIST}`": "ERROR",
+			"`assert ${#GENV} == $(@strlen ${GENV})`":                             "",
+			"`db -w hello world | assert $(@db -r hello) == world | db -d hello`": "",
+			"`db -w hello forrest | assert $(@db -r #hello) == 7 | db -d hello`":  "",
+			"`db -w hello forrest | assert $(@db -r ?hello) | db -d hello`":       "",
+			"`assert $(@db -r ?hello)`":                                           "ERROR",
+			//"`eval #hello = 1`":     "ERROR", // should panic
+			//"`env -w #hello 1`": "ERROR", // should panic
 		}
 	} else {
 		m = map[string]string{

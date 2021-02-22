@@ -18,15 +18,17 @@ Here `name` is variable name which is started with alpha or `_` and composed of 
 ## Variable Decoration
 A variable decoration is to add a prefix sign before variable name. gmeter support:
 - `#name`: get length of value of vairable `name`
-- `?name`: check existence of variable `name`. It reutrns `true` if it exist, `false` otherwise.
+- `?name`: check existence of variable `name`. It reutrns `true` if it exists, `false` otherwise.
 
-These decorations applies to all variables(local, global, json). Assuming we've got a local variable `LocalVar` with value `hello` and a global `GlobalVar` with value `forrest`:
+These decorations apply to all variables(local, global, json). Assuming we've got a local variable `LocalVar` with value `hello` and a global `GlobalVar` with value `forrest`:
 - `$(#LocalVar)` will get `5`
 - `$(#NotExist)` will get `0`
 - `$(?NotExist)` will get `false`
-- `${#GlobalVar}` will get `6`
+- `${#GlobalVar}` will get `7`
 - `${?GlobalVar}` will get `true`
 
+This adds a restriction to variable name:
+    **While writing a variable, it's name can not be decorated. Attemption to write value to a variable like `#hello` will trigger a panic error**.
 ## Global Variables
 Global variables are those defined inside a schedule and can be accessed by all its tests in every stage at any time.
 It is persisted across the whole lifetime of schedule.
@@ -389,6 +391,8 @@ db -d <variable>
 ```
 
 Database is a persistent container to store key-value pairs, unlike local environment, it remains across sessions and unlike global environment, it can be accessed by `-r`(read), `-d`(delete), `-w` write.
+
+`db` command will apply decoration as variables, so `db -r #name` will read length of data base item `name` and `db -r ?name` will get `true` if database item `name` exists or `false` if not. And variable name with decoration is not allowed.
 
 ## env - local variable operations
 
