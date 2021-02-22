@@ -11,10 +11,21 @@ There are two types of variable: **local variable** and **global variable**. Loc
 Two forms of variable representation are defined:
 - `$(name)`: local variable
 - `${name}`: global variable
-- `$<name>`: json compare environment variable
+- `$<name>`: json compare environment variable, or json variable
 
 Here `name` is variable name which is started with alpha or `_` and composed of `[a-zA-Z0-9_-.]`.
 
+## Variable Decoration
+A variable decoration is to add a prefix sign before variable name. gmeter support:
+- `#name`: get length of value of vairable `name`
+- `?name`: check existence of variable `name`. It reutrns `true` if it exist, `false` otherwise.
+
+These decorations applies to all variables(local, global, json). Assuming we've got a local variable `LocalVar` with value `hello` and a global `GlobalVar` with value `forrest`:
+- `$(#LocalVar)` will get `5`
+- `$(#NotExist)` will get `0`
+- `$(?NotExist)` will get `false`
+- `${#GlobalVar}` will get `6`
+- `${?GlobalVar}` will get `true`
 
 ## Global Variables
 Global variables are those defined inside a schedule and can be accessed by all its tests in every stage at any time.

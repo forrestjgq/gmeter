@@ -275,7 +275,7 @@ func TestPlanConcurrent(t *testing.T) {
 	tpr.n = nextFinished
 	time.Sleep(100 * time.Millisecond)
 	if ret != nextFinished {
-		t.Fatalf("expect finish")
+		t.Fatalf("expect finish, get %v", ret)
 	}
 
 	if !tpr.check() {
@@ -283,6 +283,7 @@ func TestPlanConcurrent(t *testing.T) {
 	}
 	p.close()
 }
+
 func TestPlanConcurrentFail(t *testing.T) {
 	concurrent := 100
 	p := &plan{

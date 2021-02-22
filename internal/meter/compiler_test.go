@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -36,9 +37,12 @@ func TestSegments(t *testing.T) {
 		_ = os.Remove(name)
 	}()
 
-	bg.setGlobalEnv("GENV", "global variable")
+	gv := "global variable"
+	gvlen := strconv.Itoa(len(gv))
+	bg.setGlobalEnv("GENV", gv)
 	bg.setLocalEnv("LENV", "local variable")
 	bg.setLocalEnv("FILE", name)
+	flen := strconv.Itoa(len(name))
 
 	enc := base64.StdEncoding.EncodeToString([]byte(base))
 	fenc := base64.StdEncoding.EncodeToString([]byte(content))
@@ -140,10 +144,16 @@ func TestSegments(t *testing.T) {
 			"`echo 5 | assert $(@eval 4 + 3) > $$ + 1`":                                  "",
 			"`echo 5 | eval $$ + 3 | assert $$ > 3`":                                     "",
 			"`env -w HELLO $(@echo 3) | env -r HELLO`":                                   "3",
+			"$(#FILE)":              flen,
+			"${#GENV}":              gvlen,
+			"`assert $(?NOTEXIST)`": "ERROR",
+			"`assert $(?FILE)`":     "",
+			"`assert ${?GENV}`":     "",
+			"`assert ${?NOTEXIST}`": "ERROR",
 		}
 	} else {
 		m = map[string]string{
-			"`echo 5 | assert $(@eval 4 + 3) > $$ + 1`": "",
+			"$(#FILE)": flen,
 		}
 	}
 

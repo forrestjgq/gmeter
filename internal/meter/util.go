@@ -13,6 +13,14 @@ func isTrue(s string) bool {
 func isFalse(s string) bool {
 	return s == "0" || s == "FALSE" || s == _false
 }
+
+func isEof(err error) bool {
+	if err != nil {
+		return errors.Cause(err).Error() == EOF
+	}
+	return false
+}
+
 func merge(src, dst interface{}) (interface{}, error) {
 	s, err := iface2strings(src)
 	if err != nil {

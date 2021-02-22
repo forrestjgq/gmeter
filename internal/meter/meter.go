@@ -4,7 +4,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
+
+	"github.com/golang/glog"
 
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/forrestjgq/gomark"
@@ -51,11 +54,33 @@ var (
 	EofError = io.EOF
 )
 
-func isEof(err error) bool {
-	if err != nil {
-		return errors.Cause(err).Error() == EOF
+func hasSign(s string) bool {
+	if len(s) > 1 && (s[0] == '#' || s[0] == '?') {
+		return true
 	}
 	return false
+}
+func getSign(s string) (rune, string) {
+	if len(s) > 1 {
+		switch s[0] {
+		case '#', '?':
+			return rune(s[0]), s[1:]
+		}
+	}
+	return 0, s
+}
+func calcSign(sign rune, s string) string {
+	switch sign {
+	case '#':
+		return strconv.Itoa(len(s))
+	case '?':
+		if len(s) > 0 {
+			return _true
+		}
+		return _false
+	default:
+		return s
+	}
 }
 
 type simpEnv map[string]string
@@ -346,14 +371,18 @@ func (bg *background) topEnv() env {
 	return bg.dyn[len(bg.dyn)-1]
 }
 func (bg *background) getJsonEnv(key string) string {
+	sign, k := getSign(key)
 	e := bg.topEnv()
 	if e == nil {
-		panic("no json env " + key)
+		panic("no json env " + k)
 	}
-	return e.get(key)
+	return calcSign(sign, e.get(k))
 }
 
 //func (bg *background) setJsonEnv(key, value string) {
+//if hasSign(key) {
+//glog.Fatalf("set local key %s value %s", key, value)
+//}
 //	e := bg.topEnv()
 //	if e == nil {
 //		panic("no json env " + key)
@@ -399,9 +428,13 @@ func (bg *background) setError(err error) {
 }
 
 func (bg *background) dbRead(key string) string {
-	return bg.db.get(key)
+	sign, k := getSign(key)
+	return calcSign(sign, bg.db.get(k))
 }
 func (bg *background) dbWrite(key string, value string) {
+	if hasSign(key) {
+		glog.Fatalf("set DB key %s value %s", key, value)
+	}
 	bg.db.put(key, value)
 }
 func (bg *background) dbDelete(key string) {
@@ -420,15 +453,21 @@ func (bg *background) getArgument(index int) (string, error) {
 	return args[index], nil
 }
 func (bg *background) getLocalEnv(key string) string {
-	if key == KeyError {
-		if bg.err == nil {
-			return ""
+	v := ""
+	sign, k := getSign(key)
+	if k == KeyError {
+		if bg.err != nil {
+			v = bg.err.Error()
 		}
-		return bg.err.Error()
+	} else {
+		v = bg.local.get(k)
 	}
-	return bg.local.get(key)
+	return calcSign(sign, v)
 }
 func (bg *background) setLocalEnv(key string, value string) {
+	if hasSign(key) {
+		glog.Fatalf("set local key %s value %s", key, value)
+	}
 	bg.local.put(key, value)
 }
 func (bg *background) delLocalEnv(key string) {
@@ -436,13 +475,17 @@ func (bg *background) delLocalEnv(key string) {
 }
 
 func (bg *background) getGlobalEnv(key string) string {
-	r := bg.global.get(key)
+	sign, k := getSign(key)
+	r := bg.global.get(k)
 	if len(r) == 0 {
-		r = GetGlobalVariable(key)
+		r = GetGlobalVariable(k)
 	}
-	return r
+	return calcSign(sign, r)
 }
 func (bg *background) setGlobalEnv(key string, value string) {
+	if hasSign(key) {
+		glog.Fatalf("set global key %s value %s", key, value)
+	}
 	bg.global.put(key, value)
 }
 
