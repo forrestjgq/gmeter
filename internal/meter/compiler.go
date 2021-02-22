@@ -1872,7 +1872,6 @@ type stream struct {
 	rdOffset   int // reading offset (position after current character)
 	prevOffset int
 	err        error
-	expect     rune
 }
 
 func (s *stream) errorFrom(err error) {
@@ -1910,6 +1909,7 @@ func (s *stream) unread() {
 		s.rdOffset = s.offset
 	}
 }
+
 func (s *stream) next() {
 	if s.rdOffset < len(s.src) {
 		s.offset = s.rdOffset

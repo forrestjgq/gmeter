@@ -1,9 +1,7 @@
 package meter
 
 import (
-	"bytes"
 	"fmt"
-	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
@@ -135,10 +133,10 @@ func (s *Scanner) next() {
 		s.ch = r
 	} else {
 		s.offset = len(s.src)
-		if s.ch == '\n' {
-			//s.lineOffset = s.offset
-			//s.file.AddLine(s.offset)
-		}
+		//if s.ch == '\n' {
+		//s.lineOffset = s.offset
+		//s.file.AddLine(s.offset)
+		//}
 		s.ch = -1 // eof
 	}
 }
@@ -212,7 +210,7 @@ func (s *Scanner) errorf(offs int, format string, args ...interface{}) {
 	s.error(offs, fmt.Sprintf(format, args...))
 }
 
-var prefix = []byte("line ")
+//var prefix = []byte("line ")
 
 // updateLineInfo parses the incoming comment text at offset offs
 // as a line directive. If successful, it updates the line info table
@@ -276,59 +274,59 @@ var prefix = []byte("line ")
 //	s.file.AddLineColumnInfo(next, filename, line, col)
 //}
 
-func trailingDigits(text []byte) (int, int, bool) {
-	i := bytes.LastIndexByte(text, ':') // look from right (Windows filenames may contain ':')
-	if i < 0 {
-		return 0, 0, false // no ":"
-	}
-	// i >= 0
-	n, err := strconv.ParseUint(string(text[i+1:]), 10, 0)
-	return i + 1, int(n), err == nil
-}
+//func trailingDigits(text []byte) (int, int, bool) {
+//	i := bytes.LastIndexByte(text, ':') // look from right (Windows filenames may contain ':')
+//	if i < 0 {
+//		return 0, 0, false // no ":"
+//	}
+//	// i >= 0
+//	n, err := strconv.ParseUint(string(text[i+1:]), 10, 0)
+//	return i + 1, int(n), err == nil
+//}
 
-func (s *Scanner) findLineEnd() bool {
-	// initial '/' already consumed
-
-	defer func(offs int) {
-		// reset scanner state to where it was upon calling findLineEnd
-		s.ch = '/'
-		s.offset = offs
-		s.rdOffset = offs + 1
-		s.next() // consume initial '/' again
-	}(s.offset - 1)
-
-	// read ahead until a newline, EOF, or non-comment token is found
-	for s.ch == '/' || s.ch == '*' {
-		if s.ch == '/' {
-			//-style comment always contains a newline
-			return true
-		}
-		/*-style comment: look for newline */
-		s.next()
-		for s.ch >= 0 {
-			ch := s.ch
-			if ch == '\n' {
-				return true
-			}
-			s.next()
-			if ch == '*' && s.ch == '/' {
-				s.next()
-				break
-			}
-		}
-		s.skipWhitespace() // s.insertSemi is set
-		if s.ch < 0 || s.ch == '\n' {
-			return true
-		}
-		if s.ch != '/' {
-			// non-comment token
-			return false
-		}
-		s.next() // consume '/'
-	}
-
-	return false
-}
+//func (s *Scanner) findLineEnd() bool {
+//	// initial '/' already consumed
+//
+//	defer func(offs int) {
+//		// reset scanner state to where it was upon calling findLineEnd
+//		s.ch = '/'
+//		s.offset = offs
+//		s.rdOffset = offs + 1
+//		s.next() // consume initial '/' again
+//	}(s.offset - 1)
+//
+//	// read ahead until a newline, EOF, or non-comment token is found
+//	for s.ch == '/' || s.ch == '*' {
+//		if s.ch == '/' {
+//			//-style comment always contains a newline
+//			return true
+//		}
+//		/*-style comment: look for newline */
+//		s.next()
+//		for s.ch >= 0 {
+//			ch := s.ch
+//			if ch == '\n' {
+//				return true
+//			}
+//			s.next()
+//			if ch == '*' && s.ch == '/' {
+//				s.next()
+//				break
+//			}
+//		}
+//		s.skipWhitespace() // s.insertSemi is set
+//		if s.ch < 0 || s.ch == '\n' {
+//			return true
+//		}
+//		if s.ch != '/' {
+//			// non-comment token
+//			return false
+//		}
+//		s.next() // consume '/'
+//	}
+//
+//	return false
+//}
 
 func isLetter(ch rune) bool {
 	return 'a' <= lower(ch) && lower(ch) <= 'z' || ch == '_' || ch >= utf8.RuneSelf && unicode.IsLetter(ch)
@@ -665,41 +663,41 @@ func (s *Scanner) scanEscape(quote rune) bool {
 	return true
 }
 
-func (s *Scanner) scanRune() string {
-	// '\'' opening already consumed
-	offs := s.offset - 1
-
-	valid := true
-	n := 0
-	for {
-		ch := s.ch
-		if ch == '\n' || ch < 0 {
-			// only report error if we don't have one already
-			if valid {
-				s.error(offs, "rune literal not terminated")
-				valid = false
-			}
-			break
-		}
-		s.next()
-		if ch == '\'' {
-			break
-		}
-		n++
-		if ch == '\\' {
-			if !s.scanEscape('\'') {
-				valid = false
-			}
-			// continue to read to closing quote
-		}
-	}
-
-	if valid && n != 1 {
-		s.error(offs, "illegal rune literal")
-	}
-
-	return string(s.src[offs:s.offset])
-}
+//func (s *Scanner) scanRune() string {
+//	// '\'' opening already consumed
+//	offs := s.offset - 1
+//
+//	valid := true
+//	n := 0
+//	for {
+//		ch := s.ch
+//		if ch == '\n' || ch < 0 {
+//			// only report error if we don't have one already
+//			if valid {
+//				s.error(offs, "rune literal not terminated")
+//				valid = false
+//			}
+//			break
+//		}
+//		s.next()
+//		if ch == '\'' {
+//			break
+//		}
+//		n++
+//		if ch == '\\' {
+//			if !s.scanEscape('\'') {
+//				valid = false
+//			}
+//			// continue to read to closing quote
+//		}
+//	}
+//
+//	if valid && n != 1 {
+//		s.error(offs, "illegal rune literal")
+//	}
+//
+//	return string(s.src[offs:s.offset])
+//}
 
 func (s *Scanner) scanString(right rune) string {
 	// '"' opening already consumed
@@ -723,50 +721,50 @@ func (s *Scanner) scanString(right rune) string {
 	return string(s.src[offs : s.offset-1])
 }
 
-func stripCR(b []byte, comment bool) []byte {
-	c := make([]byte, len(b))
-	i := 0
-	for j, ch := range b {
-		// In a /*-style comment, don't strip \r from *\r/ (incl.
-		// sequences of \r from *\r\r...\r/) since the resulting
-		// */ would terminate the comment too early unless the \r
-		// is immediately following the opening /* in which case
-		// it's ok because /*/ is not closed yet (issue #11151).
-		if ch != '\r' || comment && i > len("/*") && c[i-1] == '*' && j+1 < len(b) && b[j+1] == '/' {
-			c[i] = ch
-			i++
-		}
-	}
-	return c[:i]
-}
+//func stripCR(b []byte, comment bool) []byte {
+//	c := make([]byte, len(b))
+//	i := 0
+//	for j, ch := range b {
+//		// In a /*-style comment, don't strip \r from *\r/ (incl.
+//		// sequences of \r from *\r\r...\r/) since the resulting
+//		// */ would terminate the comment too early unless the \r
+//		// is immediately following the opening /* in which case
+//		// it's ok because /*/ is not closed yet (issue #11151).
+//		if ch != '\r' || comment && i > len("/*") && c[i-1] == '*' && j+1 < len(b) && b[j+1] == '/' {
+//			c[i] = ch
+//			i++
+//		}
+//	}
+//	return c[:i]
+//}
 
-func (s *Scanner) scanRawString() string {
-	// '`' opening already consumed
-	offs := s.offset - 1
-
-	hasCR := false
-	for {
-		ch := s.ch
-		if ch < 0 {
-			s.error(offs, "raw string literal not terminated")
-			break
-		}
-		s.next()
-		if ch == '`' {
-			break
-		}
-		if ch == '\r' {
-			hasCR = true
-		}
-	}
-
-	lit := s.src[offs:s.offset]
-	if hasCR {
-		lit = stripCR(lit, false)
-	}
-
-	return string(lit)
-}
+//func (s *Scanner) scanRawString() string {
+//	// '`' opening already consumed
+//	offs := s.offset - 1
+//
+//	hasCR := false
+//	for {
+//		ch := s.ch
+//		if ch < 0 {
+//			s.error(offs, "raw string literal not terminated")
+//			break
+//		}
+//		s.next()
+//		if ch == '`' {
+//			break
+//		}
+//		if ch == '\r' {
+//			hasCR = true
+//		}
+//	}
+//
+//	lit := s.src[offs:s.offset]
+//	if hasCR {
+//		lit = stripCR(lit, false)
+//	}
+//
+//	return string(lit)
+//}
 
 func (s *Scanner) skipWhitespace() {
 	for s.ch == ' ' || s.ch == '\t' || s.ch == '\n' || s.ch == '\r' {
@@ -800,21 +798,21 @@ func (s *Scanner) switch3(tok0, tok1 Token, ch2 rune, tok2 Token) Token {
 	return tok0
 }
 
-func (s *Scanner) switch4(tok0, tok1 Token, ch2 rune, tok2, tok3 Token) Token {
-	if s.ch == '=' {
-		s.next()
-		return tok1
-	}
-	if s.ch == ch2 {
-		s.next()
-		if s.ch == '=' {
-			s.next()
-			return tok3
-		}
-		return tok2
-	}
-	return tok0
-}
+//func (s *Scanner) switch4(tok0, tok1 Token, ch2 rune, tok2, tok3 Token) Token {
+//	if s.ch == '=' {
+//		s.next()
+//		return tok1
+//	}
+//	if s.ch == ch2 {
+//		s.next()
+//		if s.ch == '=' {
+//			s.next()
+//			return tok3
+//		}
+//		return tok2
+//	}
+//	return tok0
+//}
 
 // Scan scans the next token and returns the token position, the token,
 // and its literal string if applicable. The source end is indicated by
