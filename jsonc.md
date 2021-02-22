@@ -1,3 +1,14 @@
+- [Overview](#overview)
+- [Structure](#structure)
+- [Grammar](#grammar)
+  * [Json Environment](#json-environment)
+  * [Object](#object)
+    + [Key Options](#key-options)
+    + [Member Compare](#member-compare)
+  * [List](#list)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 # Overview
 jsonc(Json Compare) is a tool used to process json message based on a template.
 

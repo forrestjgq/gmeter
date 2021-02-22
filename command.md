@@ -1,3 +1,43 @@
+
+- [Overview](#overview)
+- [Variable](#variable)
+  * [Variable Decoration](#variable-decoration)
+  * [Global Variables](#global-variables)
+  * [Local Variables](#local-variables)
+  * [Json compare environment variables](#json-compare-environment-variables)
+  * [Variable reference](#variable-reference)
+- [Expression](#expression)
+- [Command](#command)
+  * [iterable command](#iterable-command)
+  * [Pipeline](#pipeline)
+  * [Embedded command](#embedded-command)
+  * [Group](#group)
+  * [cvt - strip quotes and convert string to specified type](#cvt---strip-quotes-and-convert-string-to-specified-type)
+  * [nop - do nothing](#nop---do-nothing)
+  * [fail - abort current execution(pipeline or group)](#fail---abort-current-execution-pipeline-or-group-)
+  * [echo - echo string](#echo---echo-string)
+  * [cat - read content of a file](#cat---read-content-of-a-file)
+  * [write - write string to a file](#write---write-string-to-a-file)
+  * [sleep - sleep for a while](#sleep---sleep-for-a-while)
+  * [print - print string to stdout](#print---print-string-to-stdout)
+  * [escape - escape quotes](#escape---escape-quotes)
+  * [strrepl - replace or delete substring](#strrepl---replace-or-delete-substring)
+  * [strlen - get string length](#strlen---get-string-length)
+  * [db - database accessing](#db---database-accessing)
+  * [env - local variable operations](#env---local-variable-operations)
+  * [eval - expression calculation](#eval---expression-calculation)
+  * [assert - condition checking](#assert---condition-checking)
+  * [list - read line by line from a file](#list---read-line-by-line-from-a-file)
+  * [b64 - base64 encoding](#b64---base64-encoding)
+  * [json - json query](#json---json-query)
+  * [until - do test until condition satisfied](#until---do-test-until-condition-satisfied)
+  * [if-then-else - if condition](#if-then-else---if-condition)
+  * [report - write string to report file](#report---write-string-to-report-file)
+  * [call - function call](#call---function-call)
+  * [lua support](#lua-support)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 # Overview
 gmeter provides environment variables and a set of commands support for test cases to dynamically generate cases, check responses, report response with customized formation.
 
