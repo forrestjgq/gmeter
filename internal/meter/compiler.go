@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	eps   = 0.00000001
-	debug = false
+	eps = 0.00000001
 )
 
 // composable is an entity which generates a string,
@@ -41,25 +40,39 @@ type composable interface {
 type segment interface {
 	iterable() bool
 	produce(bg *background) (string, error)
+	String() string
 }
 type staticSegment string
 
+func (ss staticSegment) String() string {
+	return string(ss)
+}
 func (ss staticSegment) iterable() bool {
 	return false
 }
-func (ss staticSegment) produce(_ *background) (string, error) {
+func (ss staticSegment) produce(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("static produce: %v\n", ss)
+	}
 	return string(ss), nil
 }
 
 type dynamicSegment struct {
 	isIterable bool
 	f          func(bg *background) (string, error)
+	desc       string
 }
 
-func (ds dynamicSegment) iterable() bool {
+func (ds *dynamicSegment) String() string {
+	return ds.desc
+}
+func (ds *dynamicSegment) iterable() bool {
 	return ds.isIterable
 }
-func (ds dynamicSegment) produce(bg *background) (string, error) {
+func (ds *dynamicSegment) produce(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("dynamic produce: %v\n", ds)
+	}
 	return ds.f(bg)
 }
 
@@ -73,6 +86,16 @@ func (s segments) iterable() bool {
 	}
 	return false
 }
+func (s segments) String() string {
+	str := ""
+	for i, s := range s {
+		if i > 0 {
+			str += " | "
+		}
+		str += s.String()
+	}
+	return str
+}
 func (s segments) isStatic() bool {
 	for _, seg := range s {
 		if _, ok := seg.(staticSegment); ok {
@@ -82,6 +105,10 @@ func (s segments) isStatic() bool {
 	return false
 }
 func (s segments) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("segments compose: %v\n", s)
+	}
+
 	//fmt.Printf("compose %+v\n", s)
 	arr := make([]string, len(s))
 	for i, seg := range s {
@@ -1374,8 +1401,8 @@ func (c *cmdCall) close() {
 }
 
 func (c *cmdCall) execute(bg *background) (string, error) {
-	if debug {
-		glog.Errorf("execute call %s", c.raw)
+	if bg.inDebug() {
+		fmt.Printf("execute call %s\n", c.raw)
 	}
 	return c.args.call(bg)
 }
@@ -1413,8 +1440,8 @@ func (c *cmdEval) close() {
 }
 
 func (c *cmdEval) execute(bg *background) (string, error) {
-	if debug {
-		glog.Errorf("execute eval %s", c.raw)
+	if bg.inDebug() {
+		fmt.Printf("execute eval %s\n", c.raw)
 	}
 	return c.eval.compose(bg)
 }
@@ -1925,28 +1952,37 @@ func (s *stream) end() {
 			s.errorFrom(errors.Wrapf(err, "parse cmd"))
 			return
 		}
-		seg := &dynamicSegment{f: func(bg *background) (string, error) {
-			return cmd.execute(bg)
-		}}
+		seg := &dynamicSegment{
+			f:          cmd.execute,
+			desc:       "`" + str + "`",
+			isIterable: cmd.iterable(),
+		}
 
-		seg.isIterable = cmd.iterable()
 		s.segs = append(s.segs, seg)
 	case phaseJsonEnv:
 		if len(str) == 0 {
 			s.errorFrom(errors.New("json env variable name is missing"))
 			return
 		}
-		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
-			return bg.getJsonEnv(str), nil
-		}})
+		seg := &dynamicSegment{
+			f: func(bg *background) (string, error) {
+				return bg.getJsonEnv(str), nil
+			},
+			desc: "$<" + str + ">",
+		}
+		s.segs = append(s.segs, seg)
 	case phaseGlobal:
 		if len(str) == 0 {
 			s.errorFrom(errors.New("global variable name is missing"))
 			return
 		}
-		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
-			return bg.getGlobalEnv(str), nil
-		}})
+		seg := &dynamicSegment{
+			f: func(bg *background) (string, error) {
+				return bg.getGlobalEnv(str), nil
+			},
+			desc: "${" + str + "}",
+		}
+		s.segs = append(s.segs, seg)
 	case phaseLocal:
 		name := strings.TrimSpace(str)
 		if len(name) == 0 {
@@ -1961,20 +1997,27 @@ func (s *stream) end() {
 				s.errorFrom(errors.Wrapf(err, "parse cmd"))
 				return
 			}
-			seg := &dynamicSegment{f: func(bg *background) (string, error) {
-				// here background should be duplicated
-				// assume we has a pipeline: echo 5 | assert $(@eval $$ + 3) > $(@eval $$ + 2)
-				input := bg.getLocalEnv(KeyInput)
-				defer bg.setInput(input)
-				return cmd.execute(bg)
-			}}
+			seg := &dynamicSegment{
+				f: func(bg *background) (string, error) {
+					// here background should be duplicated
+					// assume we has a pipeline: echo 5 | assert $(@eval $$ + 3) > $(@eval $$ + 2)
+					input := bg.getLocalEnv(KeyInput)
+					defer bg.setInput(input)
+					return cmd.execute(bg)
+				},
+				desc:       "$(@" + str + ")",
+				isIterable: cmd.iterable(),
+			}
 
-			seg.isIterable = cmd.iterable()
 			s.segs = append(s.segs, seg)
 		} else {
-			s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
-				return bg.getLocalEnv(name), nil
-			}})
+			seg := &dynamicSegment{
+				f: func(bg *background) (string, error) {
+					return bg.getLocalEnv(str), nil
+				},
+				desc: "$(" + str + ")",
+			}
+			s.segs = append(s.segs, seg)
 		}
 	case phaseArguments:
 		if len(str) == 0 {
@@ -1986,9 +2029,13 @@ func (s *stream) end() {
 			s.errorFrom(errors.Wrapf(err, "make arg index %s", str))
 			return
 		}
-		s.segs = append(s.segs, &dynamicSegment{f: func(bg *background) (string, error) {
-			return bg.getArgument(idx)
-		}})
+		seg := &dynamicSegment{
+			f: func(bg *background) (string, error) {
+				return bg.getArgument(idx)
+			},
+			desc: "$" + str,
+		}
+		s.segs = append(s.segs, seg)
 	}
 }
 
@@ -2115,6 +2162,10 @@ type group struct {
 }
 
 func (g *group) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("group compose: %v\n", g)
+	}
+
 	var err error
 	var output string
 	for i, seg := range g.segs {
@@ -2129,6 +2180,16 @@ func (g *group) compose(bg *background) (string, error) {
 	return output, nil
 }
 
+func (g *group) String() string {
+	str := ""
+	for i, s := range g.segs {
+		if i > 0 {
+			str += " ||| "
+		}
+		str += s.String()
+	}
+	return str
+}
 func (g *group) iterable() bool {
 	return g.isIterable
 }

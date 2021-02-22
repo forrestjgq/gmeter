@@ -151,15 +151,16 @@ func TestSegments(t *testing.T) {
 		//bg.setOutput("input") // output will be put into input while pipeline starts
 		bg.setError(nil)
 
-		t.Log(k)
 		if seg, err := makeSegments(k); err != nil {
-			t.Fatal(err)
+			t.Log(k)
+			t.Fatalf("make %s fail, err: %v", k, err)
 		} else {
+			t.Logf(">> %v", seg)
 			if res, err := seg.compose(bg); err != nil {
 				if v != "ERROR" {
 					t.Fatal(err)
 				} else {
-					t.Log("get error: ", err)
+					t.Log("compose fail: ", err)
 				}
 			} else if res != v {
 				if v == "NE" {

@@ -1,6 +1,7 @@
 package meter
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 
@@ -42,6 +43,10 @@ func (v *varReader) getError() error {
 }
 
 func (v *varReader) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("var reader compose: %v\n", v)
+	}
+
 	switch v.typ {
 	case varLocal:
 		return bg.getLocalEnv(v.name), nil
@@ -89,7 +94,11 @@ type staticReader struct {
 	str string
 }
 
-func (s staticReader) compose(_ *background) (string, error) {
+func (s staticReader) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("static reader compose: %v\n", s)
+	}
+
 	return s.str, nil
 }
 
@@ -111,6 +120,10 @@ type commandComposer struct {
 }
 
 func (c *commandComposer) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("command compose: %v\n", c)
+	}
+
 	if c.cmd == nil {
 		return "", nil
 	}
@@ -144,6 +157,10 @@ type unaryComposer struct {
 }
 
 func (u *unaryComposer) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("unary compose: %v\n", u)
+	}
+
 	s, err := u.c.compose(bg)
 	if err != nil {
 		return "", err
@@ -224,6 +241,10 @@ func (b *binaryComposer) String() string {
 }
 
 func (b *binaryComposer) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("binary compose: %v\n", b)
+	}
+
 	lhs, err := b.lhs.compose(bg)
 	if err != nil {
 		return "", err
@@ -422,6 +443,9 @@ func (a *assigner) String() string {
 }
 
 func (a *assigner) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("assigner compose: %v\n", a)
+	}
 	res, err := a.rhs.compose(bg)
 	if err != nil {
 		return "", err
@@ -471,11 +495,15 @@ type combiner struct {
 	lhs, rhs composer
 }
 
-func (c combiner) String() string {
+func (c *combiner) String() string {
 	return c.lhs.String() + "; " + c.rhs.String()
 }
 
-func (c combiner) compose(bg *background) (string, error) {
+func (c *combiner) compose(bg *background) (string, error) {
+	if bg.inDebug() {
+		fmt.Printf("combiner compose: %v\n", c)
+	}
+
 	_, err := c.lhs.compose(bg)
 	if err != nil {
 		return "", err
@@ -483,7 +511,13 @@ func (c combiner) compose(bg *background) (string, error) {
 	return c.rhs.compose(bg)
 }
 
-func (c combiner) getError() error {
+func (c *combiner) getError() error {
+	if c.lhs.getError() != nil {
+		return c.lhs.getError()
+	}
+	if c.rhs.getError() != nil {
+		return c.rhs.getError()
+	}
 	return nil
 }
 
