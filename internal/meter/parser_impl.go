@@ -11,6 +11,11 @@ import (
 )
 
 //go:generate goyacc -o parser_rule.go parser.yy
+
+func init() {
+	initCalculators()
+}
+
 type composer interface {
 	composable
 	getError() error
@@ -261,7 +266,10 @@ func (b *binaryComposer) getError() error {
 	return b.err
 }
 
-func makeCalc(lhs composer, op string, rhs composer) composer {
+var calculators = make(map[string]binCalc)
+
+func initCalculators() {
+
 	toNum := func(s string) (float64, error) {
 		return strconv.ParseFloat(s, 64)
 	}
@@ -318,115 +326,112 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 		}
 		return bToStr(f(l, r)), nil
 	}
-	var err error
-	var calc binCalc
-	switch op {
-	case "+":
-		calc = func(lhs, rhs string) (string, error) {
-			return arith(lhs, rhs, func(left, right float64) float64 {
-				return left + right
-			})
-		}
-	case "-":
-		calc = func(lhs, rhs string) (string, error) {
-			return arith(lhs, rhs, func(left, right float64) float64 {
-				return left - right
-			})
-		}
-	case "*":
-		calc = func(lhs, rhs string) (string, error) {
-			return arith(lhs, rhs, func(left, right float64) float64 {
-				return left * right
-			})
-		}
-	case "/":
-		calc = func(lhs, rhs string) (string, error) {
-			return arith(lhs, rhs, func(left, right float64) float64 {
-				if right == 0 {
-					panic("div 0 error")
-				}
-				return left / right
-			})
-		}
-	case "%":
-		calc = func(lhs, rhs string) (string, error) {
-			return arith(lhs, rhs, func(left, right float64) float64 {
-				if right == 0 {
-					panic("div 0 error")
-				}
-				return float64(int(left) % int(right))
-			})
-		}
-	case "&&":
-		calc = func(lhs, rhs string) (string, error) {
-			return logic(lhs, rhs, func(left, right bool) bool {
-				return left && right
-			})
-		}
-	case "||":
-		calc = func(lhs, rhs string) (string, error) {
-			return logic(lhs, rhs, func(left, right bool) bool {
-				return left || right
-			})
-		}
-	case ">":
-		calc = func(lhs, rhs string) (string, error) {
-			return comp(lhs, rhs, func(left, right float64) bool {
-				return left > right
-			})
-		}
-	case ">=":
-		calc = func(lhs, rhs string) (string, error) {
-			return comp(lhs, rhs, func(left, right float64) bool {
-				return left >= right
-			})
-		}
-	case "<":
-		calc = func(lhs, rhs string) (string, error) {
-			return comp(lhs, rhs, func(left, right float64) bool {
-				return left < right
-			})
-		}
-	case "<=":
-		calc = func(lhs, rhs string) (string, error) {
-			return comp(lhs, rhs, func(left, right float64) bool {
-				return left <= right
-			})
-		}
-	case "!=", "==":
-		calc = func(lhs, rhs string) (string, error) {
-			if op == "==" && lhs == rhs {
-				return _true, nil
-			}
-
-			f, err := comp(lhs, rhs, func(left, right float64) bool {
-				if op == "!=" {
-					return math.Abs(left-right) >= eps
-				}
-				return math.Abs(left-right) < eps
-			})
-			if err != nil {
-				f, err = logic(lhs, rhs, func(left, right bool) bool {
-					if op == "!=" {
-						return left != right
-					}
-					return left == right
-				})
-			}
-			if err != nil {
-				return _false, nil
-			}
-			return f, nil
-		}
-	default:
-		err = errors.Errorf("unknown bianry operator %s", op)
+	calculators["+"] = func(lhs, rhs string) (string, error) {
+		return arith(lhs, rhs, func(left, right float64) float64 {
+			return left + right
+		})
 	}
+	calculators["-"] = func(lhs, rhs string) (string, error) {
+		return arith(lhs, rhs, func(left, right float64) float64 {
+			return left - right
+		})
+	}
+	calculators["*"] = func(lhs, rhs string) (string, error) {
+		return arith(lhs, rhs, func(left, right float64) float64 {
+			return left * right
+		})
+	}
+	calculators["/"] = func(lhs, rhs string) (string, error) {
+		return arith(lhs, rhs, func(left, right float64) float64 {
+			if right == 0 {
+				panic("div 0 error")
+			}
+			return left / right
+		})
+	}
+	calculators["%"] = func(lhs, rhs string) (string, error) {
+		return arith(lhs, rhs, func(left, right float64) float64 {
+			if right == 0 {
+				panic("div 0 error")
+			}
+			return float64(int(left) % int(right))
+		})
+	}
+	calculators["&&"] = func(lhs, rhs string) (string, error) {
+		return logic(lhs, rhs, func(left, right bool) bool {
+			return left && right
+		})
+	}
+	calculators["||"] = func(lhs, rhs string) (string, error) {
+		return logic(lhs, rhs, func(left, right bool) bool {
+			return left || right
+		})
+	}
+	calculators[">"] = func(lhs, rhs string) (string, error) {
+		return comp(lhs, rhs, func(left, right float64) bool {
+			return left > right
+		})
+	}
+	calculators[">="] = func(lhs, rhs string) (string, error) {
+		return comp(lhs, rhs, func(left, right float64) bool {
+			return left >= right
+		})
+	}
+	calculators["<"] = func(lhs, rhs string) (string, error) {
+		return comp(lhs, rhs, func(left, right float64) bool {
+			return left < right
+		})
+	}
+	calculators["<="] = func(lhs, rhs string) (string, error) {
+		return comp(lhs, rhs, func(left, right float64) bool {
+			return left <= right
+		})
+	}
+	calculators["!="] = func(lhs, rhs string) (string, error) {
+		f, err := comp(lhs, rhs, func(left, right float64) bool {
+			return math.Abs(left-right) >= eps
+		})
+		if err != nil {
+			f, err = logic(lhs, rhs, func(left, right bool) bool {
+				return left != right
+			})
+		}
+		if err != nil {
+			return _false, nil
+		}
+		return f, nil
+	}
+	calculators["=="] = func(lhs, rhs string) (string, error) {
+		if lhs == rhs {
+			return _true, nil
+		}
+
+		f, err := comp(lhs, rhs, func(left, right float64) bool {
+			return math.Abs(left-right) < eps
+		})
+		if err != nil {
+			f, err = logic(lhs, rhs, func(left, right bool) bool {
+				return left == right
+			})
+		}
+		if err != nil {
+			return _false, nil
+		}
+		return f, nil
+	}
+}
+func makeCalc(lhs composer, op string, rhs composer) composer {
 	b := &binaryComposer{
-		calc: calc,
+		calc: nil,
 		lhs:  lhs,
 		rhs:  rhs,
-		err:  err,
+		err:  nil,
 		desc: op,
+	}
+	if c, ok := calculators[op]; ok {
+		b.calc = c
+	} else {
+		b.err = errors.Errorf("unknown bianry operator %s", op)
 	}
 	return b
 }
