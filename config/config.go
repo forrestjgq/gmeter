@@ -34,8 +34,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-
-	"github.com/huandu/go-clone"
 )
 
 // Host defines a server and proxy to visit this server
@@ -87,30 +85,6 @@ type Test struct {
 	// If Timeout is empty, try use  Schedule.Env["TIMEOUT"] as default value;
 	// if it's still empty, it'll be set to "1m" as default value
 	Timeout string
-}
-
-func cpList(src interface{}) interface{} {
-	return clone.Clone(src)
-}
-func (t *Test) Dup() *Test {
-	ret := &Test{
-		PreProcess:     cpList(t.PreProcess),
-		Host:           t.Host,
-		Request:        t.Request,
-		RequestMessage: t.RequestMessage,
-		Response:       nil,
-		Timeout:        t.Timeout,
-	}
-
-	if t.Response != nil {
-		ret.Response = &Response{
-			Check:    cpList(t.Response.Check),
-			Success:  cpList(t.Response.Success),
-			Failure:  cpList(t.Response.Failure),
-			Template: t.Response.Template,
-		}
-	}
-	return ret
 }
 
 // Option defines options gmeter accepts. These options can be used as key in Config.Options.

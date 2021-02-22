@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/huandu/go-clone"
+
 	"github.com/pkg/errors"
 
 	"github.com/forrestjgq/gmeter/config"
@@ -32,7 +34,7 @@ func loadFilePath(root string, path string) (string, error) {
 
 	return cpath, nil
 }
-func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
+func createHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 	key := h.Proxy + "|" + h.Host + "|" + timeout
 	if host, ok := hosts[key]; !ok {
 		host := &http.Client{}
@@ -58,12 +60,63 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		return host, nil
 	}
 }
+func loadHTTPClient(t *config.Test, s *config.Schedule, cfg *config.Config) (*http.Client, string, error) {
+	if t.Host == "" {
+		if len(cfg.Hosts) == 1 {
+			for k := range cfg.Hosts {
+				t.Host = k
+				break
+			}
+		} else {
+			t.Host = "-" // "-" is the default host
+		}
+	}
 
+	h, ok := cfg.Hosts[t.Host]
+	if !ok {
+		urls := strings.Split(t.Host, "|")
+		if len(urls) == 0 || len(urls) > 2 {
+			return nil, "", errors.Errorf("unknown host definition: %s", t.Host)
+		}
+		h = &config.Host{}
+
+		if len(urls) == 1 {
+			h.Host = urls[0]
+		} else {
+			h.Proxy = urls[0]
+			h.Host = urls[1]
+		}
+	}
+	if err := h.Check(); err != nil {
+		return nil, "", errors.Wrapf(err, "host %s check", t.Host)
+	}
+
+	if len(t.Timeout) == 0 {
+		if du, ok := s.Env["TIMEOUT"]; ok {
+			t.Timeout = du
+		}
+	}
+	if len(t.Timeout) == 0 {
+		t.Timeout = "1m"
+	}
+
+	c, err := createHTTPClient(h, t.Timeout)
+	if err != nil {
+		return nil, "", err
+	}
+	return c, h.Host, nil
+}
+
+// create a test from a base.
 func constructTest(t, base *config.Test) (*config.Test, error) {
-	t = t.Dup()
+
+	t = clone.Clone(t).(*config.Test)
+
 	if len(t.Host) == 0 && len(base.Host) > 0 {
 		t.Host = base.Host
 	}
+
+	// request not defined, use base's, and make RequestMessage preferred.
 	if len(t.Request) == 0 && t.RequestMessage == nil {
 		if base.RequestMessage != nil {
 			t.RequestMessage = base.RequestMessage
@@ -71,6 +124,7 @@ func constructTest(t, base *config.Test) (*config.Test, error) {
 			t.Request = base.Request
 		}
 	}
+
 	var err error
 	t.PreProcess, err = merge(base.PreProcess, t.PreProcess)
 	if err != nil {
@@ -103,12 +157,8 @@ func constructTest(t, base *config.Test) (*config.Test, error) {
 	}
 	return t, nil
 }
-func create(cfg *config.Config) ([]*plan, error) {
-	if len(cfg.Schedules) == 0 {
-		return nil, errors.Errorf("no schedule is defined")
-	}
-	var plans []*plan
 
+func loadFunctions(cfg *config.Config) (map[string]composable, error) {
 	functions := map[string]composable{}
 	if cfg.Functions != nil {
 		for k, v := range cfg.Functions {
@@ -120,183 +170,188 @@ func create(cfg *config.Config) ([]*plan, error) {
 		}
 	}
 
-	for _, s := range cfg.Schedules {
-		bg, err := makeBackground(cfg, s)
-		if err != nil {
-			return nil, errors.Wrapf(err, "schedule %s create background ", s.Name)
-		}
-		bg.functions = functions
-
-		tests := strings.Split(s.Tests, "|")
-		if len(tests) == 0 {
-			return nil, errors.Errorf("schedule %s contains no tests", s.Name)
-		}
-
-		var baseTest *config.Test
-		if len(s.TestBase) > 0 {
-			t, ok := cfg.Tests[s.TestBase]
-			if !ok && t != nil {
-				return nil, errors.Errorf("test base %s not found", s.TestBase)
-			}
-			baseTest = t
-		}
-
-		var runners []runnable
-		for _, name := range tests {
-			t, ok := cfg.Tests[name]
-			if !ok || t == nil {
-				return nil, errors.Errorf("test %s not found", name)
-			}
-
-			if baseTest != nil {
-				t, err = constructTest(t, baseTest)
-				if err != nil {
-					return nil, errors.Wrapf(err, "schedule %s construct test %s", s.Name, name)
-				}
-			}
-
-			var h *config.Host
-			var req *config.Request
-			rsp := t.Response
-
-			// host
-			if t.Host == "" {
-				if len(cfg.Hosts) == 1 {
-					for k := range cfg.Hosts {
-						t.Host = k
-						break
-					}
-				} else {
-					t.Host = "-" // "-" is the default host
-				}
-			}
-			h, ok = cfg.Hosts[t.Host]
+	return functions, nil
+}
+func loadRequest(t *config.Test, cfg *config.Config) (*config.Request, error) {
+	ok := false
+	req := t.RequestMessage
+	if req == nil {
+		str := t.Request
+		if len(str) > 0 {
+			req, ok = cfg.Messages[str]
 			if !ok {
-				urls := strings.Split(t.Host, "|")
-				if len(urls) == 0 || len(urls) > 2 {
-					return nil, errors.Errorf("unknown host definition: %s", t.Host)
-				}
-				h = &config.Host{}
+				return nil, errors.Errorf("unexpected request %s", str)
+			}
+		}
+	}
+	if req == nil {
+		return nil, errors.Errorf("misses request")
+	}
 
-				if len(urls) == 1 {
-					h.Host = urls[0]
-				} else {
-					h.Proxy = urls[0]
-					h.Host = urls[1]
-				}
-			}
-			if err = h.Check(); err != nil {
-				return nil, errors.Wrapf(err, "host %s check", t.Host)
-			}
+	if req.Method == "" {
+		req.Method = "GET"
+	}
 
-			if len(t.Timeout) == 0 {
-				if du, ok := s.Env["TIMEOUT"]; ok {
-					t.Timeout = du
-				}
-			}
-			if len(t.Timeout) == 0 {
-				t.Timeout = "1m"
-			}
+	if err := req.Check(); err != nil {
+		return nil, errors.Wrap(err, "request check")
+	}
+	return req, nil
+}
+func loadProvider(host string, t *config.Test, s *config.Schedule, cfg *config.Config) (providerSource, error) {
+	req, err := loadRequest(t, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "load request")
+	}
 
-			client, err := loadHTTPClient(h, t.Timeout)
-			if err != nil {
-				return nil, errors.Wrap(err, "load http client")
-			}
+	m := make(map[string]string)
+	m[string(catMethod)] = req.Method
+	m[string(catURL)] = host + req.Path
+	m[string(catBody)] = string(req.Body)
+	for k, v := range req.Headers {
+		m[k] = v
+	}
 
-			// request
-			req = t.RequestMessage
-			if req == nil {
-				str := t.Request
-				if len(str) > 0 {
-					req, ok = cfg.Messages[str]
-					if !ok {
-						return nil, errors.Errorf("unexpected request %s", str)
-					}
-				}
-			}
-			if req == nil {
-				return nil, errors.Errorf("test %s misses request", name)
-			}
+	feeder, err := makeDynamicFeeder(m, s.Count, t.PreProcess)
+	if err != nil {
+		return nil, errors.Wrap(err, "create feeder")
+	}
 
-			if req.Method == "" {
-				req.Method = "GET"
-			}
+	return makeFeedProvider(feeder)
+}
+func loadConsumer(t *config.Test, cfg *config.Config) (consumer, error) {
 
-			if err := req.Check(); err != nil {
-				return nil, errors.Wrapf(err, "test %s request check", name)
-			}
+	var csm consumer
+	decision := ignoreOnFail
+	if cfg.Options[config.OptionAbortIfFail] == "true" {
+		decision = abortOnFail
+	}
 
-			m := make(map[string]string)
-			m[string(catMethod)] = req.Method
-			m[string(catURL)] = h.Host + req.Path
-			m[string(catBody)] = string(req.Body)
-			for k, v := range req.Headers {
-				m[k] = v
-			}
+	rsp := t.Response
+	if rsp != nil {
+		var err error
+		csm, err = makeDynamicConsumer(rsp.Check, rsp.Success, rsp.Failure, rsp.Template, decision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "make consumer")
+		}
+	}
+	return csm, nil
+}
+func loadPlan(cfg *config.Config, s *config.Schedule) (*plan, error) {
+	var err error
 
-			if s.Count == 0 {
-				s.Count = math.MaxUint64 - 1
-			}
+	tests := strings.Split(s.Tests, "|")
+	if len(tests) == 0 {
+		return nil, errors.Errorf("schedule %s contains no tests", s.Name)
+	}
 
-			feeder, err := makeDynamicFeeder(m, s.Count, t.PreProcess)
-			if err != nil {
-				return nil, errors.Wrapf(err, "test %s create feeder", name)
-			}
+	var baseTest *config.Test
+	if len(s.TestBase) > 0 {
+		t, ok := cfg.Tests[s.TestBase]
+		if !ok && t != nil {
+			return nil, errors.Errorf("test base %s not found", s.TestBase)
+		}
+		baseTest = t
+	}
 
-			prv, err := makeFeedProvider(feeder)
-			if err != nil {
-				return nil, errors.Wrapf(err, "test %s create provider", name)
-			}
-
-			var csm consumer
-			decision := ignoreOnFail
-			if cfg.Options[config.OptionAbortIfFail] == "true" {
-				decision = abortOnFail
-			}
-			if rsp != nil {
-				csm, err = makeDynamicConsumer(rsp.Check, rsp.Success, rsp.Failure, rsp.Template, decision)
-				if err != nil {
-					return nil, errors.Wrapf(err, "make test %s consumer", name)
-				}
-			}
-
-			runner, err := makeRunner(name, prv, client, csm)
-			if err != nil {
-				return nil, errors.Wrapf(err, "make test %s runner", name)
-			}
-			runners = append(runners, runner)
+	var runners []runnable
+	for _, name := range tests {
+		t, ok := cfg.Tests[name]
+		if !ok || t == nil {
+			return nil, errors.Errorf("test %s not found", name)
 		}
 
-		if len(runners) == 0 {
-			return nil, errors.Errorf("schedule %s does not define any tests", s.Name)
+		if baseTest != nil {
+			t, err = constructTest(t, baseTest)
+			if err != nil {
+				return nil, errors.Wrapf(err, "schedule %s construct test %s", s.Name, name)
+			}
 		}
 
-		run := assembleRunners(runners...)
-		p := &plan{
-			name:       s.Name,
-			target:     run,
-			bg:         bg,
-			concurrent: 1,
+		client, host, err := loadHTTPClient(t, s, cfg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "config %s schedule %s test %s load host", cfg.Name, s.Name, name)
 		}
+
+		prv, err := loadProvider(host, t, s, cfg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "config %s schedule %s test %s load provider", cfg.Name, s.Name, name)
+		}
+
+		csm, err := loadConsumer(t, cfg)
+		if err != nil {
+			return nil, errors.Wrapf(err, "config %s schedule %s test %s load consumer", cfg.Name, s.Name, name)
+		}
+
+		runner, err := makeRunner(name, prv, client, csm)
+		if err != nil {
+			return nil, errors.Wrapf(err, "make test %s runner", name)
+		}
+		runners = append(runners, runner)
+	}
+
+	if len(runners) == 0 {
+		return nil, errors.Errorf("schedule %s does not define any tests", s.Name)
+	}
+
+	run := assembleRunners(runners...)
+
+	p := &plan{
+		name:       s.Name,
+		target:     run,
+		bg:         nil,
+		concurrent: s.Concurrency,
+	}
+
+	p.preprocess, _, err = makeComposable(s.PreProcess)
+	if err != nil {
+		return nil, errors.Wrapf(err, "schedule %s make PreProcess", s.Name)
+	}
+	return p, nil
+}
+func create(cfg *config.Config) ([]*plan, error) {
+	if len(cfg.Schedules) == 0 {
+		return nil, errors.Errorf("no schedule is defined")
+	}
+	var plans []*plan
+
+	// functions that could be used
+	functions, err := loadFunctions(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "config %s load functions", cfg.Name)
+	}
+
+	for _, s := range cfg.Schedules {
+		if s.Count == 0 {
+			s.Count = math.MaxUint64 - 1
+		}
+
 		if s.Concurrency > 1 {
-			p.concurrent = s.Concurrency
 			if s.Parallel > s.Concurrency {
 				s.Parallel = s.Concurrency
 			} else if s.Parallel < 2 {
 				s.Parallel = 0
 			}
 		} else {
+			s.Concurrency = 1
 			s.Parallel = 0
 		}
+
+		p, err := loadPlan(cfg, s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "config %s schedule %s load plan", cfg.Name, s.Name)
+		}
+
+		p.bg, err = makeBackground(cfg, s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "schedule %s create background ", s.Name)
+		}
+
+		p.bg.functions = functions
 		if s.QPS > 1 || s.Parallel > 1 {
 			p.fc = makeFlowControl(s.QPS, s.Parallel)
 			p.bg.fc = p.fc
 		}
 
-		p.preprocess, _, err = makeComposable(s.PreProcess)
-		if err != nil {
-			return nil, errors.Wrapf(err, "schedule %s make PreProcess", s.Name)
-		}
 		plans = append(plans, p)
 	}
 
