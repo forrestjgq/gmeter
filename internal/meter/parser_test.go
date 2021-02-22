@@ -65,7 +65,7 @@ func TestYyParser(t *testing.T) {
 	}
 
 	for k, v := range m {
-		t.Logf("run %s, expect %s", k, v)
+		//t.Logf("run %s, expect %s", k, v)
 
 		bg, err := createDefaultBackground()
 		if err != nil {
@@ -85,6 +85,7 @@ func TestYyParser(t *testing.T) {
 		bg.pushJsonEnv(je)
 
 		c := makeExpression(k)
+		t.Logf("%v, expect %s", c, v)
 		res, err := c.compose(bg)
 		if err != nil {
 			t.Fatalf(err.Error())

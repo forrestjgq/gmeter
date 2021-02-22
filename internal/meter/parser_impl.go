@@ -13,6 +13,7 @@ import (
 type composer interface {
 	composable
 	getError() error
+	String() string
 }
 
 var yyComposer composer
@@ -30,8 +31,12 @@ type varReader struct {
 	err  error
 	name string
 	typ  varType
+	desc string
 }
 
+func (v *varReader) String() string {
+	return v.desc
+}
 func (v *varReader) getError() error {
 	return v.err
 }
@@ -63,6 +68,19 @@ func makeVarReader(typ varType, str string) composer {
 	}
 	if len(str) == 0 {
 		ret.err = errors.Errorf("var %d without a name", typ)
+	} else {
+		switch typ {
+		case varLocal:
+			ret.desc = "$(" + str + ")"
+		case varGlobal:
+			ret.desc = "${" + str + "}"
+		case varJson:
+			ret.desc = "$<" + str + ">"
+		case varArgument:
+			ret.desc = "$" + str
+		default:
+			ret.err = errors.Errorf("unknown var type %d", typ)
+		}
 	}
 	return ret
 }
@@ -78,14 +96,18 @@ func (s staticReader) compose(_ *background) (string, error) {
 func (s staticReader) getError() error {
 	return nil
 }
+func (s staticReader) String() string {
+	return s.str
+}
 
 func makeStaticReader(str string) composer {
 	return &staticReader{str: str}
 }
 
 type commandComposer struct {
-	cmd command
-	err error
+	cmd  command
+	err  error
+	desc string
 }
 
 func (c *commandComposer) compose(bg *background) (string, error) {
@@ -100,20 +122,25 @@ func (c *commandComposer) compose(bg *background) (string, error) {
 func (c *commandComposer) getError() error {
 	return c.err
 }
+func (c *commandComposer) String() string {
+	return c.desc
+}
 
 func makeCommand(str string) composer {
 	c, err := parseCmd(str)
 	cc := &commandComposer{
-		cmd: c,
-		err: err,
+		cmd:  c,
+		err:  err,
+		desc: "`" + str + "`",
 	}
 	return cc
 }
 
 type unaryComposer struct {
-	tok Token
-	c   composer
-	err error
+	tok  Token
+	c    composer
+	err  error
+	desc string
 }
 
 func (u *unaryComposer) compose(bg *background) (string, error) {
@@ -153,9 +180,15 @@ func (u *unaryComposer) compose(bg *background) (string, error) {
 func (u *unaryComposer) getError() error {
 	return u.err
 }
+func (u *unaryComposer) String() string {
+	return u.desc + u.c.String()
+}
 
 func makeUnary(lhs composer, str string) composer {
-	uc := &unaryComposer{c: lhs}
+	uc := &unaryComposer{
+		c:    lhs,
+		desc: str,
+	}
 	switch str {
 	case "++":
 		uc.tok = INC
@@ -183,6 +216,11 @@ type binaryComposer struct {
 	calc     binCalc
 	lhs, rhs composer
 	err      error
+	desc     string
+}
+
+func (b *binaryComposer) String() string {
+	return b.lhs.String() + " " + b.desc + " " + b.rhs.String()
 }
 
 func (b *binaryComposer) compose(bg *background) (string, error) {
@@ -367,14 +405,20 @@ func makeCalc(lhs composer, op string, rhs composer) composer {
 		lhs:  lhs,
 		rhs:  rhs,
 		err:  err,
+		desc: op,
 	}
 	return b
 }
 
 type assigner struct {
-	err error
-	lhs string
-	rhs composer
+	err  error
+	lhs  string
+	rhs  composer
+	desc string
+}
+
+func (a *assigner) String() string {
+	return a.lhs + " " + a.desc + " " + a.rhs.String()
 }
 
 func (a *assigner) compose(bg *background) (string, error) {
@@ -416,14 +460,19 @@ func makeAssign(lhs string, op string, rhs composer) composer {
 		err = errors.Errorf("unknown assign operator %s", op)
 	}
 	return &assigner{
-		err: err,
-		lhs: lhs,
-		rhs: c,
+		err:  err,
+		lhs:  lhs,
+		rhs:  c,
+		desc: op,
 	}
 }
 
 type combiner struct {
 	lhs, rhs composer
+}
+
+func (c combiner) String() string {
+	return c.lhs.String() + "; " + c.rhs.String()
 }
 
 func (c combiner) compose(bg *background) (string, error) {
