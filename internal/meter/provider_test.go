@@ -29,7 +29,7 @@ func TestDynamicProvider(t *testing.T) {
 		t.Fatalf("make provider fail: %+v", err)
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf("create bg fail: %+v", err)
 	}

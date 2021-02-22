@@ -166,7 +166,7 @@ func TestRunner(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -193,7 +193,7 @@ func TestRunnerFail(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

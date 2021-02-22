@@ -7,12 +7,9 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/forrestjgq/gomark"
 
 	"github.com/pkg/errors"
 
@@ -61,81 +58,7 @@ func loadHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		return host, nil
 	}
 }
-func createDefaultBackground() (*background, error) {
-	bg := &background{
-		name:   "default",
-		db:     createDB(),
-		local:  makeSimpEnv(),
-		global: makeSimpEnv(),
-	}
 
-	var err error
-	var path string
-	path, err = filepath.Abs(filepath.Dir("."))
-	if err != nil {
-		return nil, err
-	}
-
-	bg.setGlobalEnv(KeySchedule, "default-schedule")
-	bg.setGlobalEnv(KeyTPath, path)
-	bg.setGlobalEnv(KeyConfig, "default")
-	str, err := os.Getwd()
-	if err == nil {
-		bg.setGlobalEnv(KeyCWD, str)
-	}
-	return bg, nil
-}
-func createBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
-	bg := &background{
-		name:   cfg.Name,
-		db:     createDB(),
-		local:  makeSimpEnv(),
-		global: makeSimpEnv(),
-		lr:     gomark.NewLatencyRecorder(sched.Name),
-		adder:  gomark.NewAdder(sched.Name),
-	}
-
-	bg.setGlobalEnv(KeySchedule, sched.Name)
-	bg.setGlobalEnv(KeyTPath, cfg.Options[config.OptionCfgPath])
-	bg.setGlobalEnv(KeyConfig, cfg.Name)
-	str, err := os.Getwd()
-	if err == nil {
-		bg.setGlobalEnv(KeyCWD, str)
-	}
-	if sched.Env != nil {
-		bg.predefineLocalEnv(sched.Env)
-	}
-
-	if debug, ok := cfg.Options[config.OptionDebug]; ok {
-		bg.setGlobalEnv(KeyDebug, debug)
-	}
-	for k, v := range cfg.Env {
-		if k != "" {
-			bg.setGlobalEnv(k, v)
-		}
-	}
-
-	// report
-	if len(sched.Reporter.Path) > 0 {
-		s, err := makeSegments(sched.Reporter.Path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "make report path")
-		}
-		sched.Reporter.Path, err = s.compose(bg)
-		if err != nil {
-			return nil, errors.Wrapf(err, "compose report path")
-		}
-		sched.Reporter.Path, err = loadFilePath(cfg.Options[config.OptionCfgPath], sched.Reporter.Path)
-		if err != nil {
-			return nil, err
-		}
-	}
-	bg.rpt, err = makeReporter(&sched.Reporter)
-	if err != nil {
-		return nil, err
-	}
-	return bg, nil
-}
 func constructTest(t, base *config.Test) (*config.Test, error) {
 	t = t.Dup()
 	if len(t.Host) == 0 && len(base.Host) > 0 {
@@ -198,7 +121,7 @@ func create(cfg *config.Config) ([]*plan, error) {
 	}
 
 	for _, s := range cfg.Schedules {
-		bg, err := createBackground(cfg, s)
+		bg, err := makeBackground(cfg, s)
 		if err != nil {
 			return nil, errors.Wrapf(err, "schedule %s create background ", s.Name)
 		}

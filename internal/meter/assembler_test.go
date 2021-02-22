@@ -27,7 +27,7 @@ func TestAssembler(t *testing.T) {
 		r = append(r, v)
 	}
 	ar := assembleRunners(r...)
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 	res := ar.run(bg)
 
 	if runners[0].seq != runners[1].seq || runners[1].seq != runners[2].seq {
@@ -49,7 +49,7 @@ func TestAssemblerFinish(t *testing.T) {
 		r = append(r, v)
 	}
 	ar := assembleRunners(r...)
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 	res := ar.run(bg)
 
 	if runners[0].seq != runners[1].seq || runners[1].seq != runners[2].seq+1 {
@@ -71,7 +71,7 @@ func TestAssemblerAbort(t *testing.T) {
 		r = append(r, v)
 	}
 	ar := assembleRunners(r...)
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 	res := ar.run(bg)
 
 	if runners[0].seq != runners[1].seq || runners[1].seq != runners[2].seq+1 {
@@ -93,7 +93,7 @@ func TestAssemblerAbortAll(t *testing.T) {
 		r = append(r, v)
 	}
 	ar := assembleRunners(r...)
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 	res := ar.run(bg)
 
 	if runners[0].seq != runners[1].seq || runners[1].seq != runners[2].seq+1 {

@@ -28,7 +28,7 @@ func TestReportDefault(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -92,7 +92,7 @@ func TestReportTemplate(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

@@ -67,7 +67,7 @@ func TestYyParser(t *testing.T) {
 	for k, v := range m {
 		//t.Logf("run %s, expect %s", k, v)
 
-		bg, err := createDefaultBackground()
+		bg, err := makeBackground(nil, nil)
 		if err != nil {
 			t.Fatalf(err.Error())
 		}

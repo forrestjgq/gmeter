@@ -18,7 +18,7 @@ func TestDefaultConsumer(t *testing.T) {
 }
 
 func TestDynamicConsumerSuccess(t *testing.T) {
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
@@ -48,7 +48,7 @@ func TestDynamicConsumerSuccess(t *testing.T) {
 	}
 }
 func TestDynamicConsumerCheckFail(t *testing.T) {
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
@@ -79,7 +79,7 @@ func TestDynamicConsumerCheckFail(t *testing.T) {
 	}
 }
 func TestDynamicConsumerFail(t *testing.T) {
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
@@ -110,7 +110,7 @@ func TestDynamicConsumerFail(t *testing.T) {
 	}
 }
 func TestDynamicConsumerTemplate(t *testing.T) {
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check
@@ -142,7 +142,7 @@ func TestDynamicConsumerTemplate(t *testing.T) {
 	}
 }
 func TestDynamicConsumerTemplateNull(t *testing.T) {
-	bg, _ := createDefaultBackground()
+	bg, _ := makeBackground(nil, nil)
 
 	c, err := makeDynamicConsumer(
 		[]string{ // check

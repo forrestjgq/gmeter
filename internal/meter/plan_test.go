@@ -63,7 +63,7 @@ func TestPlanSequence(t *testing.T) {
 	}
 
 	var err error
-	p.bg, err = createDefaultBackground()
+	p.bg, err = makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -113,7 +113,7 @@ func TestPlanSequenceFail(t *testing.T) {
 	}
 
 	var err error
-	p.bg, err = createDefaultBackground()
+	p.bg, err = makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -240,7 +240,7 @@ func TestPlanConcurrent(t *testing.T) {
 	}
 
 	var err error
-	p.bg, err = createDefaultBackground()
+	p.bg, err = makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -295,7 +295,7 @@ func TestPlanConcurrentFail(t *testing.T) {
 	}
 
 	var err error
-	p.bg, err = createDefaultBackground()
+	p.bg, err = makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -350,7 +350,7 @@ func TestPlanInvalidPreProcess(t *testing.T) {
 	}
 
 	var err error
-	p.bg, err = createDefaultBackground()
+	p.bg, err = makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

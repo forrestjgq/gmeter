@@ -2,7 +2,12 @@ package meter
 
 import (
 	"io"
+	"os"
+	"path/filepath"
 	"sync"
+
+	"github.com/forrestjgq/gmeter/config"
+	"github.com/forrestjgq/gomark"
 
 	"github.com/pkg/errors"
 
@@ -197,9 +202,83 @@ type background struct {
 	functions         map[string]composable
 }
 
-const (
-	GMeterExit = "gmeter-exit"
-)
+func makeBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
+	bg := &background{
+		name:   "default",
+		db:     createDB(),
+		local:  makeSimpEnv(),
+		global: makeSimpEnv(),
+	}
+
+	str, err := os.Getwd()
+	if err == nil {
+		bg.setGlobalEnv(KeyCWD, str)
+	}
+
+	if cfg != nil {
+		bg.name = cfg.Name
+		bg.setGlobalEnv(KeyTPath, cfg.Options[config.OptionCfgPath])
+
+		if debug, ok := cfg.Options[config.OptionDebug]; ok {
+			bg.setGlobalEnv(KeyDebug, debug)
+		}
+
+		for k, v := range cfg.Env {
+			if k != "" {
+				bg.setGlobalEnv(k, v)
+			}
+		}
+	} else {
+		path, err := filepath.Abs(filepath.Dir("."))
+		if err != nil {
+			return nil, err
+		}
+
+		bg.setGlobalEnv(KeyTPath, path)
+	}
+
+	bg.setGlobalEnv(KeyConfig, bg.name)
+
+	if sched != nil {
+		bg.setGlobalEnv(KeySchedule, sched.Name)
+		if sched.Env != nil {
+			bg.predefineLocalEnv(sched.Env)
+		}
+
+		bg.lr = gomark.NewLatencyRecorder(sched.Name)
+		bg.adder = gomark.NewAdder(sched.Name)
+
+		// report
+		if len(sched.Reporter.Path) > 0 {
+			s, err := makeSegments(sched.Reporter.Path)
+			if err != nil {
+				return nil, errors.Wrapf(err, "make report path")
+			}
+			sched.Reporter.Path, err = s.compose(bg)
+			if err != nil {
+				return nil, errors.Wrapf(err, "compose report path")
+			}
+
+			root := ""
+			if cfg != nil {
+				root = cfg.Options[config.OptionCfgPath]
+			}
+			sched.Reporter.Path, err = loadFilePath(root, sched.Reporter.Path)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		bg.rpt, err = makeReporter(&sched.Reporter)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bg.setGlobalEnv(KeySchedule, "default-schedule")
+	}
+
+	return bg, nil
+}
 
 // globalClose should only be called by root background
 func (bg *background) globalClose() {

@@ -19,7 +19,7 @@ func TestDynamicFeed(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -63,7 +63,7 @@ func TestDynamicFeedDefaultMethod(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -109,7 +109,7 @@ func TestDynamicFeedCount0(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -152,7 +152,7 @@ func TestDynamicFeedIterable(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -189,7 +189,7 @@ func TestDynamicFeedIterableURL(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	bg, err := createDefaultBackground()
+	bg, err := makeBackground(nil, nil)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
