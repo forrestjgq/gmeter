@@ -8,7 +8,7 @@
     "Messages": {
         "echo": {
             "Method": "POST",
-            "Path": "/echo",
+            "Path": "/echo ",
             "Headers": {
                 "content-type": "application/json"
             },
@@ -42,7 +42,7 @@
         "del-req": {
             "Comment": "delete a new book",
             "Method": "DELETE",
-            "Path": "/del/$(ISBN)"
+            "Path": "/del/$(ISBN) "
         }
     },
 

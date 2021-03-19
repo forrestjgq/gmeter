@@ -1,6 +1,8 @@
 package meter
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 )
 
@@ -117,9 +119,9 @@ func (f *feedProvider) feed(bg *background) (*staticProvider, error) {
 			case catBody:
 				s.body = v
 			case catMethod:
-				s.method = v
+				s.method = strings.TrimSpace(v)
 			case catURL:
-				s.url = v
+				s.url = strings.TrimSpace(v)
 			default:
 				s.headers[string(k)] = v
 			}

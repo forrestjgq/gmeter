@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">Make RESTful HTTP More Easy</a></p>
-# What is gmeter
 
+# What is gmeter
 gmeter customizes HTTP RESTful clients and HTTP RESTful servers and runs them by configuration. With variable and command system supports, json acts as a script language to process HTTP request and response.
 
 # Features

@@ -7,6 +7,9 @@ var (
 	_false = "false"
 )
 
+func isCmdString(s string) bool {
+	return len(s) > 2 && s[0] == '`' && s[len(s)-1] == '`'
+}
 func isTrue(s string) bool {
 	return s == "1" || s == "TRUE" || s == _true
 }

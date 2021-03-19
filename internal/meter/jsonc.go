@@ -2,6 +2,7 @@ package meter
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -99,6 +100,7 @@ func makeJsonEnv(bg *background, key string, value interface{}) *jsonEnv {
 // "`xxxxx`", or
 // ["`xxxxx`", "`yyyyy`",...]
 func makeDynamic(value interface{}) (composable, error) {
+	// try turning []interface{} to []string
 	if v, ok := value.([]interface{}); ok {
 		var slist []string
 		fail := false
@@ -114,12 +116,13 @@ func makeDynamic(value interface{}) (composable, error) {
 			value = slist
 		}
 	}
+
 	switch v := value.(type) {
 	case []string:
 		var list []string
 		for _, s := range v {
-			if len(s) < 2 || s[0] != '`' || s[len(s)-1] != '`' {
-				return nil, errors.New("default with a list should be `string`")
+			if !isCmdString(s) {
+				return nil, errors.Errorf("expect a command string(`command`), got %s", s)
 			}
 			if len(s) > 2 {
 				list = append(list, s)
@@ -127,20 +130,20 @@ func makeDynamic(value interface{}) (composable, error) {
 		}
 		c, err := makeGroup(list, false)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "make dynamic group %v", v)
 		}
 		return c, nil
 	case string:
-		if len(v) > 2 && v[0] == '`' && v[len(v)-1] == '`' {
+		if isCmdString(v) {
 			c, err := makeSegments(v)
 			if err != nil {
 				return nil, err
 			}
 			return c, nil
 		}
-		return nil, errors.New("default object accept only string or string list")
+		return nil, errors.Errorf("expect a command string(`command`), got %s", v)
 	default:
-		return nil, errors.Errorf("default object accept only string or string list, %T is not accepted", value)
+		return nil, errors.Errorf("accept only command or command group, type %T value %v is not accepted", value, value)
 	}
 }
 
@@ -158,10 +161,16 @@ func (j *jsonDynamicRule) getKey() *jsonKey {
 	return nil
 }
 
+func (j *jsonDynamicRule) String() string {
+	return fmt.Sprintf("dynamic json rule: %v", j.comp)
+}
 func (j *jsonDynamicRule) compare(bg *background, key string, src interface{}) error {
 	defer makeJsonEnv(bg, key, src).pop(bg)
 	_, err := j.comp.compose(bg)
-	return err
+	if err != nil {
+		return errors.Wrapf(err, "compose json dynamic rule %s on key %s value %v", j.String(), key, src)
+	}
+	return nil
 }
 
 func makeDynamicRule(value interface{}) (jsonRule, error) {
@@ -169,7 +178,7 @@ func makeDynamicRule(value interface{}) (jsonRule, error) {
 
 	c, err := makeDynamic(value)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "make json dynamic rule")
 	}
 	jod.comp = c
 	return jod, nil
@@ -192,9 +201,11 @@ func getStringOfValue(src interface{}) (string, error) {
 	case []interface{}, map[string]interface{}:
 		b, err := json.Marshal(src)
 		if err != nil {
-			return "", err
+			return "", errors.Wrapf(err, "marshal json %v", v)
 		}
 		e = string(b)
+	default:
+		return "", errors.Errorf("get string from unacceptable type %T value %v", src, src)
 	}
 
 	return e, nil
