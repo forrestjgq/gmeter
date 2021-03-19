@@ -1,4 +1,14 @@
+<p align="center">
+<img 
+    src="gmeter_logo.png" 
+    width="387" height="100" border="0" alt="gmeter">
+<br>
+<a href="https://godoc.org/github.com/forrestjgq/gmeter"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
+</p>
+
+<p align="center">Make RESTful HTTP More Easy</a></p>
 # What is gmeter
+
 gmeter customizes HTTP RESTful clients and HTTP RESTful servers and runs them by configuration. With variable and command system supports, json acts as a script language to process HTTP request and response.
 
 # Features
