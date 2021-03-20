@@ -79,6 +79,24 @@ func Execute(opt *config.GOptions) error {
 		}()
 	}
 
+	if opt.FileServer != "" {
+		s := strings.Split(opt.FileServer, ":")
+		if len(s) != 2 {
+			return errors.Errorf("invalid file server %s, expect path:port format", opt.FileServer)
+		}
+		path := strings.TrimSpace(s[0])
+		port := strings.TrimSpace(s[1])
+		if len(path) == 0 || len(port) == 0 {
+			return errors.Errorf("invalid file server config %s", opt.FileServer)
+		}
+		go func() {
+			err := http.ListenAndServe(":"+port, http.FileServer(http.Dir(path)))
+			if err != nil {
+				panic("file server create failed")
+			}
+		}()
+	}
+
 	executor := func(path string) error {
 		fmt.Println("gmeter starts ", path)
 		c, err := loadConfig(path)

@@ -53,6 +53,7 @@ Optional arguments includes:
 - `-call <commandline>`: command line called before any config is executed and after any server is started.
 - `-f <final>`: final config called even running fails.
 - `-gm <port>`: set [GoMark](https://github.com/forrestjgq/gomark) HTTP port, default 7777.
+- `-fs <path:port>`: enable a file server for local file system `<path>` using HTTP server on port `<port>`
 
 # Documents
 - [Guideline](./guideline.md): A guideline explains with examples for you to ease into gmeter:

@@ -75,3 +75,9 @@ type HttpServers struct {
 	// Servers represented by a name
 	Servers map[string]*HttpServer
 }
+
+// FileServer opens a file HTTP server on Port for local file path Path.
+type FileServer struct {
+	Port int    // TCP port to listen File server
+	Path string // local file system path
+}

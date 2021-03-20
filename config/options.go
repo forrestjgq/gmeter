@@ -7,6 +7,7 @@ type GOptions struct {
 	Configs        []string          // "-config" or configuration list
 	HTTPServerCfg  string            // "-httpsrv"
 	ArceeServerCfg string            // "-arceesrv"
+	FileServer     string            // "-fs"
 	Call           string            // "-call"
 	Final          string            // "-f"
 	GoMarkPort     int               // "-gm"
