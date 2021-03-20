@@ -1547,6 +1547,7 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 
 	rete := errors.New(path + " not found")
 	for i, key := range segs {
+
 		if len(key) == 0 {
 			if i > 0 && i < len(segs)-1 {
 				continue
@@ -1555,12 +1556,21 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 				return value, nil
 			}
 		}
+		if key == "#" {
+			if i < len(segs)-1 {
+				return nil, errors.New("# must be last segment in path " + path)
+			}
+		}
 
 		r := []rune(key)
 		switch c := value.(type) {
 		case []interface{}:
 			if len(key) == 0 {
 				continue
+			}
+			if key == "#" {
+				value = len(c)
+				break
 			}
 			if len(r) < 2 || r[0] != '[' || r[len(r)-1] != ']' {
 				return nil, errors.New("expect json list path")
@@ -1582,6 +1592,10 @@ func (c *cmdJson) find(content string, path string) (interface{}, error) {
 		case map[string]interface{}:
 			if len(key) == 0 {
 				continue
+			}
+			if key == "#" {
+				value = len(c)
+				break
 			}
 			if v, ok := c[key]; ok {
 				value = v
@@ -1694,6 +1708,8 @@ func (c *cmdJson) execute(bg *background) (string, error) {
 		} else {
 			out = string(b)
 		}
+	case int:
+		out = strconv.Itoa(cc)
 	default:
 		return "", errors.Errorf("%s: unknown value type %T", c.raw, cc)
 	}

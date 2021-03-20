@@ -552,6 +552,7 @@ if `-m` is present, the segment `<path>` indicates must be a map and the json ke
 2. use `[n]` to represent an element of a list, `[]` for whole list
 3. if target json is exepcted as an object(like `{...}`), the first segment is empty, in other word, it starts by '.'
 4. if target json is an array, start by `[]` or `[n]`, here n is a number
+5. if path is defined with suffix `.#`, it indicates the length of list or member number of object, and will report an error for other types
 
 Here gives some examples of path:
 ```json
@@ -575,6 +576,8 @@ Here gives some examples of path:
 - `.map.k1` is `this`
 - `.list` is `["line1", "line2"]`
 - `.list.[1]` is `line1`
+- `.list.#` is `2`
+- `.map.#` is `2`
 
 ## until - do test until condition satisfied
 ```
