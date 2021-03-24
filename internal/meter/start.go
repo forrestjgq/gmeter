@@ -306,6 +306,10 @@ func loadPlan(cfg *config.Config, s *config.Schedule) (*plan, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "schedule %s make PreProcess", s.Name)
 	}
+	p.postprocess, _, err = makeComposable(s.PostProcess)
+	if err != nil {
+		return nil, errors.Wrapf(err, "schedule %s make PostProcess", s.Name)
+	}
 	return p, nil
 }
 func create(cfg *config.Config) ([]*plan, error) {

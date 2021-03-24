@@ -11,7 +11,6 @@ func makeBg() *background {
 		local:     makeSimpEnv(),
 		global:    makeSimpEnv(),
 		dyn:       nil,
-		lr:        nil,
 		err:       nil,
 		rpt:       nil,
 		predefine: make(map[string]string),

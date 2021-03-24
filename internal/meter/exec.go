@@ -89,6 +89,7 @@ func Execute(opt *config.GOptions) error {
 		if len(path) == 0 || len(port) == 0 {
 			return errors.Errorf("invalid file server config %s", opt.FileServer)
 		}
+		hasServer = true
 		go func() {
 			err := http.ListenAndServe(":"+port, http.FileServer(http.Dir(path)))
 			if err != nil {

@@ -11,13 +11,14 @@ import (
 )
 
 type plan struct {
-	name       string
-	target     runnable
-	bg         *background
-	concurrent int
-	preprocess composable
-	seq        int64
-	fc         *flowControl
+	name        string
+	target      runnable
+	bg          *background
+	concurrent  int
+	preprocess  composable
+	postprocess composable
+	seq         int64
+	fc          *flowControl
 }
 
 func (p *plan) close() {
@@ -112,6 +113,12 @@ func (p *plan) run() next {
 			return nextAbortPlan
 		}
 	}
+	defer func() {
+		p.bg.commit()
+		if p.postprocess != nil {
+			_, _ = p.postprocess.compose(p.bg)
+		}
+	}()
 	if p.concurrent > 1 {
 		return p.runConcurrent(p.concurrent)
 	}
