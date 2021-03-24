@@ -179,6 +179,13 @@ type Schedule struct {
 	//
 	// [dynamic]
 	PreProcess interface{}
+	// PreProcess defines a group of segment which will be composed after tests finishs.
+	// Note that this postprocessing will be called only once.
+	//
+	// PostProcess should be a string list or a single string
+	//
+	// [dynamic]
+	PostProcess interface{}
 
 	// Tests defined a test pipeline composed of one or more tests.
 	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...

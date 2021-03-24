@@ -32,21 +32,22 @@ func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
 		defer bg.fc.wait().cancel()
 	}
 	var latency *gomark.Latency
-	if bg.lr != nil {
-		latency = gomark.NewLatency(bg.lr)
-	}
-	if bg.adder != nil {
-		bg.adder.Mark(1)
+	if bg.perf != nil {
+		latency = gomark.NewLatency(bg.perf.lr)
+		if bg.perf.adder != nil {
+			bg.perf.adder.Mark(1)
+		}
 	}
 
 	rsp, err := r.h.Do(req)
 
-	if bg.adder != nil {
-		bg.adder.Mark(-1)
+	if bg.perf != nil && bg.perf.adder != nil {
+		bg.perf.adder.Mark(-1)
 	}
 	// only successful request count latency
-	if latency != nil && err == nil {
+	if err == nil && latency != nil {
 		latency.Mark()
+		bg.reportLatency(latency.Latency())
 	}
 	return rsp, err
 }

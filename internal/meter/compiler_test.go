@@ -217,7 +217,6 @@ func TestSegmentMakeFailure(t *testing.T) {
 		name:   "",
 		local:  makeSimpEnv(),
 		global: makeSimpEnv(),
-		lr:     nil,
 		err:    nil,
 	}
 
@@ -258,7 +257,6 @@ func TestFunction(t *testing.T) {
 		name:   "",
 		local:  makeSimpEnv(),
 		global: makeSimpEnv(),
-		lr:     nil,
 		err:    nil,
 	}
 

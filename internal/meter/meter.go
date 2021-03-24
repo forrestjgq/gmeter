@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -213,18 +214,81 @@ func makeArguments(args []string) (arguments, error) {
 	return a, nil
 }
 
+type perf struct {
+	lr           gmi.Marker
+	adder        gmi.Marker
+	cLatency     chan int32
+	maxLatency   int32
+	minLatency   int32
+	totalLatency int64
+	start        time.Time
+	count        int64
+}
+
+func (p *perf) close() {
+	if p.cLatency != nil {
+		close(p.cLatency)
+		p.cLatency = nil
+	}
+}
+
+func (p *perf) report(latency int32) {
+	if p.cLatency != nil {
+		p.cLatency <- latency
+	}
+}
+
+func (p *perf) commit() (max, min, avg int32, qps int64) {
+	if p.count == 0 {
+		return
+	}
+	max = p.maxLatency
+	min = p.minLatency
+	avg = int32(p.totalLatency / p.count)
+	du := time.Since(p.start).Milliseconds()
+	//fmt.Printf("count %d du %d ms", p.count, du)
+
+	if du > 0 {
+		qps = p.count * 1000 / du
+	}
+	return
+}
+
+func makePerf(name string) *perf {
+	p := &perf{
+		lr:       gomark.NewLatencyRecorder(name),
+		adder:    gomark.NewAdder(name),
+		cLatency: make(chan int32, 1000),
+	}
+	go func() {
+		for lr := range p.cLatency {
+			if p.count == 0 {
+				p.start = time.Now()
+			}
+			p.count++
+			p.totalLatency += int64(lr)
+			if p.maxLatency == 0 || p.maxLatency < lr {
+				p.maxLatency = lr
+			}
+			if p.minLatency == 0 || p.minLatency > lr {
+				p.minLatency = lr
+			}
+		}
+	}()
+	return p
+}
+
 type background struct {
 	name              string // global test name
 	db, local, global env
 	dyn               []env
-	lr                gmi.Marker
-	adder             gmi.Marker
 	err               error
 	rpt               *reporter
 	predefine         map[string]string
 	fc                *flowControl
 	fargs             [][]string // arguments stacks
 	functions         map[string]composable
+	perf              *perf
 }
 
 func makeBackground(cfg *config.Config, sched *config.Schedule) (*background, error) {
@@ -265,13 +329,11 @@ func makeBackground(cfg *config.Config, sched *config.Schedule) (*background, er
 	bg.setGlobalEnv(KeyConfig, bg.name)
 
 	if sched != nil {
+		bg.perf = makePerf(sched.Name)
 		bg.setGlobalEnv(KeySchedule, sched.Name)
 		if sched.Env != nil {
 			bg.predefineLocalEnv(sched.Env)
 		}
-
-		bg.lr = gomark.NewLatencyRecorder(sched.Name)
-		bg.adder = gomark.NewAdder(sched.Name)
 
 		// report
 		if len(sched.Reporter.Path) > 0 {
@@ -310,6 +372,9 @@ func (bg *background) globalClose() {
 	if bg.rpt != nil {
 		bg.rpt.close()
 	}
+	if bg.perf != nil {
+		bg.perf.close()
+	}
 }
 func (bg *background) dup() *background {
 	return &background{
@@ -317,8 +382,7 @@ func (bg *background) dup() *background {
 		local:     bg.local.dup(),
 		global:    bg.global,
 		db:        bg.db,
-		lr:        bg.lr,
-		adder:     bg.adder,
+		perf:      bg.perf,
 		rpt:       bg.rpt,
 		predefine: bg.predefine,
 		fc:        bg.fc,
@@ -336,6 +400,11 @@ func (bg *background) cleanup() {
 		}
 	}
 	bg.err = nil
+}
+func (bg *background) reportLatency(latency int32) {
+	if bg.perf != nil {
+		bg.perf.report(latency)
+	}
 }
 func (bg *background) reportDefault(newline bool) {
 	if bg.rpt != nil {
@@ -491,6 +560,16 @@ func (bg *background) setGlobalEnv(key string, value string) {
 
 func (bg *background) inDebug() bool {
 	return bg.getGlobalEnv(KeyDebug) == "true"
+}
+
+func (bg *background) commit() {
+	if bg.perf != nil {
+		max, min, avg, qps := bg.perf.commit()
+		bg.setLocalEnv("_.latency.max", strconv.Itoa(int(max)))
+		bg.setLocalEnv("_.latency.min", strconv.Itoa(int(min)))
+		bg.setLocalEnv("_.latency.avg", strconv.Itoa(int(avg)))
+		bg.setLocalEnv("_.qps", strconv.Itoa(int(qps)))
+	}
 }
 
 type runnable interface {
