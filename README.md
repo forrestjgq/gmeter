@@ -1,6 +1,6 @@
 <p align="center">
 <img 
-    src="gmeter_logo.png" 
+    src="assets/gmeter_logo.png" 
     width="387" height="100" border="0" alt="gmeter">
 <br>
 <a href="https://godoc.org/github.com/forrestjgq/gmeter"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
@@ -64,3 +64,15 @@ Optional arguments includes:
 # TODOs
 1. gomark support
 2. better logging
+
+# Thanks
+
+<p align="left">
+<a href="https://www.jetbrains.com">
+<img 
+    src="assets/jetbrains-small.png" 
+    width="150" height="163" border="0" alt="Jetbrains">
+</a>
+</p>
+
+
