@@ -105,7 +105,7 @@ Body: %s
 	}
 
 	if req, err = http.NewRequest(method, url, rd); err != nil {
-		return c.processFailure(bg, err)
+		return c.processFailure(bg, errors.Wrap(err, "create http request"))
 	}
 
 	if len(headers) > 0 {
@@ -116,7 +116,7 @@ Body: %s
 
 	rsp, err = r.do(bg, req)
 	if err != nil {
-		return c.processFailure(bg, err)
+		return c.processFailure(bg, errors.Wrap(err, "execute http request"))
 	}
 
 	b, err := ioutil.ReadAll(rsp.Body)
@@ -131,7 +131,7 @@ Body: %s
 `, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), rsp.StatusCode, string(b))
 	}
 	if err != nil {
-		return c.processFailure(bg, err)
+		return c.processFailure(bg, errors.Wrap(err, "read body"))
 	}
 	bg.setLocalEnv(KeyStatus, strconv.Itoa(rsp.StatusCode))
 	bg.setLocalEnv(KeyResponse, string(b))

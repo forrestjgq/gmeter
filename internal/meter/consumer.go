@@ -2,6 +2,8 @@ package meter
 
 import (
 	"encoding/json"
+
+	"github.com/pkg/errors"
 )
 
 // consumer should be a component that process response and failure
@@ -80,6 +82,7 @@ func (d *dynamicConsumer) processSuccess(bg *background) {
 	}
 }
 func (d *dynamicConsumer) processFailure(bg *background, err error) next {
+	err = errors.Wrap(err, "process failure")
 	// move error to failure if any to make sure fail processing without any error
 	bg.setLocalEnv(KeyFailure, err.Error())
 	bg.setError(nil)
