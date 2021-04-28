@@ -15,9 +15,9 @@ func main() {
 	}
 
 	so := args[0]
-	rcv, err := gplugin.Load(so, "Load", "")
+	plugin, err := gplugin.Load(so, "Load", "")
 	if err != nil {
 		glog.Fatalf("load fail: %v", err)
 	}
-	_ = rcv.Recv("hello world")
+	_ = gplugin.Send(plugin, "hello world")
 }

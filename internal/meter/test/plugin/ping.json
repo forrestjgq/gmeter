@@ -1,0 +1,34 @@
+{
+    "Name": "plugin",
+    "Tests": {
+        "echo": {
+            "Host": "http://127.0.0.1:${HTTP.PORT}",
+            "RequestMessage": {
+                "Method": "POST",
+                "Path": "/echo",
+                "Body": {
+                    "Key": "Value"
+                }
+            },
+            "Response": {
+                "Check": [
+                    "`assert $(STATUS) == 200`",
+                    "`print client recv $(RESPONSE)`",
+                    "`plugin sample $(RESPONSE)`"
+                ]
+            },
+            "Timeout": "3s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "plugin",
+            "Tests": "echo",
+            "Count": 1
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "false"
+    }
+}

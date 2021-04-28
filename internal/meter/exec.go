@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/forrestjgq/gmeter/gplugin"
+
 	"github.com/forrestjgq/gomark"
 
 	"github.com/forrestjgq/gmeter/config"
@@ -48,6 +50,13 @@ func Execute(opt *config.GOptions) error {
 	if len(opt.Vars) > 0 {
 		for k, v := range opt.Vars {
 			AddGlobalVariable(k, v)
+		}
+	}
+
+	if len(opt.Plugins) > 0 {
+		err = gplugin.LoadPlugins(opt.Plugins)
+		if err != nil {
+			return errors.Wrapf(err, "load plugin config %s", opt.Plugins)
 		}
 	}
 

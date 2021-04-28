@@ -11,4 +11,5 @@ type GOptions struct {
 	Call           string            // "-call"
 	Final          string            // "-f"
 	GoMarkPort     int               // "-gm"
+	Plugins        string
 }

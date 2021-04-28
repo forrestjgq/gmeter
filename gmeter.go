@@ -42,6 +42,7 @@ func run() error {
 	final := ""
 	gmport := 0
 	fs := ""
+	plugins := ""
 	flag.StringVar(&variables, "e", "", "predefined global variables k=v, seperated by space if define multiple variables")
 	flag.StringVar(&template, "t", "", "template config file path")
 	flag.StringVar(&template, "template", "", "template config file path")
@@ -51,6 +52,7 @@ func run() error {
 	flag.StringVar(&call, "call", "", "extra program command line")
 	flag.StringVar(&final, "f", "", "final execute config")
 	flag.StringVar(&fs, "fs", "", "file server: path:port")
+	flag.StringVar(&plugins, "plugin", "", `plugin config json: {"plugins": [{"Path": "so file path", "Symbol": "symbol name", "Param": {...}}, ...]}`)
 	flag.IntVar(&gmport, "gm", 7777, "gomark HTTP server, default 7777")
 	flag.Parse()
 
@@ -64,6 +66,7 @@ func run() error {
 		Final:          final,
 		GoMarkPort:     gmport,
 		FileServer:     fs,
+		Plugins:        plugins,
 	}
 
 	var err error

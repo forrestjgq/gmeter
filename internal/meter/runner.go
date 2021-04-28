@@ -2,8 +2,10 @@ package meter
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -40,6 +42,11 @@ func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
 	}
 
 	rsp, err := r.h.Do(req)
+	if err != nil {
+		if e, ok := err.(*url.Error); ok && e.Err == io.EOF {
+			rsp, err = r.h.Do(req)
+		}
+	}
 
 	if bg.perf != nil && bg.perf.adder != nil {
 		bg.perf.adder.Mark(-1)

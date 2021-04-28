@@ -9,6 +9,10 @@ import (
 type local struct {
 }
 
+func (l local) Name() string {
+	return "sample"
+}
+
 func (l local) Recv(msg string) error {
 	fmt.Println(msg)
 	return nil

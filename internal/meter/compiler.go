@@ -17,6 +17,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/forrestjgq/gmeter/gplugin"
+
 	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
@@ -664,6 +666,65 @@ func makeWrite(v []string) (command, error) {
 	if c.content, err = makeSegments(content); err != nil {
 		return nil, errors.Wrapf(err, "%s make content", raw)
 	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                            until                          ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+// plugin <pluginName> <message>
+type cmdPlugin struct {
+	raw     string
+	plugin  segments
+	message segments
+}
+
+func (c *cmdPlugin) iterable() bool {
+	return false
+}
+func (c *cmdPlugin) close() {
+}
+
+func (c *cmdPlugin) execute(bg *background) (string, error) {
+	name, err := c.plugin.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "%s: compose plugin name", c.raw)
+	}
+	content, err := c.message.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "%s: compose message", c.raw)
+	}
+	err = gplugin.Send(name, content)
+	if err != nil {
+		return "", errors.Wrapf(err, "%s: send message to plugin %s", c.raw, name)
+	}
+	return "", nil
+}
+
+func makePlugin(v []string) (command, error) {
+	c := &cmdPlugin{
+		raw: "plugin " + strings.Join(v, " "),
+	}
+
+	if len(v) != 1 && len(v) != 2 {
+		return nil, errors.Errorf("%s: invalid argument number", c.raw)
+	}
+	plugin := v[0]
+	message := "$(INPUT)"
+	if len(v) == 2 {
+		message = v[1]
+	}
+	var err error
+	c.plugin, err = makeSegments(plugin)
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s: make plugin", c.plugin)
+	}
+	c.message, err = makeSegments(message)
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s: make message", c.message)
+	}
+
 	return c, nil
 }
 
@@ -1811,6 +1872,7 @@ func init() {
 		"cvt":     makeCvt,
 		"if":      makeIf,
 		"until":   makeUntil,
+		"plugin":  makePlugin,
 		"report":  makeReport,
 		"print":   makePrint,
 		"sleep":   makeSleep,

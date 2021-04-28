@@ -18,8 +18,13 @@
           "Request":  {
             "Success":  [
               "`env -w STATUS 200 `",
-              "`env -w RESPONSE $(REQUEST)`"
+              "`print server: $(REQUEST)`"
             ]
+          },
+          "Response": {
+            "-": {
+              "Request": "`cvt -r $(REQUEST)`"
+            }
           }
         },
 
