@@ -706,14 +706,14 @@ func makePlugin(v []string) (command, error) {
 	c := &cmdPlugin{
 		raw: "plugin " + strings.Join(v, " "),
 	}
-
-	if len(v) != 1 && len(v) != 2 {
-		return nil, errors.Errorf("%s: invalid argument number", c.raw)
+	if len(v) == 0 {
+		return nil, errors.Errorf("plugin: no plugin name is given")
 	}
+
 	plugin := v[0]
 	message := "$(INPUT)"
-	if len(v) == 2 {
-		message = v[1]
+	if len(v) >= 2 {
+		message = strings.Join(v[1:], " ")
 	}
 	var err error
 	c.plugin, err = makeSegments(plugin)

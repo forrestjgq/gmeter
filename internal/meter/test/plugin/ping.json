@@ -14,7 +14,9 @@
                 "Check": [
                     "`assert $(STATUS) == 200`",
                     "`print client recv $(RESPONSE)`",
-                    "`plugin sample $(RESPONSE)`"
+                    "`plugin sample hello world deepglint xxxxx`",
+                    "`plugin sample command`",
+                    "`plugin sample msg $(RESPONSE)`"
                 ]
             },
             "Timeout": "3s"

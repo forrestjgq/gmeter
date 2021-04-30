@@ -14,7 +14,7 @@ func (l local) Name() string {
 }
 
 func (l local) Recv(msg string) error {
-	fmt.Println(msg)
+	fmt.Println("sample recv:\n", msg)
 	return nil
 }
 
