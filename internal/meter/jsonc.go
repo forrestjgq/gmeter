@@ -890,3 +890,36 @@ func compareTemplate(template jsonRule, bg *background, msg string) error {
 
 	return template.compare(bg, "", v)
 }
+
+type JsonCmp struct {
+	bg       *background
+	template jsonRule
+}
+
+func (j *JsonCmp) Set(key, value string) {
+	j.bg.setLocalEnv(key, value)
+}
+
+func (j *JsonCmp) Get(key string) string {
+	return j.bg.getLocalEnv(key)
+}
+
+func (j *JsonCmp) Compare(message json.RawMessage) error {
+	return compareTemplate(j.template, j.bg, string(message))
+}
+
+func MakeJsonComparator(message json.RawMessage) (*JsonCmp, error) {
+	bg, err := makeBackground(nil, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "create background")
+	}
+
+	jc := &JsonCmp{
+		bg: bg,
+	}
+	jc.template, err = makeJsonTemplate(message)
+	if err != nil {
+		return nil, errors.Wrap(err, "make json template")
+	}
+	return jc, nil
+}
