@@ -17,8 +17,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/forrestjgq/gmeter/gplugin"
+	"github.com/tidwall/sjson"
 
+	"github.com/forrestjgq/gmeter/gplugin"
 	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
@@ -347,6 +348,79 @@ func makeEscape(v []string) (command, error) {
 	var err error
 	if c.content, err = makeSegments(content); err != nil {
 		return nil, errors.Wrapf(err, "escape %s make content", raw)
+	}
+	return c, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////                            ja                             ///////////
+////////////////////////////////////////////////////////////////////////////////
+
+// json append
+// ja src-json sub-json
+type cmdJA struct {
+	raw            string
+	src, path, sub segments
+}
+
+func (c *cmdJA) iterable() bool {
+	return false
+}
+
+func (c *cmdJA) close() {
+}
+
+func (c *cmdJA) execute(bg *background) (string, error) {
+	src, err := c.src.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "ja %s: compose src", c.raw)
+	}
+	path, err := c.path.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "ja %s: compose path", c.raw)
+	}
+	sub, err := c.sub.compose(bg)
+	if err != nil {
+		return "", errors.Wrapf(err, "ja %s: compose sub", c.raw)
+	}
+
+	ret, err := sjson.SetRaw(src, path, sub)
+	if err != nil {
+		return "", errors.Wrapf(err, "ja %s: append (%s) to (%s)", c.raw, sub, src)
+	}
+	return ret, nil
+}
+
+func makeJA(v []string) (command, error) {
+	raw := strings.Join(v, " ")
+	if len(v) < 2 {
+		return nil, errors.Errorf("ja expect at least 2 argument")
+	}
+	if len(v) > 3 {
+		return nil, errors.Errorf("ja %s: accept 2 or 3 arguments", raw)
+	}
+
+	src := v[0]
+	path := v[1]
+	sub := "$(" + KeyInput + ")"
+	if len(v) == 3 {
+		sub = v[2]
+	}
+	c := &cmdJA{
+		raw: raw,
+	}
+	var err error
+	c.src, err = makeSegments(src)
+	if err != nil {
+		return nil, errors.Errorf("ja %s: compile src fail", raw)
+	}
+	c.path, err = makeSegments(path)
+	if err != nil {
+		return nil, errors.Errorf("ja %s: compile path fail", raw)
+	}
+	c.sub, err = makeSegments(sub)
+	if err != nil {
+		return nil, errors.Errorf("ja %s: compile sub fail", raw)
 	}
 	return c, nil
 }
@@ -1878,6 +1952,7 @@ func init() {
 		"sleep":   makeSleep,
 		"strrepl": makeStrRepl,
 		"strlen":  makeStrLen,
+		"ja":      makeJA,
 		"escape":  makeEscape,
 		"nop":     makeNop,
 	}

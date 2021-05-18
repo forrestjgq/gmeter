@@ -17,7 +17,7 @@ type Plugin struct {
 func (p Plugin) load() error {
 	name, err := Load(p.Path, p.Symbol, string(p.Param))
 	if err != nil {
-		return errors.Wrapf(err, "Load plugin %+v", p)
+		return errors.Wrapf(err, "Load plugin %s, symbol %s param %s", p.Path, p.Symbol, p.Param)
 	}
 	glog.Infof("Load plugin %s path %s", name, p.Path)
 	return nil

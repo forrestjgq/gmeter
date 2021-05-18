@@ -896,6 +896,10 @@ type JsonCmp struct {
 	template jsonRule
 }
 
+func (j *JsonCmp) Reset() {
+	j.bg.cleanup()
+}
+
 func (j *JsonCmp) Set(key, value string) {
 	j.bg.setLocalEnv(key, value)
 }

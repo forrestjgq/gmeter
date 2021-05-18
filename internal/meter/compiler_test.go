@@ -154,6 +154,7 @@ func TestSegments(t *testing.T) {
 			"`db -w hello forrest | assert $(@db -r #hello) == 7 | db -d hello`":  "",
 			"`db -w hello forrest | assert $(@db -r ?hello) | db -d hello`":       "",
 			"`assert $(@db -r ?hello)`":                                           "ERROR",
+			"`ja [] -1 $(JSON)`":                                                  "[" + json + "]",
 			//"`eval #hello = 1`":     "ERROR", // should panic
 			//"`env -w #hello 1`": "ERROR", // should panic
 		}
