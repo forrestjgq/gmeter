@@ -21,7 +21,7 @@ import (
 
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/forrestjgq/gmeter/internal/arcee"
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 	"github.com/pkg/errors"
 )
 

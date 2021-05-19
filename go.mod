@@ -3,8 +3,8 @@ module github.com/forrestjgq/gmeter
 go 1.15
 
 require (
-	github.com/forrestjgq/gomark v1.0.13
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/forrestjgq/glog v1.0.1
+	github.com/forrestjgq/gomark v1.0.18
 	github.com/golang/protobuf v1.4.3
 	github.com/gorilla/mux v1.8.0
 	github.com/huandu/go-clone v1.1.4

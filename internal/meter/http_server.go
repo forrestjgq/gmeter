@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 	"github.com/gorilla/mux"
 
 	"github.com/forrestjgq/gmeter/config"

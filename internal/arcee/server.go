@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	context "golang.org/x/net/context"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 )

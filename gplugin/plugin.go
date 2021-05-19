@@ -3,7 +3,7 @@ package gplugin
 import (
 	"plugin"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 
 	"github.com/pkg/errors"
 )

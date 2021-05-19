@@ -22,7 +22,7 @@ import (
 	"github.com/forrestjgq/gmeter/gplugin"
 	"github.com/pkg/errors"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 
 	"github.com/forrestjgq/gmeter/internal/argv"
 )

@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/forrestjgq/gmeter/gplugin"
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 )
 
 func main() {

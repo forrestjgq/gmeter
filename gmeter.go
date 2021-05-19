@@ -13,7 +13,7 @@ import (
 	"github.com/forrestjgq/gmeter/config"
 	"github.com/pkg/errors"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 )
 
 func parseGlobalVariables(s string) (map[string]string, error) {

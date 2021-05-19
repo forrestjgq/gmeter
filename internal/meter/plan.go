@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 )
 
 type plan struct {

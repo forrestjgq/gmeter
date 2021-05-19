@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/forrestjgq/glog"
 
 	"github.com/forrestjgq/gmeter/config"
 )
