@@ -48,7 +48,6 @@ gmeter [options] <config>[, <config>, ...]
 Optional arguments includes:
 - `-t, -template <config>`: load an HTTP client template configuration. `<template-config>` is a configure json file used as a base configuration. If this argument is present, the Hosts/Messages/Tests/Env/Options will be copied to all `<config>` if target configuration does not define those items identified by the key of map. An example could be find in [template](example/base.json) and [configuration](example/sep.json), and the command line would be `gmeter -template example/base.json example/sep.json`.
 - `-httpsrv <http-server-config>`: start an HTTP server. `<http-server-config>` is configure json file path for creating http server, a sample can be get [here](example/server.json), see [HTTP Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#HttpServers) for more information.
-- `-arcee <arcee-server-config>`: start an Arcee file server. `<arcee-server-config>` is configure json file path for creating arcee server, a sample can be get [here](example/arcee.json), see [Arcee Server Configuration](https://godoc.org/github.com/forrestjgq/gmeter/config#Arcee) for more information.
 - `-e="k1=v1 k2=v2 ..."`: predefined global variables. Each variable is defined in `key=value` form, and multiple key value pairs are seperated by spaces.
 - `-call <commandline>`: command line called before any config is executed and after any server is started.
 - `-f <final>`: final config called even running fails.

@@ -35,7 +35,6 @@ func parseGlobalVariables(s string) (map[string]string, error) {
 func run() error {
 	cfg := ""
 	httpsrv := ""
-	arceeCfg := ""
 	call := ""
 	template := ""
 	variables := ""
@@ -48,7 +47,6 @@ func run() error {
 	flag.StringVar(&template, "template", "", "template config file path")
 	flag.StringVar(&cfg, "config", "", "config file path, could be a .json, or .list, or a directory")
 	flag.StringVar(&httpsrv, "httpsrv", "", "config file path for http server")
-	flag.StringVar(&arceeCfg, "arcee", "", "arcee configuration file path")
 	flag.StringVar(&call, "call", "", "extra program command line")
 	flag.StringVar(&final, "f", "", "final execute config")
 	flag.StringVar(&fs, "fs", "", "file server: path:port")
@@ -57,16 +55,15 @@ func run() error {
 	flag.Parse()
 
 	opt := &config.GOptions{
-		Vars:           map[string]string{},
-		Template:       template,
-		Configs:        []string{},
-		HTTPServerCfg:  httpsrv,
-		ArceeServerCfg: arceeCfg,
-		Call:           call,
-		Final:          final,
-		GoMarkPort:     gmport,
-		FileServer:     fs,
-		Plugins:        plugins,
+		Vars:          map[string]string{},
+		Template:      template,
+		Configs:       []string{},
+		HTTPServerCfg: httpsrv,
+		Call:          call,
+		Final:         final,
+		GoMarkPort:    gmport,
+		FileServer:    fs,
+		Plugins:       plugins,
 	}
 
 	var err error

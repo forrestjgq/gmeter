@@ -19,9 +19,8 @@ import (
 
 	"github.com/forrestjgq/gomark"
 
-	"github.com/forrestjgq/gmeter/config"
-	"github.com/forrestjgq/gmeter/internal/arcee"
 	"github.com/forrestjgq/glog"
+	"github.com/forrestjgq/gmeter/config"
 	"github.com/pkg/errors"
 )
 
@@ -71,15 +70,6 @@ func Execute(opt *config.GOptions) error {
 		defer func() {
 			StopAll()
 		}()
-	}
-
-	if len(opt.ArceeServerCfg) > 0 {
-		_, err = arcee.StartArcee(opt.ArceeServerCfg)
-		if err != nil {
-			return errors.Wrap(err, "start arcee")
-		} else {
-			hasServer = true
-		}
 	}
 
 	if len(opt.Call) > 0 {
