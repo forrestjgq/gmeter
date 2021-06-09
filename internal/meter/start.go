@@ -239,7 +239,19 @@ func loadConsumer(t *config.Test, cfg *config.Config) (consumer, error) {
 func loadPlan(cfg *config.Config, s *config.Schedule) (*plan, error) {
 	var err error
 
-	tests := strings.Split(s.Tests, "|")
+	var tests []string
+	if s.Tests == "*" {
+		for k := range cfg.Tests {
+			if k == s.TestBase {
+				// ignore base test
+				continue
+			}
+			tests = append(tests, k)
+		}
+	} else {
+		tests = strings.Split(s.Tests, "|")
+	}
+
 	if len(tests) == 0 {
 		return nil, errors.Errorf("schedule %s contains no tests", s.Name)
 	}

@@ -190,6 +190,10 @@ type Schedule struct {
 	// Tests defined a test pipeline composed of one or more tests.
 	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...
 	// are defined in Config.Tests.
+	//
+	// If you need execute all tests one by one, you may set Tests to "*" instead
+	// of specify them one by one explicitly. But note that the execute sequence
+	// is not defined.
 	Tests string
 
 	// TestBase is a special test that behavior like a super class of Tests, this is how
