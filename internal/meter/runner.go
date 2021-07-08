@@ -29,7 +29,17 @@ func (r *runner) close() {
 	r.h.CloseIdleConnections()
 }
 
-func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
+func (r *runner) do(bg *background, method, url string, body string, headers map[string]string) (*http.Response, error) {
+
+	req, err := http.NewRequest(method, url, strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
 	if bg.fc != nil {
 		defer bg.fc.wait().cancel()
 	}
@@ -42,11 +52,6 @@ func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
 	}
 
 	rsp, err := r.h.Do(req)
-	if err != nil {
-		if e, ok := err.(*url.Error); ok && e.Err == io.EOF {
-			rsp, err = r.h.Do(req)
-		}
-	}
 
 	if bg.perf != nil && bg.perf.adder != nil {
 		bg.perf.adder.Mark(-1)
@@ -58,13 +63,13 @@ func (r *runner) do(bg *background, req *http.Request) (*http.Response, error) {
 	}
 	return rsp, err
 }
+
 func (r *runner) run(bg *background) next {
 	var (
-		url      string
+		addr     string
 		body     string
 		headers  map[string]string
 		decision next
-		req      *http.Request
 		rsp      *http.Response
 		err      error
 		p        provider
@@ -82,7 +87,7 @@ func (r *runner) run(bg *background) next {
 		return decision
 	}
 
-	if url, decision = p.getUrl(bg); decision != nextContinue {
+	if addr, decision = p.getUrl(bg); decision != nextContinue {
 		return decision
 	}
 
@@ -94,12 +99,10 @@ func (r *runner) run(bg *background) next {
 		return decision
 	}
 
-	bg.setLocalEnv(KeyURL, url)
+	bg.setLocalEnv(KeyURL, addr)
 	bg.setLocalEnv(KeyRequest, body)
 
-	rd := strings.NewReader(body)
 	debug := bg.getGlobalEnv(KeyDebug) == "true"
-
 	method := p.getMethod(bg)
 
 	if debug {
@@ -108,20 +111,15 @@ func (r *runner) run(bg *background) next {
 URL: %s %s
 Header: %v
 Body: %s
-`, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), method, url, headers, body)
+`, bg.getLocalEnv(KeyRoutine), bg.getLocalEnv(KeySequence), method, addr, headers, body)
 	}
 
-	if req, err = http.NewRequest(method, url, rd); err != nil {
-		return c.processFailure(bg, errors.Wrap(err, "create http request"))
+	rsp, err = r.do(bg, method, addr, body, headers)
+	if e, ok := err.(*url.Error); ok && e.Err == io.EOF {
+		fmt.Printf("got EOF: %v\n", err)
+		rsp, err = r.do(bg, method, addr, body, headers)
 	}
 
-	if len(headers) > 0 {
-		for k, v := range headers {
-			req.Header.Add(k, v)
-		}
-	}
-
-	rsp, err = r.do(bg, req)
 	if err != nil {
 		return c.processFailure(bg, errors.Wrap(err, "execute http request"))
 	}
