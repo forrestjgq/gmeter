@@ -2,10 +2,8 @@ package meter
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -18,7 +16,7 @@ import (
 
 // runner is a single http sender
 type runner struct {
-	h       *http.Client
+	h       httpcFactory
 	provSrc providerSource
 	c       consumer
 	name    string
@@ -26,7 +24,6 @@ type runner struct {
 
 func (r *runner) close() {
 	r.provSrc.close()
-	r.h.CloseIdleConnections()
 }
 
 func (r *runner) do(bg *background, method, url string, body string, headers map[string]string) (*http.Response, error) {
@@ -51,7 +48,12 @@ func (r *runner) do(bg *background, method, url string, body string, headers map
 		}
 	}
 
-	rsp, err := r.h.Do(req)
+	client := r.h.Get(false)
+	if client == nil {
+		return nil, errors.New("create http client fails")
+	}
+
+	rsp, err := client.Do(req)
 
 	if bg.perf != nil && bg.perf.adder != nil {
 		bg.perf.adder.Mark(-1)
@@ -115,8 +117,8 @@ Body: %s
 	}
 
 	rsp, err = r.do(bg, method, addr, body, headers)
-	if e, ok := err.(*url.Error); ok && e.Err == io.EOF {
-		fmt.Printf("got EOF: %v\n", err)
+	if err != nil {
+		_ = r.h.Get(true)
 		rsp, err = r.do(bg, method, addr, body, headers)
 	}
 
@@ -146,12 +148,14 @@ Body: %s
 
 // makeRunner will create a runner with valid provider.
 // if http.Client h or consumer c is not provided, a default one will be used.
-func makeRunner(name string, provSrc providerSource, h *http.Client, c consumer) (runnable, error) {
+func makeRunner(name string, provSrc providerSource, h httpcFactory, c consumer) (runnable, error) {
 	if provSrc == nil {
 		return nil, errors.New("provider must be provided")
 	}
 	if h == nil {
-		h = http.DefaultClient
+		h = createConcurrentHttpClientWrapper(func() *http.Client {
+			return http.DefaultClient
+		})
 	}
 	if c == nil {
 		c = defaultConsumer

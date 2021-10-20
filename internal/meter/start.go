@@ -60,7 +60,7 @@ func createHTTPClient(h *config.Host, timeout string) (*http.Client, error) {
 		return host, nil
 	}
 }
-func loadHTTPClient(t *config.Test, s *config.Schedule, cfg *config.Config) (*http.Client, string, error) {
+func loadHTTPClient(t *config.Test, s *config.Schedule, cfg *config.Config) (httpcFactory, string, error) {
 	if t.Host == "" {
 		if len(cfg.Hosts) == 1 {
 			for k := range cfg.Hosts {
@@ -100,11 +100,16 @@ func loadHTTPClient(t *config.Test, s *config.Schedule, cfg *config.Config) (*ht
 		t.Timeout = "1m"
 	}
 
-	c, err := createHTTPClient(h, t.Timeout)
-	if err != nil {
-		return nil, "", err
+	creator := func() *http.Client {
+		c, err := createHTTPClient(h, t.Timeout)
+		if err != nil {
+			fmt.Printf("create http client failed: %v", err)
+			return nil
+		}
+		return c
 	}
-	return c, h.Host, nil
+	factory := createConcurrentHttpClientWrapper(creator)
+	return factory, h.Host, nil
 }
 
 // create a test from a base.

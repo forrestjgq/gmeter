@@ -15,7 +15,6 @@ func TestExecute(t *testing.T) {
 			"test/client",
 		},
 		HTTPServerCfg:  "test/server/server.json",
-		ArceeServerCfg: "",
 		Call:           "",
 		Final:          "",
 	}
@@ -35,7 +34,6 @@ func TestExecuteList(t *testing.T) {
 			"test/client/all.list",
 		},
 		HTTPServerCfg:  "test/server/server.json",
-		ArceeServerCfg: "",
 		Call:           "",
 		Final:          "test/base/ping.json",
 	}
@@ -52,7 +50,6 @@ func TestExecuteImports(t *testing.T) {
 			"test/standalone/import.json",
 		},
 		HTTPServerCfg:  "test/server/server.json",
-		ArceeServerCfg: "",
 		Call:           "",
 		Final:          "",
 	}
