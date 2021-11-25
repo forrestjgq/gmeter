@@ -549,3 +549,30 @@ func TestStartEnv(t *testing.T) {
 	}
 
 }
+func TestStartTestSeq(t *testing.T) {
+	m := &mockServer{}
+	err := m.start("")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	defer m.stop()
+
+	b, err := readExample("tests_seq.json")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg := &config.Config{}
+	err = json.Unmarshal(b, cfg)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	cfg.Hosts["vse"].Host = "http://127.0.0.1:" + m.port
+	err = meter.StartConfig(cfg)
+	if err != nil {
+		t.Fatalf("not expect a failure %v", err)
+	}
+
+}

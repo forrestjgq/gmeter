@@ -239,17 +239,45 @@ func loadConsumer(t *config.Test, cfg *config.Config) (consumer, error) {
 func loadPlan(cfg *config.Config, s *config.Schedule) (*plan, error) {
 	var err error
 
-	var tests []string
-	if s.Tests == "*" {
+	tests := strings.Split(s.Tests, "|")
+	star := -1
+	testMap := make(map[string]struct{})
+	var filtered  []string
+	var void  struct {}
+	for _, t := range tests {
+		t = strings.TrimSpace(t)
+		if len(t) == 0 {
+			continue
+		}
+		if t == "*" {
+			star = len(filtered)
+		}
+		testMap[t] = void
+		filtered = append(filtered, t)
+	}
+	if star >= 0 {
+		var rest  []string
 		for k := range cfg.Tests {
-			if k == s.TestBase {
-				// ignore base test
+			if _, exist := testMap[k]; exist{
+				// ignore included test
 				continue
 			}
-			tests = append(tests, k)
+			rest = append(rest, k)
 		}
+
+		var tmp []string
+		if star > 0 {
+			tmp = append(tmp, filtered[:star]...)
+		}
+		if len(rest) > 0 {
+			tmp = append(tmp, rest...)
+		}
+		if star < len(filtered)-1 {
+			tmp = append(tmp, filtered[star+1:]...)
+		}
+		tests = tmp
 	} else {
-		tests = strings.Split(s.Tests, "|")
+		tests = filtered
 	}
 
 	if len(tests) == 0 {

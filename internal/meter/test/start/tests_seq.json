@@ -1,0 +1,89 @@
+{
+    "Name": "multi-tests",
+    "Hosts": {
+        "vse": {
+            "Host": "http://127.0.0.1:8009",
+            "Proxy": ""
+        }
+    },
+    "Tests": {
+        "t1": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t1`" ] },
+            "Timeout": "10s"
+        },
+        "t2": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t2`" ] },
+            "Timeout": "10s"
+        },
+        "t3": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t3`" ] },
+            "Timeout": "10s"
+        },
+        "t4": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t4`" ] },
+            "Timeout": "10s"
+        },
+        "t5": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t5`" ] },
+            "Timeout": "10s"
+        },
+        "t6": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t6`" ] },
+            "Timeout": "10s"
+        },
+        "t7": {
+            "Host": "vse",
+            "RequestMessage": { "Method": "GET", "Path": "/query" },
+            "Response": { "Check": [ "`print ==> execute t7`" ] },
+            "Timeout": "10s"
+        }
+    },
+    "Schedules": [
+        {
+            "Name": "s1",
+            "PreProcess": "`print ################## s1 (t1 > t2) ###################`",
+            "Tests": "t1 | t2",
+            "Count": 1
+        },
+        {
+            "Name": "s2",
+            "PreProcess": "`print ################## s2  (*)###################`",
+            "Tests": "*",
+            "Count": 1
+        },
+        {
+            "Name": "s3",
+            "PreProcess": "`print ################## s3  (t1 > t2 > t1 > * > t7 > t3)###################`",
+            "Tests": "t1 | t2 | t1 | * | t7 | t3",
+            "Count": 1
+        },
+        {
+            "Name": "s4",
+            "PreProcess": "`print ################## s4  (* > t7 > t3)###################`",
+            "Tests": "* | t7 | t3",
+            "Count": 1
+        },
+        {
+            "Name": "s5",
+            "PreProcess": "`print ################## s5  (t1 > t2 > t1 > *)###################`",
+            "Tests": "t1 | t2 | t1 | *",
+            "Count": 1
+        }
+    ],
+    "Options": {
+        "AbortIfFail": "true",
+        "Debug": "true"
+    }
+}
