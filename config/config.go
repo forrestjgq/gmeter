@@ -187,13 +187,24 @@ type Schedule struct {
 	// [dynamic]
 	PostProcess interface{}
 
-	// Tests defined a test pipeline composed of one or more tests.
-	// For example: "test1[|test2[|test3...]]", where "test1", "test2", "test3"...
-	// are defined in Config.Tests.
+	// Tests defined a test pipeline composed of one or more tests by quoting name
+	// of tests defined in Config.Tests concated by '|'. Specially a '*' indicates
+	// any test defined in Config.Tests but not being explicitly defined in pipeline.
+	// Please note that '*' could only be defined once at most.
 	//
-	// If you need execute all tests one by one, you may set Tests to "*" instead
-	// of specify them one by one explicitly. But note that the execute sequence
-	// is not defined.
+	// If tests are explicitly defined in pipeline like "test1|test2|test3|...", they will
+	// be executed in the sequence they are defined. For tests defined by '*', the sequence
+	// of executing is not defined.
+	//
+	// Here are some examples of how to define test pipeline.
+	// Assuming we defined t1, t2, t3, t4, t5, t6, t7 in Config.Tests:
+	//   1. "t1|t2|t4|t2" will execute t1, t2, t4, t2(again)
+	//   2. "t2|t3|*|t5|t2" will execute t2, t3 first, and run t1, t4, t6, t7(defined by *) in random
+	//      sequence, at last, t5, t2 will be executed
+	//   3. "*" will execute t1 ~ t7 in random sequence once for each
+	//   4. "*|t2|t3" will execute t1, t4~t7 in random sequence, and then execute t2, t3
+	//   5. "t2|t3|*" will execute t2, t3, and then run t1, t4~t7 in random sequence
+	//   6. "" is invalid(no case)
 	Tests string
 
 	// TestBase is a special test that behavior like a super class of Tests, this is how
@@ -291,7 +302,13 @@ type Config struct {
 	Hosts map[string]*Host
 
 	Messages map[string]*Request // predefined request map messages that referred by key string
-	Tests    map[string]*Test    // predefined tests
+	// predefined tests. key will be test name, and value will be test definition.
+	// NOTE that there are some special names:
+	//  - "^": executed before any schedule for just once, often used as global initialize
+	//  - "$": executed after all schedules for just once, often used as global cleanup
+	//  - "<": executed in each schedule as the first test for one time even schedule loops
+	//  - ">": executed in each schedule as the last test for one time even schedule loops
+	Tests map[string]*Test
 
 	Mode      RunMode     // how to run schedules, default RunPipe
 	Schedules []*Schedule // all test schedules, each one runs a series of tests
