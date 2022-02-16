@@ -84,7 +84,16 @@ type Test struct {
 	// HTTP request timeout, like "5s", "1m10s", "30ms"...
 	// If Timeout is empty, try use  Schedule.Env["TIMEOUT"] as default value;
 	// if it's still empty, it'll be set to "1m" as default value
-	Timeout string
+	Timeout  string
+	imported bool
+}
+
+func (t *Test) IsImported() bool {
+	return t.imported
+}
+
+func (t *Test) SetImported() {
+	t.imported = true
 }
 
 // Option defines options gmeter accepts. These options can be used as key in Config.Options.
