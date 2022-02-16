@@ -3,8 +3,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/forrestjgq/glog v1.0.1 h1:GUrMTt+Pj/AocjDEj3xGUFnKi0smZmbMVnMcF7PbpiI=
 github.com/forrestjgq/glog v1.0.1/go.mod h1:HYbov2aMpByFWGXxZY/6soQ8S42d19Jb9w7r7XTT4cs=
-github.com/forrestjgq/gomark v1.0.18 h1:CDItqvE0r9/7+sBYFC3IE/9IpoZxI/dTHiuZbGV+5wY=
-github.com/forrestjgq/gomark v1.0.18/go.mod h1:WHSquz8XmPGW1ptKAfxjgh7Zlp7Sgbf0vjCATTYZn4w=
+github.com/forrestjgq/gomark v1.0.20 h1:9JyMpKT31eTFcReQFIlpXCjYbCQ/QUtcOpjxMiFMSKc=
+github.com/forrestjgq/gomark v1.0.20/go.mod h1:WHSquz8XmPGW1ptKAfxjgh7Zlp7Sgbf0vjCATTYZn4w=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/huandu/go-assert v1.1.5 h1:fjemmA7sSfYHJD7CUqs9qTwwfdNAx7/j2/ZlHXzNB3c=
