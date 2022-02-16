@@ -247,24 +247,35 @@ func loadPlan(cfg *config.Config, s *config.Schedule) (*plan, error) {
 	tests := strings.Split(s.Tests, "|")
 	star := -1
 	testMap := make(map[string]struct{})
-	var filtered  []string
-	var void  struct {}
+	var filtered []string
+	var void struct{}
 	for _, t := range tests {
 		t = strings.TrimSpace(t)
 		if len(t) == 0 {
 			continue
 		}
 		if t == "*" {
+			if star >= 0 {
+				return nil, errors.Errorf("more than * defined in Tests")
+			}
 			star = len(filtered)
 		}
 		testMap[t] = void
 		filtered = append(filtered, t)
 	}
 	if star >= 0 {
-		var rest  []string
+		var rest []string
 		for k := range cfg.Tests {
-			if _, exist := testMap[k]; exist{
+			if _, exist := testMap[k]; exist {
 				// ignore included test
+				continue
+			}
+			if k == s.TestBase {
+				// this is a test base, should not be included
+				continue
+			}
+			if cfg.Tests[k].IsImported() {
+				// imported tests won't be counted
 				continue
 			}
 			rest = append(rest, k)
@@ -522,6 +533,9 @@ func StartConfig(cfg *config.Config) error {
 		baseCfg, err := loadCfg(root, base)
 		if err != nil {
 			return errors.Wrapf(err, "load config %s from %s", base, root)
+		}
+		for _, t := range baseCfg.Tests {
+			t.SetImported()
 		}
 		override(baseCfg, cfg)
 	}

@@ -257,7 +257,7 @@ func (p *perf) commit() (max, min, avg int32, qps int64) {
 func makePerf(name string) *perf {
 	p := &perf{
 		lr:       gomark.NewLatencyRecorder(name),
-		adder:    gomark.NewAdder(name),
+		adder:    gomark.NewAdder(name + "_cnt"),
 		cLatency: make(chan int32, 1000),
 	}
 	go func() {
